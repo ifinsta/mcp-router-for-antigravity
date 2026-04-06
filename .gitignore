@@ -1,0 +1,89 @@
+# Dependencies
+
+node_modules/
+
+# Build output
+
+dist/
+build/
+*.tsbuildinfo
+
+# Coverage and test artifacts
+
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Logs
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and secrets
+
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Runtime temp files
+
+tmp/
+temp/
+.cache/
+
+# Tooling caches
+
+.eslintcache
+.parcel-cache/
+.vite/
+.turbo/
+
+# IDE / editor files
+
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Package manager artifacts
+
+.pnpm-store/
+.yarn/
+.yarn-cache/
+
+# Local test and debug data
+
+*.pid
+*.seed
+*.pid.lock
+
+# Optional local databases / fixtures
+
+*.sqlite
+*.sqlite3
+*.db
+
+# Generated docs or artifacts
+
+artifacts/
+
+# Misc
+
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
