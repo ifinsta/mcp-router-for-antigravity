@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Router Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 { color: #333; margin-bottom: 10px; }
+    .subtitle { color: #666; margin-bottom: 30px; }
+    
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    h2 { color: #444; margin-bottom: 15px; font-size: 18px; }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+    }
+    
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .provider-card {
+      background: white;
+      padding: 15px;
+      border-radius: 4px;
+      border: 2px solid #e0e0e0;
+    }
+    .provider-card.enabled {
+      border-color: #4CAF50;
+      background: #f8fff8;
+    }
+    .provider-card h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .status.configured { color: #4CAF50; }
+    .status.missing { color: #ff9800; }
+    
+    .btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #45a049; }
+    .btn.secondary {
+      background: #2196F3;
+    }
+    .btn.secondary:hover { background: #1976D2; }
+    .btn.outline {
+      background: white;
+      color: #4CAF50;
+      border: 2px solid #4CAF50;
+    }
+    .btn.outline:hover { background: #f8fff8; }
+    
+    .output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+    }
+    .output.show { display: block; }
+    
+    .success {
+      background: #d4edda;
+      color: #155724;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+      display: none;
+    }
+    .success.show { display: block; }
+    
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+      display: none;
+    }
+    .error.show { display: block; }
+    
+    .ide-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .ide-option {
+      padding: 15px;
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .ide-option:hover {
+      border-color: #4CAF50;
+      background: #f8fff8;
+    }
+    .ide-option.selected {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    .ide-option .icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .ide-option .name {
+      font-weight: 500;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 MCP Router Setup</h1>
+    <p class="subtitle">Configure MCP Router for any IDE - automatically generates configuration</p>
+    
+    <!-- IDE Selection -->
+    <div class="section">
+      <h2>1. Select Your IDE</h2>
+      <div class="ide-options">
+        <div class="ide-option" data-ide="qoder" onclick="selectIDE('qoder')">
+          <div class="icon">💻</div>
+          <div class="name">Qoder</div>
+        </div>
+        <div class="ide-option" data-ide="cursor" onclick="selectIDE('cursor')">
+          <div class="icon">🎯</div>
+          <div class="name">Cursor</div>
+        </div>
+        <div class="ide-option" data-ide="windsurf" onclick="selectIDE('windsurf')">
+          <div class="icon">🏄</div>
+          <div class="name">Windsurf</div>
+        </div>
+        <div class="ide-option" data-ide="claude-desktop" onclick="selectIDE('claude-desktop')">
+          <div class="icon">🤖</div>
+          <div class="name">Claude Desktop</div>
+        </div>
+        <div class="ide-option" data-ide="antigravity" onclick="selectIDE('antigravity')">
+          <div class="icon">🪶</div>
+          <div class="name">Antigravity</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Provider Configuration -->
+    <div class="section">
+      <h2>2. Configure Providers</h2>
+      <div class="form-group">
+        <label>Default Provider</label>
+        <select id="defaultProvider" onchange="updateDefaultModel()">
+          <option value="chutes">Chutes.ai</option>
+          <option value="glm">GLM (Z.AI)</option>
+          <option value="openai">OpenAI</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Default Model</label>
+        <select id="defaultModel">
+          <option value="Qwen/Qwen2.5-72B-Instruct">Qwen/Qwen2.5-72B-Instruct</option>
+          <option value="Qwen/Qwen2.5-Coder-32B-Instruct">Qwen/Qwen2.5-Coder-32B-Instruct</option>
+        </select>
+      </div>
+      
+      <div class="provider-grid">
+        <div class="provider-card" id="chutes-card">
+          <h3>Chutes.ai</h3>
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="chutesKey" placeholder="cpk_..." oninput="updateStatus()">
+          </div>
+          <div class="status missing" id="chutes-status">⚠️ Not configured</div>
+        </div>
+        
+        <div class="provider-card" id="glm-card">
+          <h3>GLM (Z.AI)</h3>
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="glmKey" placeholder="sk-..." oninput="updateStatus()">
+          </div>
+          <div class="status missing" id="glm-status">⚠️ Not configured</div>
+        </div>
+        
+        <div class="provider-card" id="openai-card">
+          <h3>OpenAI</h3>
+          <div class="form-group">
+            <label>API Key</label>
+            <input type="password" id="openaiKey" placeholder="sk-..." oninput="updateStatus()">
+          </div>
+          <div class="status missing" id="openai-status">⚠️ Not configured</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Generate Configuration -->
+    <div class="section">
+      <h2>3. Generate & Apply</h2>
+      <button class="btn" onclick="generateConfig()">🔧 Generate Configuration</button>
+      <button class="btn secondary" onclick="showConfig()">📋 View JSON</button>
+      <button class="btn outline" onclick="copyToClipboard()">📄 Copy to Clipboard</button>
+      
+      <div class="output" id="output"></div>
+      <div class="success" id="success"></div>
+      <div class="error" id="error"></div>
+    </div>
+  </div>
+
+  <script>
+    let selectedIDE = null;
+    let generatedConfig = null;
+    
+    function selectIDE(ide) {
+      selectedIDE = ide;
+      document.querySelectorAll('.ide-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.ide === ide);
+      });
+    }
+    
+    function updateDefaultModel() {
+      const provider = document.getElementById('defaultProvider').value;
+      const modelSelect = document.getElementById('defaultModel');
+      
+      const models = {
+        chutes: [
+          'Qwen/Qwen2.5-72B-Instruct',
+          'Qwen/Qwen2.5-Coder-32B-Instruct',
+          'meta-llama/Llama-3.3-70B-Instruct'
+        ],
+        glm: ['GLM-4.7', 'GLM-4.6', 'GLM-4.5', 'GLM-4.5-Air'],
+        openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo']
+      };
+      
+      modelSelect.innerHTML = models[provider].map(m => 
+        `<option value="${m}">${m}</option>`
+      ).join('');
+    }
+    
+    function updateStatus() {
+      const chutesKey = document.getElementById('chutesKey').value.trim();
+      const glmKey = document.getElementById('glmKey').value.trim();
+      const openaiKey = document.getElementById('openaiKey').value.trim();
+      
+      updateProviderStatus('chutes', chutesKey);
+      updateProviderStatus('glm', glmKey);
+      updateProviderStatus('openai', openaiKey);
+    }
+    
+    function updateProviderStatus(name, key) {
+      const card = document.getElementById(`${name}-card`);
+      const status = document.getElementById(`${name}-status`);
+      
+      if (key && !key.includes('your-') && key.length > 10) {
+        card.classList.add('enabled');
+        status.className = 'status configured';
+        status.textContent = '✅ Configured';
+      } else {
+        card.classList.remove('enabled');
+        status.className = 'status missing';
+        status.textContent = '⚠️ Not configured';
+      }
+    }
+    
+    function generateConfig() {
+      if (!selectedIDE) {
+        showError('Please select an IDE first');
+        return;
+      }
+      
+      const provider = document.getElementById('defaultProvider').value;
+      const model = document.getElementById('defaultModel').value;
+      const chutesKey = document.getElementById('chutesKey').value.trim();
+      const glmKey = document.getElementById('glmKey').value.trim();
+      const openaiKey = document.getElementById('openaiKey').value.trim();
+      
+      const providers = [];
+      if (openaiKey && !openaiKey.includes('your-')) providers.push('openai');
+      if (glmKey && !glmKey.includes('your-')) providers.push('glm');
+      if (chutesKey && !chutesKey.includes('your-')) providers.push('chutes');
+      
+      if (providers.length === 0) {
+        showError('Please configure at least one API key');
+        return;
+      }
+      
+      const config = {
+        mcpServers: {
+          'mcp-router': {
+            command: 'node',
+            args: ['C:\\\\Users\\\\user\\\\CascadeProjects\\\\mcp-router-for-antigravity\\\\dist\\\\index.js'],
+            env: {
+              ROUTER_DEFAULT_PROVIDER: provider,
+              ROUTER_DEFAULT_MODEL: model,
+              ALLOWED_PROVIDERS: providers.join(',')
+            }
+          }
+        }
+      };
+      
+      if (chutesKey && !chutesKey.includes('your-')) {
+        config.mcpServers['mcp-router'].env.CHUTES_API_KEY = chutesKey;
+        config.mcpServers['mcp-router'].env.CHUTES_BASE_URL = 'https://llm.chutes.ai/v1';
+      }
+      if (glmKey && !glmKey.includes('your-')) {
+        config.mcpServers['mcp-router'].env.GLM_API_KEY = glmKey;
+      }
+      if (openaiKey && !openaiKey.includes('your-')) {
+        config.mcpServers['mcp-router'].env.OPENAI_API_KEY = openaiKey;
+      }
+      
+      generatedConfig = config;
+      showSuccess('✅ Configuration generated successfully!');
+      document.getElementById('output').textContent = JSON.stringify(config, null, 2);
+      document.getElementById('output').classList.add('show');
+    }
+    
+    function showConfig() {
+      if (!generatedConfig) {
+        generateConfig();
+      }
+      const output = document.getElementById('output');
+      output.classList.toggle('show');
+    }
+    
+    function copyToClipboard() {
+      if (!generatedConfig) {
+        generateConfig();
+      }
+      
+      navigator.clipboard.writeText(JSON.stringify(generatedConfig, null, 2)).then(() => {
+        showSuccess('✅ Configuration copied to clipboard!');
+      }).catch(err => {
+        showError('Failed to copy: ' + err.message);
+      });
+    }
+    
+    function showSuccess(message) {
+      const el = document.getElementById('success');
+      el.textContent = message;
+      el.classList.add('show');
+      document.getElementById('error').classList.remove('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+    
+    function showError(message) {
+      const el = document.getElementById('error');
+      el.textContent = message;
+      el.classList.add('show');
+      document.getElementById('success').classList.remove('show');
+    }
+    
+    // Initialize
+    updateDefaultModel();
+    selectIDE('qoder');
+  </script>
+</body>
+</html>

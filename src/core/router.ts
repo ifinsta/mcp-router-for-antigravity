@@ -10,9 +10,11 @@
 
 import { getLogger } from '../infra/logger.js';
 import { getConfig, AppConfig } from '../infra/config.js';
+import { getMetricsCollector } from '../infra/metrics.js';
 import {
   NormalizedChatRequest,
   NormalizedChatResponse,
+  ModelInfo,
   RouterStatus,
   HealthResponse,
   ConfigurationHealth,
@@ -42,6 +44,7 @@ import { ProtectedExecutor, ExecutorConfig } from '../resilience/executor.js';
 import { AttemptPlanner, ExecutionPlan, PlannedAttempt } from './planner.js';
 import { PolicyEngine } from './policy.js';
 import { AttemptHistoryRecorder } from '../resilience/attemptHistory.js';
+import { createProviderFactory } from '../providers/providerFactory.js';
 
 const logger = getLogger('router-core');
 
@@ -65,17 +68,19 @@ export class Router {
     try {
       await initializeProviderRegistry();
 
-      const { createOpenAIAdapter } = await import('../providers/openaiAdapter.js');
+      // Use ProviderFactory for clean, decoupled adapter creation
+      const factory = createProviderFactory(getConfig());
+      const adapters = await factory.createAllAdapters();
+      
+      logger.debug('Provider config keys check', {
+        hasOpenAI: !!getConfig().providers.openai,
+        hasGLM: !!getConfig().providers.glm,
+        hasChutes: !!getConfig().providers.chutes,
+      });
 
-      if (getConfig().providers.openai) {
-        const openaiAdapter = createOpenAIAdapter(getConfig());
-        getProviderRegistry().register(openaiAdapter);
-      }
-
-      const { createGLMAdapter } = await import('../providers/glmAdapter.js');
-      if (getConfig().providers.glm) {
-        const glmAdapter = createGLMAdapter(getConfig());
-        getProviderRegistry().register(glmAdapter);
+      for (const adapter of adapters) {
+        logger.debug(`Registering ${adapter.name} adapter`);
+        getProviderRegistry().register(adapter);
       }
 
       this.initializeResilienceComponents();
@@ -144,6 +149,8 @@ export class Router {
    */
   async executeChat(request: NormalizedChatRequest): Promise<NormalizedChatResponse> {
     const startTime = Date.now();
+    const metrics = getMetricsCollector();
+    metrics.incrementRequestCount();
 
     logger.debug('Executing chat request through router', {
       messageCount: request.messages.length,
@@ -206,6 +213,13 @@ export class Router {
             response.warnings.push(...policyResult.warnings);
           }
 
+          metrics.incrementSuccessCount();
+          metrics.recordLatencyMs(response.latencyMs);
+
+          if (response.fallbackUsed) {
+            metrics.incrementFallbackCount();
+          }
+
           logger.info('Chat request completed successfully', {
             provider: response.provider,
             model: response.model,
@@ -262,6 +276,9 @@ export class Router {
 
       throw createProviderNotFoundError('No available provider after all attempts');
     } catch (error) {
+      metrics.incrementFailureCount();
+      metrics.recordLatencyMs(Date.now() - startTime);
+
       logger.error('Failed to execute chat request', {
         error: error instanceof Error ? error.message : String(error),
         code: isRouterError(error) ? error.code : undefined,
@@ -360,7 +377,7 @@ export class Router {
    */
   async listModels(
     provider?: string
-  ): Promise<Array<{ provider: string; models: any[]; errors: string[] }>> {
+  ): Promise<Array<{ provider: string; models: ModelInfo[]; errors: string[] }>> {
     logger.debug('Listing models', { provider });
 
     try {

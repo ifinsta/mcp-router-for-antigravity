@@ -43,7 +43,7 @@ export const MessageSchema = z.object({
 export const ChatRequestSchema = z
   .object({
     provider: z.string().optional(),
-    model: z.string().optional(),
+    model: z.string().min(1, 'model is required. Use llm_list_models to see available models.'),
     messages: z.array(MessageSchema).min(1, 'At least one message is required'),
     temperature: z.number().min(0).max(2).optional(),
     maxTokens: z.number().int().positive().optional(),
@@ -233,10 +233,10 @@ export interface ValidatedProviderResponse {
         outputText: string;
         finishReason: string;
         usage?: {
-          inputTokens?: number;
-          outputTokens?: number;
-          totalTokens?: number;
-        };
+          inputTokens?: number | undefined;
+          outputTokens?: number | undefined;
+          totalTokens?: number | undefined;
+        } | undefined;
       }
     | undefined;
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * MCP Router for Antigravity - Entry Point
  *
@@ -5,26 +7,24 @@
  * through one stable, resilient MCP server.
  */
 
-import { startMCPServer } from "./server/mcpServer.js";
-import { getLogger } from "./infra/logger.js";
+import { startMCPServer } from './server/mcpServer.js';
+import { getLogger } from './infra/logger.js';
 
-const logger = getLogger("main");
+const logger = getLogger('main');
 
-async function main() {
+export async function main() {
   try {
-    logger.info("Starting MCP Router for Antigravity...");
+    logger.info('Starting MCP Router for Antigravity...');
 
     // Start the MCP server
     await startMCPServer();
 
-    logger.info("MCP Router started successfully");
-
+    logger.info('MCP Router started successfully');
   } catch (error) {
-    logger.error("Failed to start MCP Router", error);
+    logger.error('Failed to start MCP Router', error);
     process.exit(1);
   }
 }
 
 // Start the application
-main();
-
+void main();

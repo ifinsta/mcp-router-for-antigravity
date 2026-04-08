@@ -174,7 +174,10 @@ export class AttemptPlanner {
     if (phase === AttemptPhase.RETRY) {
       const retryIndex = currentAttempt - 1;
       if (retryIndex < plan.retries.length) {
-        return plan.retries[retryIndex];
+        const retry = plan.retries[retryIndex];
+        if (retry) {
+          return retry;
+        }
       }
     }
 

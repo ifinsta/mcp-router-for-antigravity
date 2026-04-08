@@ -225,8 +225,8 @@ export function createHealthResponse(
     providers: Array<{
       provider: string;
       status: 'success' | 'failed';
-      modelCount?: number;
-      error?: string;
+      modelCount?: number | undefined;
+      error?: string | undefined;
     }>;
     warnings: string[];
   },
@@ -234,7 +234,7 @@ export function createHealthResponse(
     status: 'healthy' | 'degraded' | 'failed';
     activeRequests: number;
     concurrencyUtilization: number;
-    recentErrorRate?: number;
+    recentErrorRate?: number | undefined;
     warnings: string[];
   },
   providerHealth: Array<{
@@ -242,8 +242,8 @@ export function createHealthResponse(
     status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
     breakerState: CircuitBreakerState;
     lastCheckAt: number;
-    latencyMs?: number;
-    recentErrorRate?: number;
+    latencyMs?: number | undefined;
+    recentErrorRate?: number | undefined;
   }>
 ): HealthResponse {
   const status = normalizeHealthStatus(

@@ -7,6 +7,7 @@
 
 import { getLogger } from '../infra/logger.js';
 import { createOverloadError, RouterError } from '../core/errors.js';
+import { getMetricsCollector } from '../infra/metrics.js';
 
 const logger = getLogger('concurrency');
 
@@ -43,10 +44,12 @@ export class ConcurrencyManager {
 
     if (!this.canProceed(provider, providerSlot)) {
       if (this.config.queueSize === 0) {
+        getMetricsCollector().incrementOverloadRejectionCount();
         throw createOverloadError('concurrency', this.config.globalLimit);
       }
 
       if (this.globalQueued >= this.config.queueSize) {
+        getMetricsCollector().incrementOverloadRejectionCount();
         throw createOverloadError('queue', this.config.queueSize);
       }
 
@@ -54,6 +57,8 @@ export class ConcurrencyManager {
     }
 
     this.incrementCounts(provider, providerSlot);
+
+    getMetricsCollector().setActiveConcurrency(this.globalActive, provider, providerSlot.active);
 
     logger.debug('Slot acquired', {
       provider,
@@ -111,6 +116,8 @@ export class ConcurrencyManager {
   private release(provider: string, providerSlot: ProviderSlot): void {
     this.globalActive--;
     providerSlot.active--;
+
+    getMetricsCollector().setActiveConcurrency(this.globalActive, provider, providerSlot.active);
 
     logger.debug('Slot released', {
       provider,

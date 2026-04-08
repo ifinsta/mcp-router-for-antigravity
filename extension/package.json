@@ -1,0 +1,212 @@
+{
+  "name": "antigravity-custom-models",
+  "displayName": "Antigravity Custom Models (MCP Router)",
+  "description": "Integrate custom LLM providers (OpenAI, GLM, Chutes) into Antigravity, Qoder, Cursor, Windsurf and more via MCP Router",
+  "version": "0.1.0",
+  "publisher": "ifinsta",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ifinsta/mcp-router-for-antigravity"
+  },
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "mcpRouter.configureApiKeys",
+        "title": "Configure API Keys",
+        "category": "MCP Router",
+        "icon": "$(key)"
+      },
+      {
+        "command": "mcpRouter.setupMCP",
+        "title": "Setup MCP Server for IDE",
+        "category": "MCP Router",
+        "icon": "$(gear)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "mcpRouter.configureApiKeys"
+        },
+        {
+          "command": "mcpRouter.setupMCP"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "mcpRouter.configureApiKeys",
+          "when": "view == chat",
+          "group": "navigation"
+        }
+      ]
+    },
+    "languageModelChatProviders": [
+      {
+        "vendor": "mcp-router",
+        "displayName": "MCP Router Models"
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "mcp-router-server",
+        "label": "MCP Router (GLM/OpenAI)"
+      }
+    ],
+    "configuration": {
+      "title": "Antigravity Custom Models",
+      "properties": {
+        "mcpRouter.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL of the MCP Router backend API"
+        },
+        "mcpRouter.timeout": {
+          "type": "number",
+          "default": 30000,
+          "description": "Request timeout in milliseconds for router communication"
+        },
+        "mcpRouter.showOnlyHealthyModels": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only show models that pass health checks"
+        },
+        "mcpRouter.autoRefreshCatalog": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh model catalog on changes"
+        },
+        "mcpRouter.logLevel": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug"],
+          "default": "info",
+          "description": "Logging level for MCP Router extension output"
+        },
+        "mcpRouter.providers.glm.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GLM (Z.AI) provider"
+        },
+        "mcpRouter.providers.glm.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for GLM (Z.AI). Obtain from https://z.ai/manage-apikey/apikey-list",
+          "markdownDescription": "API key for GLM (Z.AI). Obtain from [Z.AI API Keys](https://z.ai/manage-apikey/apikey-list). See [Z.AI Devpack Docs](https://docs.z.ai/devpack/overview) for details."
+        },
+        "mcpRouter.providers.glm.baseUrl": {
+          "type": "string",
+          "default": "https://api.z.ai/api/paas/v4",
+          "description": "Base URL for the GLM (Z.AI) API endpoint"
+        },
+        "mcpRouter.providers.glm.defaultModel": {
+          "type": "string",
+          "default": "GLM-4.7",
+          "description": "Default model for GLM provider",
+          "enum": ["GLM-5.1", "GLM-5", "GLM-5-Turbo", "GLM-4.7", "GLM-4.6", "GLM-4.5", "GLM-4.5-Air"]
+        },
+        "mcpRouter.providers.openai.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenAI provider"
+        },
+        "mcpRouter.providers.openai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for OpenAI"
+        },
+        "mcpRouter.providers.openai.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Base URL for the OpenAI API endpoint"
+        },
+        "mcpRouter.providers.openai.defaultModel": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "Default model for OpenAI provider"
+        },
+        "mcpRouter.providers.anthropic.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Anthropic provider"
+        },
+        "mcpRouter.providers.anthropic.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for Anthropic"
+        },
+        "mcpRouter.providers.anthropic.baseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com",
+          "description": "Base URL for the Anthropic API endpoint"
+        },
+        "mcpRouter.providers.anthropic.defaultModel": {
+          "type": "string",
+          "default": "claude-sonnet-4-20250514",
+          "description": "Default model for Anthropic provider"
+        },
+        "mcpRouter.providers.chutes.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Chutes provider"
+        },
+        "mcpRouter.providers.chutes.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for Chutes"
+        },
+        "mcpRouter.providers.chutes.baseUrl": {
+          "type": "string",
+          "default": "https://llm.chutes.ai/v1",
+          "description": "Base URL for the Chutes API endpoint"
+        },
+        "mcpRouter.providers.chutes.defaultModel": {
+          "type": "string",
+          "default": "Qwen/Qwen2.5-72B-Instruct",
+          "description": "Default model for Chutes provider"
+        }
+      }
+    }
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "antigravity",
+    "mcp",
+    "router",
+    "openai",
+    "glm",
+    "language-model",
+    "llm"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "tsc --watch",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "test": "node --import tsx --test",
+    "test:unit": "node --require ./test/setup-vscode-mock.cjs --import tsx --test test/unit/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.107.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0",
+    "tsx": "^4.21.0"
+  }
+}

@@ -24,20 +24,20 @@ export interface LogEvent {
   message: string;
 
   /** Request ID for tracing */
-  requestId?: string;
+  requestId?: string | undefined;
 
   /** Component or module emitting log */
-  component?: string;
+  component?: string | undefined;
 
   /** Additional context */
-  context?: Record<string, unknown>;
+  context?: Record<string, unknown> | undefined;
 
   /** Error details (if applicable) */
   error?: {
     code: string;
     message: string;
-    stack?: string;
-  };
+    stack?: string | undefined;
+  } | undefined;
 }
 
 /**
@@ -255,11 +255,7 @@ export function createLogger(config: LoggerConfig): Logger {
     switch (level) {
       case 'debug':
       case 'info':
-        console.log(formatted);
-        break;
       case 'warn':
-        console.warn(formatted);
-        break;
       case 'error':
         console.error(formatted);
         break;

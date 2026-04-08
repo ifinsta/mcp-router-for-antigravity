@@ -97,8 +97,8 @@ export class OpenAIAdapter implements ProviderAdapter {
           streaming: true,
           vision: false,
         },
-        maxContextTokens: model.context_window || undefined,
-        maxOutputTokens: model.max_tokens || undefined,
+        maxContextTokens: model.context_window ?? undefined,
+        maxOutputTokens: model.max_tokens ?? undefined,
       }));
 
       logger.info(`Listed ${models.length} OpenAI models`);
@@ -167,6 +167,11 @@ export class OpenAIAdapter implements ProviderAdapter {
       }
 
       const choice = data.choices[0];
+
+      if (!choice) {
+        throw createUpstreamError(this.name, 'No completion choices returned');
+      }
+
       const message = choice.message;
 
       if (!message || message.role !== 'assistant') {
@@ -234,7 +239,6 @@ export class OpenAIAdapter implements ProviderAdapter {
         status: 'healthy',
         lastCheckAt: Date.now(),
         latencyMs,
-        error: undefined,
       };
 
       logger.info('OpenAI health check successful', {
@@ -295,9 +299,6 @@ export class OpenAIAdapter implements ProviderAdapter {
   private mapUsage(usage: OpenAIUsage | undefined): NormalizedUsage {
     if (!usage) {
       return {
-        inputTokens: undefined,
-        outputTokens: undefined,
-        totalTokens: undefined,
         accuracy: 'unavailable',
       };
     }
@@ -349,7 +350,7 @@ export class OpenAIAdapter implements ProviderAdapter {
       'gpt-4-1-mini': 'GPT-4.1 Mini',
     };
 
-    return modelNames[modelId] || modelId;
+    return modelNames[modelId] ?? modelId;
   }
 
   /**
@@ -368,15 +369,20 @@ export class OpenAIAdapter implements ProviderAdapter {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const fetchOptions: RequestInit = {
         method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
-      });
+      };
+
+      if (body) {
+        fetchOptions.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 

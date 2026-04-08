@@ -9,6 +9,7 @@
  */
 
 import { getLogger } from '../infra/logger.js';
+import { getMetricsCollector } from '../infra/metrics.js';
 import { CircuitBreaker, CircuitBreakerConfig } from './circuitBreaker.js';
 import { ConcurrencyManager, ConcurrencyConfig } from './concurrency.js';
 import { RequestBudgetManager, RequestBudget } from './requestBudget.js';
@@ -122,6 +123,10 @@ export class ProtectedExecutor {
     } catch (error) {
       const routerError = this.classifyError(error, providerName);
       const retryable = this.retryPolicy.shouldRetry(routerError);
+
+      if (retryable) {
+        getMetricsCollector().incrementRetryCount();
+      }
 
       breaker.recordFailure(routerError);
       history.completeAttempt(attempt, AttemptStatus.FAILED, routerError.code, retryable);

@@ -5,6 +5,7 @@
  */
 
 import { getLogger } from '../infra/logger.js';
+import { getMetricsCollector } from '../infra/metrics.js';
 import {
   HealthResponse,
   RouterStatus,
@@ -69,6 +70,7 @@ export async function getHealth(): Promise<HealthResponse> {
       execution: executionHealth,
       providers: providerHealth,
       warnings,
+      metrics: getMetricsCollector().getSnapshot(),
       timestamp: now,
     };
 
@@ -181,8 +183,8 @@ async function checkDiscoveryHealth(): Promise<DiscoveryHealth> {
     interface ProviderHealthResult {
       provider: string;
       status: 'success' | 'failed';
-      modelCount?: number;
-      error?: string;
+      modelCount?: number | undefined;
+      error?: string | undefined;
     }
 
     const providerHealthResults = await Promise.allSettled(

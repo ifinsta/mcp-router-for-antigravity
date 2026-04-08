@@ -1,6 +1,8 @@
 # Quick Start Guide
 
-Get the MCP router running and connected to Antigravity in under 5 minutes.
+Get the MCP router running and connected to Antigravity or Qoder in under 5 minutes.
+
+If your AI agent can launch `npx`-based MCP servers, you can run this router directly from GitHub without cloning the repository.
 
 ## Prerequisites
 
@@ -29,19 +31,19 @@ cp .env.example .env
 Edit `.env` and add at minimum:
 
 ```env
-ROUTER_DEFAULT_PROVIDER=openai
-ROUTER_DEFAULT_MODEL=gpt-4.1-mini
-OPENAI_API_KEY=your-api-key-here
+ROUTER_DEFAULT_PROVIDER=glm
+ROUTER_DEFAULT_MODEL=glm-4.5
+GLM_API_KEY=your-api-key-here
 ```
 
 **Alternative providers:**
 
-For GLM:
+For OpenAI:
 
 ```env
-ROUTER_DEFAULT_PROVIDER=glm
-ROUTER_DEFAULT_MODEL=glm-4.5
-GLM_API_KEY=your-glm-key-here
+ROUTER_DEFAULT_PROVIDER=openai
+ROUTER_DEFAULT_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=your-openai-key-here
 ```
 
 For Ollama (no API key needed):
@@ -70,15 +72,101 @@ You should see logs like:
 
 ```
 [INFO] MCP Router starting...
-[INFO] Provider initialized: openai
+[INFO] Provider initialized: glm
 [INFO] MCP server listening on stdio
 ```
 
 Press `Ctrl+C` to stop the server.
 
-### 5. Configure Antigravity
+### 5. Configure Antigravity or Qoder
 
-Add the router to your Antigravity MCP configuration file:
+#### For Qoder
+
+1. Open **Qoder Settings** (Ctrl+Shift+, or click user icon in top-right)
+2. Click **MCP** in the left navigation
+3. Click **+ Add** on the My Servers tab
+4. Add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "npx",
+      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
+      "env": {
+        "GLM_API_KEY": "your-glm-api-key",
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "CHUTES_API_KEY": "your-chutes-api-key",
+        "ROUTER_DEFAULT_PROVIDER": "glm",
+        "ROUTER_DEFAULT_MODEL": "glm-4.5"
+      }
+    }
+  }
+}
+```
+
+5. Click **Save** when prompted
+6. The link icon should appear, indicating successful connection
+
+**Alternative: Local setup for Qoder**
+
+If you've cloned the repository:
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "node",
+      "args": ["C:\\Users\\yourusername\\mcp-router-for-antigravity\\dist\\index.js"],
+      "env": {
+        "GLM_API_KEY": "your-glm-api-key",
+        "ROUTER_DEFAULT_PROVIDER": "glm",
+        "ROUTER_DEFAULT_MODEL": "glm-4.5"
+      }
+    }
+  }
+}
+```
+
+#### For Antigravity
+
+Add the router to your Antigravity MCP configuration file.
+
+Preferred setup when Antigravity supports `npx`:
+
+**On macOS/Linux (~/.config/antigravity/mcp_servers.json):**
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "npx",
+      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
+      "env": {
+        "GLM_API_KEY": "${GLM_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**On Windows (%APPDATA%\antigravity\mcp_servers.json):**
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "npx",
+      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
+      "env": {
+        "GLM_API_KEY": "${GLM_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Fallback setup if Antigravity only supports local commands:
 
 **On macOS/Linux (~/.config/antigravity/mcp_servers.json):**
 
@@ -87,9 +175,8 @@ Add the router to your Antigravity MCP configuration file:
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-router-for-antigravity/dist/index.js"],
+      "args": ["/home/yourusername/mcp-router-for-antigravity/dist/index.js"],
       "env": {
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
     }
@@ -104,9 +191,8 @@ Add the router to your Antigravity MCP configuration file:
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["C:\\Users\\yourusername\\path\\to\\mcp-router-for-antigravity\\dist\\index.js"],
+      "args": ["C:\\Users\\yourusername\\mcp-router-for-antigravity\\dist\\index.js"],
       "env": {
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
     }
@@ -114,11 +200,25 @@ Add the router to your Antigravity MCP configuration file:
 }
 ```
 
-**Important:** Replace the path with your actual absolute path to `dist/index.js`.
+**Important:** If you use the local `node` setup, replace `yourusername` with your actual username. The path should point to where you cloned the repository.
 
 ## Verify It Works
 
-In Antigravity, ask it to use the router:
+### In Qoder (Agent mode)
+
+```text
+Use the llm.list_models tool to see all available models
+```
+
+Or check router health:
+
+```text
+Use the router_health tool to check the router status
+```
+
+### In Antigravity
+
+Ask it to use the router:
 
 ```
 Use the llm.chat tool to say "Hello, world!" with provider=openai
@@ -133,6 +233,17 @@ Call router.health to check the router status
 ## Basic Usage Examples
 
 ### Chat with an LLM
+
+**In Qoder:**
+
+```text
+Use llm.chat with:
+- provider: "chutes"
+- model: "Qwen/Qwen2.5-72B-Instruct"
+- messages: [{"role": "user", "content": "Hello!"}]
+```
+
+**In Antigravity:**
 
 ```
 Use llm.chat with:
@@ -173,6 +284,12 @@ OPENAI_API_KEY=sk-...
 
 - ✅ `"args": ["/home/user/projects/mcp-router/dist/index.js"]`
 - ❌ `"args": ["dist/index.js"]`
+
+### GitHub Launch Fails
+
+**Error:** Antigravity fails when using `npx github:ifinsta/mcp-router-for-antigravity`
+
+**Fix:** Some MCP hosts only allow local commands or do not support `npx`. Use the local fallback config with `node` and a built `dist/index.js` path.
 
 ### Node Version Mismatch
 
@@ -220,3 +337,5 @@ Should output `v20.10.0` or higher.
 - Review logs with `npm run start`
 - Verify your `.env` configuration
 - Ensure all prerequisites are met
+- Browse the [GitHub repository](https://github.com/ifinsta/mcp-router-for-antigravity)
+- Report issues on [GitHub Issues](https://github.com/ifinsta/mcp-router-for-antigravity/issues)

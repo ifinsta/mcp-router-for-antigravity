@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Router</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div class="popup">
+
+  <!-- Header -->
+  <header class="popup-header">
+    <span class="popup-header__title">MCP Router</span>
+    <span class="popup-header__spacer"></span>
+    <span class="status-dot" id="popupStatusDot" title="Disconnected"></span>
+    <span class="status-label" id="popupStatusLabel">Disconnected</span>
+  </header>
+
+  <!-- Server Connection -->
+  <section class="popup-section">
+    <div class="popup-section__title">Server Connection</div>
+    <div class="connect-row">
+      <input type="text" class="input" id="hostInput" placeholder="localhost" value="localhost" aria-label="Host">
+      <span style="color:var(--text-muted)">:</span>
+      <input type="text" class="input input--sm" id="portInput" placeholder="3700" value="3700" aria-label="Port">
+      <button class="btn btn--primary" id="connectBtn">Connect</button>
+    </div>
+  </section>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <button class="action-btn" id="actionScreenshot" title="Capture screenshot">
+      <span class="action-btn__icon">&#128247;</span>
+      <span>Screenshot</span>
+    </button>
+    <button class="action-btn" id="actionAudit" title="Run performance audit">
+      <span class="action-btn__icon">&#128203;</span>
+      <span>Run Audit</span>
+    </button>
+    <button class="action-btn" id="actionVitals" title="Refresh web vitals">
+      <span class="action-btn__icon">&#128200;</span>
+      <span>Web Vitals</span>
+    </button>
+    <button class="action-btn" id="actionMonitor" title="Toggle performance monitor">
+      <span class="action-btn__icon">&#128065;</span>
+      <span>Toggle Monitor</span>
+    </button>
+  </div>
+
+  <!-- Mini Web Vitals -->
+  <section class="popup-section">
+    <div class="popup-section__title">Web Vitals</div>
+    <div class="mini-vitals" id="miniVitals">
+      <div class="mini-vital-row">
+        <span class="mini-vital-row__label">LCP</span>
+        <div class="mini-vital-bar"><div class="mini-vital-bar__fill" id="miniLcpBar"></div></div>
+        <span class="mini-vital-row__value" id="miniLcpVal">—</span>
+      </div>
+      <div class="mini-vital-row">
+        <span class="mini-vital-row__label">FID</span>
+        <div class="mini-vital-bar"><div class="mini-vital-bar__fill" id="miniFidBar"></div></div>
+        <span class="mini-vital-row__value" id="miniFidVal">—</span>
+      </div>
+      <div class="mini-vital-row">
+        <span class="mini-vital-row__label">CLS</span>
+        <div class="mini-vital-bar"><div class="mini-vital-bar__fill" id="miniClsBar"></div></div>
+        <span class="mini-vital-row__value" id="miniClsVal">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="popup-footer">
+    <div class="session-info">
+      <span>Active sessions: <strong id="sessionCount">0</strong></span>
+      <span class="awaiting" id="awaitingLabel">Awaiting data&hellip;</span>
+    </div>
+    <button class="btn btn--primary btn--full" id="openDashboardBtn">Open Dashboard</button>
+  </div>
+
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

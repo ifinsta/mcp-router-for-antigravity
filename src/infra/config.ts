@@ -83,12 +83,49 @@ const OllamaConfigSchema = z.object({
 });
 
 /**
+ * Chutes provider configuration schema (OpenAI-compatible)
+ */
+const ChutesConfigSchema = z.object({
+  apiKey: z.string().min(1),
+  baseUrl: z.string().url().optional(),
+});
+
+/**
+ * Anthropic provider configuration schema
+ */
+const AnthropicConfigSchema = z.object({
+  apiKey: z.string().min(1),
+  baseUrl: z.string().url().optional(),
+});
+
+/**
+ * Azure OpenAI provider configuration schema
+ */
+const AzureOpenAIConfigSchema = z.object({
+  apiKey: z.string().min(1),
+  resource: z.string().min(1),
+  deployment: z.string().min(1),
+  apiVersion: z.string().min(1).optional(),
+  baseUrl: z.string().url().optional(),
+});
+
+/**
  * Providers configuration schema
  */
 const ProvidersConfigSchema = z.object({
   openai: OpenAIConfigSchema.optional(),
   glm: GLMConfigSchema.optional(),
   ollama: OllamaConfigSchema.optional(),
+  chutes: ChutesConfigSchema.optional(),
+  anthropic: AnthropicConfigSchema.optional(),
+  'azure-openai': AzureOpenAIConfigSchema.optional(),
+});
+
+/**
+ * Server configuration schema
+ */
+const ServerConfigSchema = z.object({
+  extensionApiPort: z.number().int().positive().default(3000),
 });
 
 /**
@@ -99,6 +136,7 @@ const AppConfigSchema = z.object({
   policy: PolicyConfigSchema,
   resilience: ResilienceConfigSchema,
   providers: ProvidersConfigSchema,
+  server: ServerConfigSchema.default({ extensionApiPort: 3000 }),
 });
 
 // ============================================================================
@@ -122,7 +160,7 @@ export interface AppConfig {
     allowedModels: string[];
     maxInputChars: number;
     maxOutputTokens: number;
-    maxCostUsdPerRequest?: number;
+    maxCostUsdPerRequest?: number | undefined;
   };
   resilience: {
     maxAttemptsPerRequest: number;
@@ -143,15 +181,33 @@ export interface AppConfig {
   providers: {
     openai?: {
       apiKey: string;
-      baseUrl?: string;
-    };
+      baseUrl?: string | undefined;
+    } | undefined;
     glm?: {
       apiKey: string;
-      baseUrl?: string;
-    };
+      baseUrl?: string | undefined;
+    } | undefined;
     ollama?: {
       baseUrl: string;
-    };
+    } | undefined;
+    chutes?: {
+      apiKey: string;
+      baseUrl?: string | undefined;
+    } | undefined;
+    anthropic?: {
+      apiKey: string;
+      baseUrl?: string | undefined;
+    } | undefined;
+    'azure-openai'?: {
+      apiKey: string;
+      resource: string;
+      deployment: string;
+      apiVersion?: string | undefined;
+      baseUrl?: string | undefined;
+    } | undefined;
+  };
+  server: {
+    extensionApiPort: number;
   };
 }
 
@@ -263,7 +319,7 @@ export function loadConfig(): AppConfig {
       },
       providerConcurrency: {} as Record<string, number>,
     },
-    providers: {} as any,
+    providers: {} as AppConfig['providers'],
   };
 
   // Load provider configurations
@@ -287,6 +343,35 @@ export function loadConfig(): AppConfig {
   if (ollamaBaseUrl) {
     rawConfig.providers.ollama = {
       baseUrl: ollamaBaseUrl,
+    };
+  }
+
+  const chutesKey = process.env['CHUTES_API_KEY'];
+  if (chutesKey) {
+    rawConfig.providers.chutes = {
+      apiKey: chutesKey,
+      baseUrl: process.env['CHUTES_BASE_URL'],
+    };
+  }
+
+  const anthropicKey = process.env['ANTHROPIC_API_KEY'];
+  if (anthropicKey) {
+    rawConfig.providers.anthropic = {
+      apiKey: anthropicKey,
+      baseUrl: process.env['ANTHROPIC_BASE_URL'],
+    };
+  }
+
+  const azureOpenaiKey = process.env['AZURE_OPENAI_API_KEY'];
+  const azureOpenaiResource = process.env['AZURE_OPENAI_RESOURCE'];
+  const azureOpenaiDeployment = process.env['AZURE_OPENAI_DEPLOYMENT'];
+  if (azureOpenaiKey && azureOpenaiResource && azureOpenaiDeployment) {
+    rawConfig.providers['azure-openai'] = {
+      apiKey: azureOpenaiKey,
+      resource: azureOpenaiResource,
+      deployment: azureOpenaiDeployment,
+      apiVersion: process.env['AZURE_OPENAI_API_VERSION'],
+      baseUrl: process.env['AZURE_OPENAI_BASE_URL'],
     };
   }
 
@@ -384,7 +469,7 @@ export function loadAndValidateConfig(): AppConfig {
     if (validation.warnings.length > 0) {
       // Log warnings but continue
       for (const warning of validation.warnings) {
-        console.warn(`[Config Warning] ${warning}`);
+        console.error(`[Config Warning] ${warning}`);
       }
     }
 
@@ -441,3 +526,83 @@ export const AppConfigRuntime: AppConfig = new Proxy({} as AppConfig, {
     return getConfig()[prop];
   },
 });
+
+// ============================================================================
+// Runtime API Key Updates
+// ============================================================================
+
+/**
+ * Update a provider's API key at runtime
+ * This allows the extension to push API keys to the router without restart
+ * 
+ * @param provider - Provider name (e.g., 'openai', 'glm')
+ * @param apiKey - The API key to set
+ * @throws Error if provider is not supported
+ */
+export function updateProviderApiKey(provider: string, apiKey: string): void {
+  if (!apiKey || apiKey.trim().length === 0) {
+    throw createConfigurationError(`API key cannot be empty for provider: ${provider}`);
+  }
+
+  // Supported providers that can have API keys updated
+  const supportedProviders = ['openai', 'glm', 'anthropic', 'chutes', 'azure-openai'];
+  
+  if (!supportedProviders.includes(provider)) {
+    throw createConfigurationError(
+      `Unsupported provider for runtime key update: ${provider}. Supported: ${supportedProviders.join(', ')}`
+    );
+  }
+
+  // Update the environment variable (for new config loads)
+  const envVarName = `${provider.toUpperCase()}_API_KEY`;
+  process.env[envVarName] = apiKey.trim();
+
+  // If config is already loaded, update it
+  if (_loadedConfig) {
+    const providerKey = provider as keyof AppConfig['providers'];
+    
+    // Update or create the provider config
+    const currentProviders = _loadedConfig.providers;
+    const existingConfig = currentProviders[providerKey];
+    
+    if (existingConfig && 'apiKey' in existingConfig) {
+      // Update existing provider config - use typed approach
+      const updated = { ...existingConfig, apiKey: apiKey.trim() };
+      (currentProviders[providerKey] as typeof updated) = updated;
+    } else {
+      // Create new provider config
+      const newConfig: { apiKey: string } = {
+        apiKey: apiKey.trim(),
+      };
+      // Use a typed mutable reference to update the providers object
+      const mutableProviders = currentProviders as Record<string, { apiKey: string }>;
+      mutableProviders[providerKey] = newConfig;
+    }
+
+    console.error(`[Config] API key updated for provider: ${provider}`);
+  }
+
+  console.error(`[Config] API key stored for provider: ${provider} (env: ${envVarName})`);
+}
+
+/**
+ * Remove a provider's API key at runtime
+ * 
+ * @param provider - Provider name
+ */
+export function removeProviderApiKey(provider: string): void {
+  const envVarName = `${provider.toUpperCase()}_API_KEY`;
+  
+  // Remove from environment
+  delete process.env[envVarName];
+
+  // If config is loaded, remove from it
+  if (_loadedConfig) {
+    const providerKey = provider as keyof AppConfig['providers'];
+    // Use a typed mutable reference to remove the provider
+    const mutableProviders = _loadedConfig.providers as Record<string, unknown>;
+    delete mutableProviders[providerKey];
+    
+    console.error(`[Config] API key removed for provider: ${provider}`);
+  }
+}

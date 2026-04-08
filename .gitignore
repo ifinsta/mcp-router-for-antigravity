@@ -14,6 +14,10 @@ coverage/
 .nyc_output/
 playwright-report/
 test-results/
+.qoder/
+.agent/
+.antigravity/
+.claude/
 
 # Logs
 

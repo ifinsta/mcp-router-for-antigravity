@@ -212,7 +212,7 @@ export function createTimeoutError(
 /**
  * Create a network error
  */
-export function createNetworkError(provider: string, message: string, cause?: Error): RouterError {
+export function createNetworkError(provider: string, message: string, cause?: Error | undefined): RouterError {
   return baseCreateError(ErrorCode.NETWORK_ERROR, `Network error for ${provider}: ${message}`, {
     retryable: true,
     provider,
@@ -237,7 +237,7 @@ export function createOverloadError(type: 'concurrency' | 'queue', limit: number
 /**
  * Create an upstream error
  */
-export function createUpstreamError(provider: string, message: string, cause?: Error): RouterError {
+export function createUpstreamError(provider: string, message: string, cause?: Error | undefined): RouterError {
   return baseCreateError(ErrorCode.UPSTREAM_ERROR, `Upstream error from ${provider}: ${message}`, {
     retryable: true,
     provider,
@@ -311,8 +311,8 @@ export function createCancelledError(reason?: string): RouterError {
  */
 export function createUnknownError(
   message: string,
-  cause?: Error,
-  context?: Record<string, unknown>
+  cause?: Error | undefined,
+  context?: Record<string, unknown> | undefined
 ): RouterError {
   return baseCreateError(ErrorCode.UNKNOWN_ERROR, message, {
     retryable: false,
@@ -404,18 +404,38 @@ export function getDebugErrorMessage(error: RouterError): string {
 // ============================================================================
 
 /**
- * Sanitize an upstream error by removing sensitive information
+ * Sanitize an upstream error by removing sensitive information.
+ *
+ * Strips:
+ * - URLs containing embedded credentials (https://user:pass@host)
+ * - Bearer tokens
+ * - OpenAI-style sk- keys
+ * - Generic api_key / token / password values
+ * - Long alphanumeric strings that look like API keys (32+ chars)
+ * - Common sensitive header names with values (x-api-key, authorization)
  */
 export function sanitizeUpstreamError(error: Error | string): string {
   const message = typeof error === 'string' ? error : error.message;
 
-  // Remove potential secrets (API keys, tokens, etc.)
   const sanitized = message
+    // URLs with embedded credentials: https://key:secret@host
+    .replace(/https?:\/\/[^@\s]+@/gi, 'https://[CREDENTIALS_REDACTED]@')
+    // Bearer tokens
     .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+/gi, 'Bearer [REDACTED]')
+    // OpenAI-style keys
     .replace(/sk-[A-Za-z0-9]{20,}/gi, 'sk-[REDACTED]')
+    // Generic api_key patterns
     .replace(/api[_-]?key["\s:=]+[A-Za-z0-9\-._~+/]+/gi, 'api_key=[REDACTED]')
+    // Token values
     .replace(/token["\s:=]+[A-Za-z0-9\-._~+/]+/gi, 'token=[REDACTED]')
-    .replace(/password["\s:=]+[^\s"]+/gi, 'password=[REDACTED]');
+    // Password values
+    .replace(/password["\s:=]+[^\s"]+/gi, 'password=[REDACTED]')
+    // x-api-key header values
+    .replace(/x-api-key["\s:=]+[A-Za-z0-9\-._~+/]+/gi, 'x-api-key=[REDACTED]')
+    // authorization header values
+    .replace(/authorization["\s:=]+[A-Za-z0-9\-._~+/ ]+/gi, 'authorization=[REDACTED]')
+    // Long alphanumeric strings (32+ chars) that look like API keys
+    .replace(/\b[A-Za-z0-9]{32,}\b/g, '[REDACTED_KEY]');
 
   return sanitized;
 }

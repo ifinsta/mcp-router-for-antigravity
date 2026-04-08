@@ -8,6 +8,7 @@
 import { getLogger } from '../infra/logger.js';
 import { RouterError } from '../core/errors.js';
 import { CircuitBreakerState } from '../core/types.js';
+import { getMetricsCollector } from '../infra/metrics.js';
 
 const logger = getLogger('circuit-breaker');
 
@@ -78,9 +79,12 @@ export class CircuitBreaker {
 
   private open(): void {
     if (this.state !== CircuitBreakerState.OPEN) {
+      const previousState = this.state;
       this.state = CircuitBreakerState.OPEN;
       this.openedAt = Date.now();
       this.halfOpenSuccesses = 0;
+
+      getMetricsCollector().recordBreakerTransition(this.provider, previousState, CircuitBreakerState.OPEN);
 
       logger.warn(`Circuit breaker opened for ${this.provider}`, {
         failureCount: this.failureCount,
@@ -91,10 +95,13 @@ export class CircuitBreaker {
   }
 
   private close(): void {
+    const previousState = this.state;
     this.state = CircuitBreakerState.CLOSED;
     this.failureCount = 0;
     this.halfOpenSuccesses = 0;
     this.lastSuccessAt = Date.now();
+
+    getMetricsCollector().recordBreakerTransition(this.provider, previousState, CircuitBreakerState.CLOSED);
 
     logger.info(`Circuit breaker closed for ${this.provider}`, {
       successCount: this.successCount,
@@ -103,8 +110,12 @@ export class CircuitBreaker {
 
   getState(): CircuitBreakerState {
     if (this.state === CircuitBreakerState.OPEN && this.isCooldownExpired()) {
+      const previousState = this.state;
       this.state = CircuitBreakerState.HALF_OPEN;
       this.halfOpenSuccesses = 0;
+
+      getMetricsCollector().recordBreakerTransition(this.provider, previousState, CircuitBreakerState.HALF_OPEN);
+
       logger.info(`Circuit breaker moved to half-open for ${this.provider}`);
     }
     return this.state;

@@ -191,7 +191,7 @@ export class PolicyEngine {
 
   private checkCostEstimate(request: NormalizedChatRequest): {
     allowed: boolean;
-    estimatedCost?: number;
+    estimatedCost?: number | undefined;
   } {
     const maxCost = this.config.maxCostUsdPerRequest;
     if (maxCost === undefined) {

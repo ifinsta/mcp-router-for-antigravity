@@ -22,14 +22,16 @@ import {
   createTimeoutError,
   createNetworkError,
   isRouterError,
+  sanitizeUpstreamError,
 } from '../core/errors.js';
 import { AppConfig } from '../infra/config.js';
+import { validateNormalizedResponse } from './baseAdapter.js';
 
 const logger = getLogger('glm-adapter');
 
 // GLM API configuration
-const GLM_API_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'; // GLM-4 API endpoint
-const GLM_MODELS_URL = 'https://open.bigmodel.cn/api/paas/v4/models';
+const GLM_API_BASE_URL = 'https://api.z.ai/api/paas/v4/chat/completions'; // Z.AI/GLM API endpoint
+const GLM_MODELS_URL = 'https://api.z.ai/api/paas/v4/models';
 const GLM_TIMEOUT_MS = 60000;
 
 /**
@@ -95,8 +97,8 @@ export class GLMAdapter implements ProviderAdapter {
           streaming: true,
           vision: false,
         },
-        maxContextTokens: model.max_tokens || undefined,
-        maxOutputTokens: model.max_output_tokens || undefined,
+        maxContextTokens: model.max_tokens ?? undefined,
+        maxOutputTokens: model.max_output_tokens ?? undefined,
       }));
 
       logger.info(`Listed ${models.length} GLM models`);
@@ -162,6 +164,11 @@ export class GLMAdapter implements ProviderAdapter {
       }
 
       const choice = data.choices[0];
+
+      if (!choice) {
+        throw createUpstreamError(this.name, 'No completion choices returned');
+      }
+
       const message = choice.message;
 
       if (!message) {
@@ -189,10 +196,13 @@ export class GLMAdapter implements ProviderAdapter {
         usage: normalizedResponse.usage,
       });
 
+      // Post-extraction validation
+      validateNormalizedResponse(normalizedResponse, this.name);
+
       return normalizedResponse;
     } catch (error) {
       const latencyMs = Date.now() - startTime;
-      logger.error('GLM chat failed', error, { latencyMs });
+      logger.error('GLM chat failed', { latencyMs, error: sanitizeUpstreamError(error instanceof Error ? error.message : String(error)) });
 
       if (isRouterError(error)) {
         // Re-throw router errors
@@ -229,7 +239,6 @@ export class GLMAdapter implements ProviderAdapter {
         status: 'healthy',
         lastCheckAt: Date.now(),
         latencyMs,
-        error: undefined,
       };
 
       logger.info('GLM health check successful', {
@@ -289,9 +298,6 @@ export class GLMAdapter implements ProviderAdapter {
   private mapGLMUsage(usage: GLMUsage | undefined): NormalizedUsage {
     if (!usage) {
       return {
-        inputTokens: undefined,
-        outputTokens: undefined,
-        totalTokens: undefined,
         accuracy: 'unavailable',
       };
     }
@@ -337,13 +343,17 @@ export class GLMAdapter implements ProviderAdapter {
    */
   private getModelName(modelId: string): string {
     const modelNames: Record<string, string> = {
+      'glm-5': 'GLM-5',
+      'glm-4.7': 'GLM-4.7',
       'glm-4': 'GLM-4',
+      'glm-4-plus': 'GLM-4 Plus',
+      'glm-4-air': 'GLM-4 Air',
       'glm-4-flash': 'GLM-4 Flash',
       'glm-4-0520': 'GLM-4 0520',
       'glm-3-turbo': 'GLM-3 Turbo',
     };
 
-    return modelNames[modelId] || modelId;
+    return modelNames[modelId] ?? modelId;
   }
 
   /**
@@ -362,15 +372,20 @@ export class GLMAdapter implements ProviderAdapter {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const fetchOptions: RequestInit = {
         method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
-      });
+      };
+
+      if (body) {
+        fetchOptions.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 

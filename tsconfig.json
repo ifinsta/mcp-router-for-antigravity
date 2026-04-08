@@ -2,7 +2,7 @@
   "compilerOptions": {
     /* Language and Environment */
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
@@ -19,7 +19,7 @@
     /* Interop Constraints */
     "esModuleInterop": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": false, // Temporarily disabled for development speed
+    "verbatimModuleSyntax": false, // Requires splitting all imports into type-only (import type) and value imports across 21+ files. Tracked for future migration.
 
     /* Type Checking - MODERATE MODE FOR STARTUP */
     "strict": true,
@@ -34,6 +34,8 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
 
     /* Completeness */
@@ -50,6 +52,7 @@
     "dist",
     "coverage",
     "artifacts",
-    "test"
+    "test",
+    "extension"
   ]
 }

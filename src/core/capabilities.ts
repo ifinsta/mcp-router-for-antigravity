@@ -181,7 +181,11 @@ export function isOperationSupported(
     vision: 'vision',
   };
 
-  return providerSupportsCapability(provider, capabilityMapping[operation]);
+  const mapped = capabilityMapping[operation];
+  if (!mapped) {
+    return false;
+  }
+  return providerSupportsCapability(provider, mapped);
 }
 
 /**

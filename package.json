@@ -1,41 +1,55 @@
 {
   "name": "mcp-router-for-antigravity",
   "version": "1.0.0",
-  "description": "A production-grade MCP router that allows Antigravity to use external LLMs and selected external tools through one stable, resilient MCP server",
+  "description": "A production-grade MCP router that allows AI agents (Antigravity, Qoder, etc.) to use external LLMs through one stable, resilient MCP server",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-router-for-antigravity": "./bin/mcp-router-for-antigravity.js",
+    "setup-mcp": "./bin/setup-mcp.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "QUICKSTART.md"
+  ],
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "dev": "tsc --watch",
+    "prepare": "npm run build",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "node --import tsx --test",
-    "test:coverage": "c8 node --import tsx --test",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "test:coverage": "c8 node --import tsx --test test/**/*.test.ts",
     "test:contract": "node --import tsx --test test/contract/**/*.test.ts",
     "test:chaos": "node --import tsx --test test/chaos/**/*.test.ts",
     "test:load": "node --import tsx --test test/load/**/*.test.ts",
     "clean": "rm -rf dist coverage",
-    "ci": "npm run typecheck && npm run lint && npm run test"
+    "ci": "npm run typecheck && npm run lint && npm run test",
+    "setup": "node bin/setup-mcp.js"
   },
   "keywords": [
     "mcp",
     "router",
     "antigravity",
+    "qoder",
     "llm",
-    "anthropic",
     "openai",
-    "glm"
+    "glm",
+    "chutes"
   ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "c8": "^9.0.0",
@@ -48,6 +62,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "dotenv": "^17.4.1",
+    "ws": "^8.20.0",
     "zod": "^3.22.4"
   },
   "engines": {
@@ -55,10 +70,10 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/ifinsta/mcp-router-for-antigravity"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/ifinsta/mcp-router-for-antigravity/issues"
   },
-  "homepage": ""
+  "homepage": "https://github.com/ifinsta/mcp-router-for-antigravity"
 }

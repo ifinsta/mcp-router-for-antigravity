@@ -15,6 +15,7 @@ import {
 describe('validateChatRequest', () => {
   it('should accept valid minimal chat request', () => {
     const input = {
+      model: 'gpt-4.1-mini',
       messages: [{ role: 'user', content: 'Hello' }],
     };
 

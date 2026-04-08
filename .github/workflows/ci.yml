@@ -85,6 +85,29 @@ jobs:
       - name: Run chaos tests
         run: npm run test:chaos
 
+  test-extension:
+    name: Extension Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.10.0'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install extension dependencies
+        working-directory: extension
+        run: npm ci
+
+      - name: Run extension unit tests
+        working-directory: extension
+        run: npm run test:unit
+
   build:
     name: Build
     runs-on: ubuntu-latest

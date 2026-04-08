@@ -15,39 +15,39 @@
  */
 export interface NormalizedChatRequest {
   /** Provider identifier (e.g., 'openai', 'glm', 'ollama') */
-  provider?: string;
+  provider?: string | undefined;
 
   /** Model identifier (e.g., 'gpt-4.1-mini', 'glm-4.5') */
-  model?: string;
+  model?: string | undefined;
 
   /** Message array with standardized roles */
   messages: Array<{
     role: "system" | "user" | "assistant" | "tool";
     content: string;
-    name?: string;
+    name?: string | undefined;
   }>;
 
   /** Temperature for generation (typically 0.0 to 2.0) */
-  temperature?: number;
+  temperature?: number | undefined;
 
   /** Maximum tokens to generate */
-  maxTokens?: number;
+  maxTokens?: number | undefined;
 
   /** Per-request timeout in milliseconds */
-  timeoutMs?: number;
+  timeoutMs?: number | undefined;
 
   /** Fallback provider to use if primary fails */
-  fallbackProvider?: string;
+  fallbackProvider?: string | undefined;
 
   /** Optional schema for structured output (future expansion) */
-  schema?: Record<string, unknown> | null;
+  schema?: Record<string, unknown> | null | undefined;
 
   /** Optional metadata for tracing and sensitivity handling */
   metadata?: {
-    requestId?: string;
-    source?: string;
-    sensitivity?: string;
-  };
+    requestId?: string | undefined;
+    source?: string | undefined;
+    sensitivity?: string | undefined;
+  } | undefined;
 }
 
 /**
@@ -55,7 +55,7 @@ export interface NormalizedChatRequest {
  */
 export interface ListModelsRequest {
   /** Optional provider filter */
-  provider?: string;
+  provider?: string | undefined;
 }
 
 // ============================================================================
@@ -66,11 +66,11 @@ export interface ListModelsRequest {
  * Normalized usage information
  */
 export interface NormalizedUsage {
-  inputTokens?: number;
-  outputTokens?: number;
-  totalTokens?: number;
+  inputTokens?: number | undefined;
+  outputTokens?: number | undefined;
+  totalTokens?: number | undefined;
   /** Accuracy level of usage data */
-  accuracy?: "exact" | "estimated" | "unavailable";
+  accuracy?: "exact" | "estimated" | "unavailable" | undefined;
 }
 
 /**
@@ -104,6 +104,9 @@ export interface NormalizedChatResponse {
 
   /** Whether fallback provider was used */
   fallbackUsed: boolean;
+
+  /** Whether this response was served from cache */
+  cacheHit?: boolean | undefined;
 }
 
 /**
@@ -129,10 +132,10 @@ export interface ModelInfo {
   };
 
   /** Maximum context window in tokens */
-  maxContextTokens?: number;
+  maxContextTokens?: number | undefined;
 
   /** Maximum output tokens */
-  maxOutputTokens?: number;
+  maxOutputTokens?: number | undefined;
 }
 
 /**
@@ -148,6 +151,24 @@ export interface ListModelsResponse {
 
   /** Aggregate warnings */
   warnings: string[];
+}
+
+/**
+ * Cache statistics
+ */
+export interface CacheStats {
+  /** Current number of entries */
+  size: number;
+  /** Maximum number of entries */
+  maxSize: number;
+  /** Total cache hits */
+  hits: number;
+  /** Total cache misses */
+  misses: number;
+  /** Hit rate (0.0 to 1.0) */
+  hitRate: number;
+  /** Total evictions */
+  evictions: number;
 }
 
 // ============================================================================
@@ -172,8 +193,8 @@ export interface ProviderHealthStatus {
   provider: string;
   status: "healthy" | "degraded" | "unhealthy" | "unknown";
   lastCheckAt: number;
-  latencyMs?: number;
-  error?: string;
+  latencyMs?: number | undefined;
+  error?: string | undefined;
 }
 
 /**
@@ -301,11 +322,11 @@ export function createRouterError(
   code: ErrorCode,
   message: string,
   options: {
-    retryable?: boolean;
-    provider?: string;
-    model?: string;
-    cause?: Error;
-    context?: Record<string, unknown>;
+    retryable?: boolean | undefined;
+    provider?: string | undefined;
+    model?: string | undefined;
+    cause?: Error | undefined;
+    context?: Record<string, unknown> | undefined;
   } = {},
 ): RouterError {
   const error = new Error(message) as RouterError;
@@ -390,22 +411,22 @@ export interface AttemptRecord {
   startedAtMs: number;
 
   /** When attempt ended (ms timestamp) */
-  endedAtMs?: number;
+  endedAtMs?: number | undefined;
 
   /** Final status */
   status: AttemptStatus;
 
   /** Error code if failed */
-  errorCode?: string;
+  errorCode?: string | undefined;
 
   /** Whether error was classified as retryable */
-  retryable?: boolean;
+  retryable?: boolean | undefined;
 
   /** Circuit breaker state when attempt started */
-  breakerState?: CircuitBreakerState;
+  breakerState?: CircuitBreakerState | undefined;
 
   /** Warnings generated during attempt */
-  warnings?: string[];
+  warnings?: string[] | undefined;
 }
 
 /**
@@ -458,7 +479,7 @@ export interface ProviderHealthSummary {
   lastCheckAt: number;
 
   /** Recent error rate (0.0 to 1.0) */
-  recentErrorRate?: number;
+  recentErrorRate?: number | undefined;
 }
 
 /**
@@ -486,8 +507,8 @@ export interface DiscoveryHealth {
   providers: Array<{
     provider: string;
     status: "success" | "failed";
-    modelCount?: number;
-    error?: string;
+    modelCount?: number | undefined;
+    error?: string | undefined;
   }>;
 
   /** Discovery warnings */
@@ -508,7 +529,7 @@ export interface ExecutionHealth {
   concurrencyUtilization: number;
 
   /** Recent error rate */
-  recentErrorRate?: number;
+  recentErrorRate?: number | undefined;
 
   /** Execution warnings */
   warnings: string[];
@@ -539,8 +560,47 @@ export interface HealthResponse {
   /** General warnings */
   warnings: string[];
 
+  /** Metrics snapshot (when available) */
+  metrics?: MetricsSnapshot | undefined;
+
   /** Response timestamp */
   timestamp: number;
+}
+
+/**
+ * Metrics snapshot exposed through health endpoint
+ */
+export interface MetricsSnapshot {
+  counters: {
+    requestCount: number;
+    successCount: number;
+    failureCount: number;
+    retryCount: number;
+    fallbackCount: number;
+    overloadRejectionCount: number;
+  };
+  gauges: {
+    activeConcurrency: {
+      global: number;
+      providers: Record<string, number>;
+    };
+  };
+  latency: {
+    p50: number;
+    p95: number;
+    p99: number;
+    min: number;
+    max: number;
+    count: number;
+    mean: number;
+  };
+  breakerTransitions: Array<{
+    provider: string;
+    from: CircuitBreakerState;
+    to: CircuitBreakerState;
+    timestamp: number;
+  }>;
+  collectedSince: number;
 }
 
 // ============================================================================
@@ -555,7 +615,7 @@ export interface PolicyCheckResult {
   allowed: boolean;
 
   /** Reason for denial if not allowed */
-  denialReason?: string;
+  denialReason?: string | undefined;
 
   /** Warnings even if allowed */
   warnings: string[];
@@ -578,7 +638,7 @@ export interface PolicyConfig {
   maxOutputTokens: number;
 
   /** Maximum cost per request in USD */
-  maxCostUsdPerRequest?: number;
+  maxCostUsdPerRequest?: number | undefined;
 }
 
 // ============================================================================
@@ -616,7 +676,7 @@ export interface RetryPolicyConfig {
   jitterFactor: number;
 
   /** Provider-specific retry rules */
-  providerRules: Record<string, Partial<RetryPolicyConfig>>;
+  providerRules: Record<string, Partial<RetryPolicyConfig> | undefined>;
 }
 
 /**
@@ -644,8 +704,159 @@ export interface ConcurrencyConfig {
   globalLimit: number;
 
   /** Per-provider limits */
-  providerLimits: Record<string, number>;
+  providerLimits: Record<string, number | undefined>;
 
   /** Queue size (0 = no queue, reject immediately) */
   queueSize: number;
+}
+
+// ============================================================================
+// Structured Output Types
+// ============================================================================
+
+/**
+ * Result of JSON validation
+ */
+export interface JsonValidationResult {
+  /** Whether the JSON is valid */
+  valid: boolean;
+  /** Parsed JSON if valid */
+  parsed: unknown | null;
+  /** Extracted JSON string */
+  rawJson: string | null;
+  /** Parse/validation error message */
+  error: string | null;
+}
+
+/**
+ * Enhanced response with structured output
+ */
+export interface StructuredOutputResponse extends NormalizedChatResponse {
+  /** Parsed JSON output, null if not in json mode */
+  structuredOutput?: Record<string, unknown> | unknown[] | null | undefined;
+  /** Number of validation attempts made */
+  validationAttempts?: number | undefined;
+}
+
+// ============================================================================
+// Prompt Template Types
+// ============================================================================
+
+/**
+ * Definition of a reusable prompt template
+ */
+export interface PromptTemplate {
+  /** Template identifier */
+  name: string;
+  /** Human-readable description */
+  description: string;
+  /** Template category (e.g., 'frontend', 'testing') */
+  category: string;
+  /** System prompt text (may contain {{variable}} placeholders) */
+  systemPrompt: string;
+  /** User prompt template (may contain {{variable}} placeholders) */
+  userPromptTemplate: string;
+  /** Required variable names for substitution */
+  variables: string[];
+  /** Recommended model for this template */
+  recommendedModel?: string | undefined;
+  /** Output format hint */
+  outputFormat?: 'text' | 'json' | undefined;
+  /** JSON schema for structured output validation */
+  schema?: Record<string, unknown> | undefined;
+}
+
+/**
+ * Result of rendering a prompt template with variable substitution
+ */
+export interface TemplateRenderResult {
+  /** Rendered messages ready for chat execution */
+  messages: NormalizedChatRequest['messages'];
+  /** Output format for the rendered template */
+  outputFormat: 'text' | 'json';
+  /** JSON schema if template specifies one */
+  schema?: Record<string, unknown> | undefined;
+  /** Recommended model if template specifies one */
+  recommendedModel?: string | undefined;
+}
+
+// ============================================================================
+// Quality Guard Types
+// ============================================================================
+
+/**
+ * Guard identifiers for quality checks
+ */
+export type QualityGuardName = 'syntax' | 'length' | 'repetition' | 'nonAnswer';
+
+/**
+ * Configuration for quality guards
+ */
+export interface QualityGuardConfig {
+  /** Whether quality guards are enabled */
+  enabled?: boolean | undefined;
+  /** Which guards to run (default: all) */
+  guards?: Array<QualityGuardName> | undefined;
+  /** Minimum response length in characters (default: 20) */
+  minLength?: number | undefined;
+}
+
+/**
+ * Result of running quality guards on a response
+ */
+export interface QualityCheckResult {
+  /** Whether all guards passed */
+  passed: boolean;
+  /** Human-readable failure descriptions */
+  failures: string[];
+  /** Correction hint for retry prompt */
+  correctionHint: string;
+  /** Names of guards that failed */
+  failedGuards: string[];
+}
+
+// ============================================================================
+// Consensus Types
+// ============================================================================
+
+/**
+ * Target model for consensus execution
+ */
+export interface ConsensusModelTarget {
+  provider: string;
+  model: string;
+}
+
+/**
+ * Request for multi-model consensus execution
+ */
+export interface ConsensusRequest {
+  models: ConsensusModelTarget[];
+  messages: NormalizedChatRequest['messages'];
+  temperature?: number | undefined;
+  maxTokens?: number | undefined;
+  timeoutMs?: number | undefined;
+  strategy: 'all' | 'fastest' | 'best';
+}
+
+/**
+ * Individual result from one model in a consensus execution
+ */
+export interface ConsensusResult {
+  provider: string;
+  model: string;
+  response: NormalizedChatResponse | null;
+  error: string | null;
+  latencyMs: number;
+  qualityScore: number;
+}
+
+/**
+ * Aggregated response from consensus execution
+ */
+export interface ConsensusResponse {
+  responses: ConsensusResult[];
+  recommended: number;
+  totalLatencyMs: number;
+  strategy: string;
 }

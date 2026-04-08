@@ -1,0 +1,25 @@
+# Source files
+src/**
+tsconfig.json
+tsconfig.tsbuildinfo
+
+# Test files
+test/**
+*.test.ts
+
+# Development files
+.gitignore
+.eslintrc.json
+.prettierrc
+.vscode/**
+
+# Dependencies
+node_modules/**
+package-lock.json
+
+# Build info
+*.map
+
+# Misc
+*.log
+.DS_Store
