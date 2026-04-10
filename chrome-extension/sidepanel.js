@@ -1,6 +1,6 @@
 /**
  * sidepanel.js
- * MCP Test System – Side Panel Dashboard
+ * ifin Platform Browser Sidepanel
  *
  * State management, UI rendering, and communication with the service worker.
  * Zero external dependencies.
@@ -94,6 +94,12 @@ const dom = {
   interactionsResultsContent: $('#interactionsResultsContent'),
 };
 
+const BUTTON_LABELS = {
+  capture: $('#captureBtn')?.innerHTML ?? 'Capture',
+  audit: $('#designAuditBtn')?.innerHTML ?? 'Audit',
+  scroll: $('#scrollBtn')?.innerHTML ?? 'Scroll',
+};
+
 /* ==========================================================================
    3. Gauge Helpers
    ========================================================================== */
@@ -107,6 +113,31 @@ const THRESHOLDS = {
   inp: { good: 200, poor: 500, unit: 'ms', divisor: 1, precision: 0 },
   cls: { good: 0.1, poor: 0.25, unit: '', divisor: 1, precision: 3 },
 };
+
+function getIconMarkup(iconName) {
+  switch (iconName) {
+    case 'pass':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    case 'fail':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    case 'skip':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    case 'running':
+      return '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="8 4"/></svg>';
+    case 'info':
+      return '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v3M8 5.25h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    case 'warn':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M8 2.5L13 12.5H3L8 2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v3M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    case 'error':
+      return '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M6 6l4 4M10 6l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    case 'empty':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M4 3.5h5l3 3V12a1 1 0 01-1 1H4a1 1 0 01-1-1V4.5a1 1 0 011-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 3.5v3h3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+    case 'close':
+      return '<svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    default:
+      return '';
+  }
+}
 
 /**
  * Returns a rating class based on thresholds.
@@ -146,7 +177,7 @@ function setGauge(metric, value) {
   if (value === null || value === undefined) {
     fill.style.strokeDashoffset = GAUGE_CIRCUMFERENCE;
     fill.className = 'gauge__fill color-neutral';
-    valEl.textContent = '—';
+    valEl.textContent = '--';
     return;
   }
 
@@ -198,8 +229,8 @@ function updateWebVitals(vitals) {
   setGauge('cls', state.webVitals.cls);
 
   // Secondary metrics
-  dom.fcpValue.textContent = state.webVitals.fcp != null ? formatMetric('fcp', state.webVitals.fcp) : '—';
-  dom.ttfbValue.textContent = state.webVitals.ttfb != null ? formatMetric('ttfb', state.webVitals.ttfb) : '—';
+  dom.fcpValue.textContent = state.webVitals.fcp != null ? formatMetric('fcp', state.webVitals.fcp) : '--';
+  dom.ttfbValue.textContent = state.webVitals.ttfb != null ? formatMetric('ttfb', state.webVitals.ttfb) : '--';
 
   // Timestamp
   dom.vitalsUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
@@ -250,10 +281,10 @@ function renderTestResults() {
 
   // Build result list HTML
   const iconMap = {
-    pass: { icon: '&#10003;', cls: 'pass' },
-    fail: { icon: '&#10007;', cls: 'fail' },
-    skip: { icon: '&#8212;', cls: 'skip' },
-    running: { icon: '&#9696;', cls: 'running' },
+    pass: { icon: getIconMarkup('pass'), cls: 'pass' },
+    fail: { icon: getIconMarkup('fail'), cls: 'fail' },
+    skip: { icon: getIconMarkup('skip'), cls: 'skip' },
+    running: { icon: getIconMarkup('running'), cls: 'running' },
   };
 
   let html = '';
@@ -269,7 +300,9 @@ function renderTestResults() {
         </div>
       </div>`;
   }
-  dom.resultList.innerHTML = html || '<div class="empty-state" id="resultEmpty"><span class="empty-state__icon">&#9744;</span><span>No test results yet</span></div>';
+  dom.resultList.innerHTML =
+    html ||
+    `<div class="empty-state" id="resultEmpty"><span class="empty-state__icon">${getIconMarkup('empty')}</span><span>No test results yet</span></div>`;
 }
 
 /** E. Performance Timeline */
@@ -381,9 +414,13 @@ function addConsoleEntry(entry) {
   el.className = `console-entry console-entry--${entry.level || 'info'}`;
   el.dataset.level = entry.level || 'info';
 
-  const iconMap = { info: 'ℹ', warn: '⚠', error: '✕' };
+  const iconMap = {
+    info: getIconMarkup('info'),
+    warn: getIconMarkup('warn'),
+    error: getIconMarkup('error'),
+  };
   el.innerHTML = `
-    <span class="console-entry__icon">${iconMap[entry.level] || 'ℹ'}</span>
+    <span class="console-entry__icon">${iconMap[entry.level] || getIconMarkup('info')}</span>
     <span class="console-entry__time">${new Date(entry.timestamp || Date.now()).toLocaleTimeString()}</span>
     <span class="console-entry__msg">${escHtml(entry.message)}</span>`;
 
@@ -478,7 +515,7 @@ function displayDesignAuditResults(data) {
           `<div class="audit-item audit-item--fail">
             <span class="audit-item__swatch" style="background:${escHtml(v.foreground)};border:1px solid #666"></span>
             <span class="audit-item__swatch" style="background:${escHtml(v.background)};border:1px solid #666"></span>
-            <span>${escHtml(v.element)} — ratio ${v.ratio}:1 (need ${v.requiredAA}:1 AA)</span>
+            <span>${escHtml(v.element)} -- ratio ${v.ratio}:1 (need ${v.requiredAA}:1 AA)</span>
           </div>`).join('')
       : '<div class="audit-item audit-item--pass">All sampled elements pass contrast checks</div>'
   );
@@ -486,7 +523,7 @@ function displayDesignAuditResults(data) {
   // Typography
   const tyIssues = (ty.issues || []).length;
   html += buildAuditSection('Typography', tyIssues,
-    `<div class="audit-item">Readability score: ${ty.readabilityScore ?? '—'}/100</div>
+    `<div class="audit-item">Readability score: ${ty.readabilityScore ?? '--'}/100</div>
      <div class="audit-item">${(ty.fonts || []).length} unique font combinations</div>`
     + (ty.issues || []).slice(0, 5).map(i => `<div class="audit-item audit-item--warn">${escHtml(i)}</div>`).join('')
   );
@@ -496,14 +533,14 @@ function displayDesignAuditResults(data) {
   html += buildAuditSection('Touch Targets', ttFailing,
     `<div class="audit-item">${tt.passing || 0}/${tt.total || 0} pass (>= 48x48px)</div>`
     + (tt.violations || []).slice(0, 5).map(v =>
-        `<div class="audit-item audit-item--warn">${escHtml(v.element)} — ${v.width}x${v.height}px</div>`).join('')
+        `<div class="audit-item audit-item--warn">${escHtml(v.element)} -- ${v.width}x${v.height}px</div>`).join('')
   );
 
   // Responsiveness
   const respViols = (resp.overflowingElements || []).length;
   html += buildAuditSection('Responsiveness', respViols + (resp.hasHorizontalScroll ? 1 : 0),
-    `<div class="audit-item">${resp.hasHorizontalScroll ? '⚠ Horizontal scroll detected' : '✓ No horizontal scroll'}</div>
-     <div class="audit-item">Viewport: ${resp.viewportWidth || '—'}px</div>`
+    `<div class="audit-item">${resp.hasHorizontalScroll ? 'Horizontal scroll detected' : 'No horizontal scroll'}</div>
+     <div class="audit-item">Viewport: ${resp.viewportWidth || '--'}px</div>`
     + (resp.overflowingElements || []).slice(0, 5).map(e =>
         `<div class="audit-item audit-item--warn">${escHtml(e.element)} overflows (right: ${e.right}px)</div>`).join('')
   );
@@ -511,7 +548,7 @@ function displayDesignAuditResults(data) {
   // Images
   const imgViols = (imgs.missingAlt || []).length + (imgs.oversized || []).length;
   html += buildAuditSection('Images', imgViols,
-    `<div class="audit-item">${imgs.total || 0} images — ${imgs.lazyLoaded || 0} lazy, ${imgs.eagerLoaded || 0} eager</div>`
+    `<div class="audit-item">${imgs.total || 0} images -- ${imgs.lazyLoaded || 0} lazy, ${imgs.eagerLoaded || 0} eager</div>`
     + (imgs.missingAlt || []).slice(0, 3).map(i => `<div class="audit-item audit-item--fail">Missing alt: ${escHtml(i.selector)}</div>`).join('')
     + (imgs.oversized || []).slice(0, 3).map(i => `<div class="audit-item audit-item--warn">Oversized (${i.ratio}x): ${escHtml(i.selector)}</div>`).join('')
   );
@@ -521,7 +558,7 @@ function displayDesignAuditResults(data) {
   html += buildAuditSection('Forms', formViols,
     `<div class="audit-item">${forms.withLabels || 0}/${forms.total || 0} inputs with labels</div>`
     + (forms.violations || []).slice(0, 5).map(v =>
-        `<div class="audit-item audit-item--fail">${escHtml(v.element)} — ${escHtml(v.issue)}</div>`).join('')
+        `<div class="audit-item audit-item--fail">${escHtml(v.element)} -- ${escHtml(v.issue)}</div>`).join('')
   );
 
   // Interactive Elements
@@ -529,7 +566,7 @@ function displayDesignAuditResults(data) {
   html += buildAuditSection('Interactive Elements', intViols,
     `<div class="audit-item">${interactive.total || 0} interactive elements</div>`
     + (interactive.violations || []).slice(0, 5).map(v =>
-        `<div class="audit-item audit-item--warn">${escHtml(v.element)} — ${escHtml(v.issue)}</div>`).join('')
+        `<div class="audit-item audit-item--warn">${escHtml(v.element)} -- ${escHtml(v.issue)}</div>`).join('')
   );
 
   // Z-Index
@@ -542,7 +579,7 @@ function displayDesignAuditResults(data) {
   // Spacing
   const sp = data.spacing || {};
   html += buildAuditSection('Spacing Consistency', sp.consistencyScore != null && sp.consistencyScore < 60 ? 1 : 0,
-    `<div class="audit-item">Consistency score: ${sp.consistencyScore ?? '—'}/100</div>`
+    `<div class="audit-item">Consistency score: ${sp.consistencyScore ?? '--'}/100</div>`
   );
 
   // Color Palette
@@ -564,7 +601,7 @@ function displayDesignAuditResults(data) {
 function buildAuditSection(title, violationCount, innerHtml) {
   const badge = violationCount > 0
     ? `<span class="audit-section__badge audit-section__badge--warn">${violationCount}</span>`
-    : '<span class="audit-section__badge audit-section__badge--pass">✓</span>';
+    : '<span class="audit-section__badge audit-section__badge--pass">OK</span>';
   return `
     <details class="audit-section">
       <summary class="audit-section__header">${escHtml(title)} ${badge}</summary>
@@ -617,7 +654,7 @@ async function onNavigate(url) {
 async function onScreenshot() {
   const captureBtn = $('#captureBtn');
   const originalText = captureBtn.innerHTML;
-  captureBtn.innerHTML = '⏳ Capturing...';
+  captureBtn.innerHTML = 'Capturing...';
   captureBtn.disabled = true;
 
   const result = await sendToServiceWorker('capture-screenshot', { viewport: state.viewport });
@@ -676,7 +713,7 @@ async function onRunDesignAudit() {
   // Visual feedback
   if (dom.designAuditBtn) {
     dom.designAuditBtn.disabled = true;
-    dom.designAuditBtn.textContent = '⏳ Auditing…';
+    dom.designAuditBtn.textContent = 'Auditing...';
   }
 
   addConsoleEntry({
@@ -696,7 +733,7 @@ async function onRunDesignAudit() {
     // Re-enable button on error
     if (dom.designAuditBtn) {
       dom.designAuditBtn.disabled = false;
-      dom.designAuditBtn.innerHTML = '&#128269; Audit';
+      dom.designAuditBtn.innerHTML = BUTTON_LABELS.audit;
     }
   }
   // On success, the service worker broadcasts the results via 'design-audit-result' event
@@ -707,7 +744,7 @@ async function onSimulateScroll() {
   // Visual feedback
   if (dom.scrollBtn) {
     dom.scrollBtn.disabled = true;
-    dom.scrollBtn.innerHTML = '⏳ Scrolling... 0%';
+    dom.scrollBtn.innerHTML = 'Scrolling... 0%';
   }
 
   addConsoleEntry({
@@ -727,7 +764,7 @@ async function onSimulateScroll() {
     // Re-enable button on error
     if (dom.scrollBtn) {
       dom.scrollBtn.disabled = false;
-      dom.scrollBtn.innerHTML = '&#128071; Scroll';
+      dom.scrollBtn.innerHTML = BUTTON_LABELS.scroll;
     }
   }
   // On success, the service worker broadcasts the results via 'user-scroll-result' event
@@ -870,7 +907,7 @@ function addFormFieldRow() {
       <option value="radio">Radio</option>
       <option value="click">Click</option>
     </select>
-    <button class="btn btn--sm form-field__remove" title="Remove field">&times;</button>
+    <button class="btn btn--sm form-field__remove" title="Remove field" type="button">${getIconMarkup('close')}</button>
   `;
 
   row.querySelector('.form-field__remove').addEventListener('click', () => {
@@ -971,7 +1008,7 @@ function sendToServiceWorker(type, payload) {
  */
 function initServiceWorkerListener() {
   if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.onMessage) {
-    console.info('[sidepanel] Chrome runtime not available – running in standalone mode');
+    console.info('[sidepanel] Chrome runtime not available - running in standalone mode');
     return;
   }
 
@@ -1029,7 +1066,7 @@ function initServiceWorkerListener() {
           // Re-enable audit button
           if (dom.designAuditBtn) {
             dom.designAuditBtn.disabled = false;
-            dom.designAuditBtn.innerHTML = '&#128269; Audit';
+            dom.designAuditBtn.innerHTML = BUTTON_LABELS.audit;
           }
         }
         if (msg.type === 'event' && msg.event === 'user-scroll-result') {
@@ -1042,7 +1079,7 @@ function initServiceWorkerListener() {
           // Re-enable scroll button
           if (dom.scrollBtn) {
             dom.scrollBtn.disabled = false;
-            dom.scrollBtn.innerHTML = '&#128071; Scroll';
+            dom.scrollBtn.innerHTML = BUTTON_LABELS.scroll;
           }
         }
         break;
@@ -1176,9 +1213,11 @@ function bindEvents() {
     sendToServiceWorker('inspect-element', { path: node.dataset.path });
   });
 
-  // Settings button (placeholder)
+  // Theme mode
   $('#settingsBtn').addEventListener('click', () => {
-    sendToServiceWorker('open-settings', {});
+    if (window.ifinTheme) {
+      window.ifinTheme.cycleMode();
+    }
   });
 
   // Interactions panel
@@ -1191,8 +1230,9 @@ function bindEvents() {
 
   // Remove form field buttons (delegated)
   dom.formFieldsContainer.addEventListener('click', (e) => {
-    if (e.target.classList.contains('form-field__remove')) {
-      const row = e.target.closest('.form-field-row');
+    const removeButton = e.target.closest('.form-field__remove');
+    if (removeButton) {
+      const row = removeButton.closest('.form-field-row');
       if (row && dom.formFieldsContainer.children.length > 1) {
         row.remove();
       }
@@ -1231,6 +1271,10 @@ function positionTooltip(tip, e) {
    ========================================================================== */
 
 function init() {
+  if (window.ifinTheme) {
+    window.ifinTheme.init();
+  }
+
   bindEvents();
   initServiceWorkerListener();
   updateConnectionStatus('disconnected');

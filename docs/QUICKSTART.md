@@ -327,9 +327,9 @@ Should output `v20.10.0` or higher.
 
 ## Next Steps
 
-- Read the [README.md](README.md) for detailed documentation
-- Check [specs/architecture.md](specs/architecture.md) for system design
-- See [specs/requirements.md](specs/requirements.md) for capabilities
+- Read the [README.md](../README.md) for detailed documentation
+- Check [specs/architecture.md](../specs/architecture.md) for system design
+- See [specs/requirements.md](../specs/requirements.md) for capabilities
 
 ## Need Help?
 

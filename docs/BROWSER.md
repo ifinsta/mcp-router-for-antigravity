@@ -491,10 +491,8 @@ mcp_router perf_stop_monitoring \
 
 ## 📚 Documentation
 
-- **[Browser Integration Architecture](./BROWSER_INTEGRATION_ARCHITECTURE.md)** - Detailed technical design
-- **[Performance Optimization Guide](./PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Core optimization knowledge
-- **[Performance Quick Start](./PERFORMANCE_QUICKSTART.md)** - Get started in 5 minutes
-- **[Performance README](./PERFORMANCE_README.md)** - Overview and features
+- **[Documentation Index](./README.md)** - Current active documentation map
+- **[Archive](./archive/README.md)** - Historical design and reference material
 
 ## 🔮 Future Enhancements
 

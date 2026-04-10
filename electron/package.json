@@ -1,0 +1,6 @@
+{
+  "name": "ifin-platform-electron",
+  "private": true,
+  "type": "module",
+  "main": "./main.cjs"
+}

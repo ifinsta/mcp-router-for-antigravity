@@ -1,7 +1,7 @@
 {
-  "name": "antigravity-custom-models",
-  "displayName": "Antigravity Custom Models (MCP Router)",
-  "description": "Integrate custom LLM providers (OpenAI, GLM, Chutes) into Antigravity, Qoder, Cursor, Windsurf and more via MCP Router",
+  "name": "ifin-platform-integrations",
+  "displayName": "ifin Platform Integrations",
+  "description": "Connect ifin Platform to supported IDE clients and local model providers through one local integration layer",
   "version": "0.1.0",
   "publisher": "ifinsta",
   "license": "MIT",
@@ -21,13 +21,13 @@
       {
         "command": "mcpRouter.configureApiKeys",
         "title": "Configure API Keys",
-        "category": "MCP Router",
+        "category": "ifin Platform",
         "icon": "$(key)"
       },
       {
         "command": "mcpRouter.setupMCP",
         "title": "Setup MCP Server for IDE",
-        "category": "MCP Router",
+        "category": "ifin Platform",
         "icon": "$(gear)"
       }
     ],
@@ -51,22 +51,22 @@
     "languageModelChatProviders": [
       {
         "vendor": "mcp-router",
-        "displayName": "MCP Router Models"
+        "displayName": "ifin Platform Models"
       }
     ],
     "mcpServerDefinitionProviders": [
       {
         "id": "mcp-router-server",
-        "label": "MCP Router (GLM/OpenAI)"
+        "label": "ifin Platform"
       }
     ],
     "configuration": {
-      "title": "Antigravity Custom Models",
+      "title": "ifin Platform Integrations",
       "properties": {
         "mcpRouter.baseUrl": {
           "type": "string",
           "default": "http://localhost:3000",
-          "description": "Base URL of the MCP Router backend API"
+          "description": "Base URL of the ifin Platform backend API"
         },
         "mcpRouter.timeout": {
           "type": "number",
@@ -87,7 +87,7 @@
           "type": "string",
           "enum": ["error", "warn", "info", "debug"],
           "default": "info",
-          "description": "Logging level for MCP Router extension output"
+          "description": "Logging level for ifin Platform extension output"
         },
         "mcpRouter.providers.glm.enabled": {
           "type": "boolean",
@@ -179,7 +179,6 @@
     "Chat"
   ],
   "keywords": [
-    "antigravity",
     "mcp",
     "router",
     "openai",

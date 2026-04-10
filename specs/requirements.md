@@ -2,32 +2,32 @@
 
 ## Project
 
-MCP Router for Antigravity
+MCP Router
 
 ## Purpose
 
-Build an MCP router that allows Antigravity to use external tools and external LLM providers that are not natively supported by Antigravity.
+Build an MCP router that allows supported MCP clients to use external tools and external LLM providers that they do not natively support.
 
-The router will present a single MCP server interface to Antigravity and internally route requests to supported external providers such as OpenAI, GLM, local models, internal APIs, and optionally other MCP servers.
+The router will present a single MCP server interface to supported clients and internally route requests to supported external providers such as OpenAI, GLM, local models, internal APIs, and optionally other MCP servers.
 
 ## Problem Statement
 
-Antigravity can connect to MCP servers, but an external provider may not be directly supported in Antigravity. We need a stable integration layer that:
+MCP-capable clients can connect to MCP servers, but an external provider may not be directly supported in a given client. We need a stable integration layer that:
 
-* exposes a small, consistent MCP tool surface to Antigravity
+* exposes a small, consistent MCP tool surface to supported clients
 * hides provider-specific API differences
 * centralizes authentication and secrets
 * supports routing, fallback, and policy controls
-* makes it easy to add new providers later without changing Antigravity integration
+* makes it easy to add new providers later without changing client integration
 
 ## Objectives
 
 ### Primary objectives
 
-* Enable Antigravity to call unsupported external LLMs through MCP.
-* Enable Antigravity to call selected external tools through MCP.
+* Enable supported clients to call unsupported external LLMs through MCP.
+* Enable supported clients to call selected external tools through MCP.
 * Provide a single router layer that normalizes all provider requests and responses.
-* Keep the Antigravity-facing integration stable even when providers change.
+* Keep the client-facing integration stable even when providers change.
 
 ### Secondary objectives
 
@@ -40,7 +40,7 @@ Antigravity can connect to MCP servers, but an external provider may not be dire
 
 ### In scope
 
-* MCP server implementation for Antigravity integration
+* MCP server implementation for client integration
 * External LLM routing
 * Provider adapters for OpenAI and GLM
 * Optional adapter for local/self-hosted models such as Ollama or vLLM
@@ -61,13 +61,13 @@ Antigravity can connect to MCP servers, but an external provider may not be dire
 
 ## Users
 
-* Developer using Antigravity
+* Developer using a supported MCP client
 * Platform engineer maintaining integrations
 * Team managing external model providers and credentials
 
 ## Assumptions
 
-* Antigravity can connect to the router as an MCP server.
+* Supported MCP clients can connect to the router as an MCP server.
 * External providers expose reachable APIs.
 * Credentials are available outside source control.
 * The first version will run in a trusted developer or team environment.
@@ -75,7 +75,7 @@ Antigravity can connect to MCP servers, but an external provider may not be dire
 ## High-Level Architecture
 
 ```text
-Antigravity
+Supported MCP client
    │
    │ MCP
    ▼
@@ -95,17 +95,17 @@ MCP Router
 
 ### FR-1 MCP server interface
 
-The system shall expose a valid MCP server interface that Antigravity can connect to.
+The system shall expose a valid MCP server interface that supported clients can connect to.
 
 #### Acceptance criteria
 
-* Antigravity can start and communicate with the router as an MCP server.
+* Supported clients can start and communicate with the router as an MCP server.
 * The router registers and exposes the configured MCP tools successfully.
 * Invalid MCP requests return structured errors.
 
 ### FR-2 Stable tool surface
 
-The system shall expose a small and stable tool surface to Antigravity.
+The system shall expose a small and stable tool surface to supported clients.
 
 #### Required tools
 
@@ -152,7 +152,7 @@ The system shall implement each provider through a common adapter contract.
 
 #### Acceptance criteria
 
-* New providers can be added without changing the Antigravity-facing MCP tools.
+* New providers can be added without changing the client-facing MCP tools.
 * Providers declare supported capabilities such as chat, embeddings, structured output, or streaming.
 * Router logic depends on the common adapter contract instead of provider-specific code.
 
@@ -162,7 +162,7 @@ The system shall convert incoming MCP tool inputs into a normalized internal req
 
 #### Acceptance criteria
 
-* Chat requests from Antigravity are mapped into a standard internal schema.
+* Chat requests from supported clients are mapped into a standard internal schema.
 * Provider-specific field differences are handled inside adapters.
 * Invalid or incomplete requests are rejected before provider execution.
 
@@ -173,7 +173,7 @@ The system shall normalize provider responses into a consistent MCP tool output.
 #### Acceptance criteria
 
 * Responses include a consistent shape for provider, model, output text, finish reason, usage, latency, and warnings.
-* Provider-specific response differences do not leak to Antigravity.
+* Provider-specific response differences do not leak to supported clients.
 * Error responses are mapped into clear and actionable router errors.
 
 ### FR-7 Explicit provider selection

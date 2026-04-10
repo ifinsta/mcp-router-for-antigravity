@@ -1,9 +1,11 @@
 /**
- * Core domain types for MCP Router for Antigravity
+ * Core domain types for MCP Router
  *
  * These are the normalized contracts that all internal components use.
  * Provider-specific types live in their respective adapters.
  */
+
+import type { SystemReadiness } from '../integration/desktopIntegrations.js';
 
 // ============================================================================
 // Normalized Request Types
@@ -556,6 +558,9 @@ export interface HealthResponse {
 
   /** Provider health summary */
   providers: ProviderHealthSummary[];
+
+  /** Local product readiness across launcher, local API, and browser bridge */
+  localSystem?: SystemReadiness | undefined;
 
   /** General warnings */
   warnings: string[];

@@ -49,7 +49,7 @@ class ExtensionLogger {
   private outputChannel: vscode.LogOutputChannel;
 
   constructor(private module: string) {
-    this.outputChannel = vscode.window.createOutputChannel('MCP Router', { log: true });
+    this.outputChannel = vscode.window.createOutputChannel('ifin Platform', { log: true });
   }
 
   info(message: string, ...args: unknown[]): void {

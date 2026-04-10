@@ -1,5 +1,5 @@
 /**
- * MCP Router Test System - DevTools Page Script
+ * ifin Platform Browser - DevTools Page Script
  *
  * Creates a DevTools panel that hosts the MCP Testing dashboard,
  * allowing it to appear as a tab within Chrome DevTools.

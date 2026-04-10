@@ -42,10 +42,15 @@
     "skipLibCheck": true,
 
     /* Advanced */
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/core/*"]
+    }
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "electron/main.ts"
   ],
   "exclude": [
     "node_modules",

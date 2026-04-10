@@ -1,6 +1,6 @@
 /**
  * generate-icons.js
- * Generates PNG icon files (16x16, 48x48, 128x128) for the MCP Router Chrome extension.
+ * Generates PNG icon files (16x16, 48x48, 128x128) for the ifin Platform Browser extension.
  * Uses pure Node.js Buffer manipulation to create valid PNG files with a modern geometric "M" logo.
  */
 

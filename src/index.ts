@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * MCP Router for Antigravity - Entry Point
+ * MCP Router - Entry Point
  *
- * Production-grade MCP router that allows Antigravity to use external LLMs
- * through one stable, resilient MCP server.
+ * Production-grade MCP router that exposes one stable, resilient MCP server
+ * for supported local clients, editors, and automation surfaces.
  */
 
 import { startMCPServer } from './server/mcpServer.js';
@@ -14,7 +14,7 @@ const logger = getLogger('main');
 
 export async function main() {
   try {
-    logger.info('Starting MCP Router for Antigravity...');
+    logger.info('Starting MCP Router...');
 
     // Start the MCP server
     await startMCPServer();

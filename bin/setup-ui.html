@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCP Router Setup</title>
+  <title>ifin Platform Setup</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -190,8 +190,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>🚀 MCP Router Setup</h1>
-    <p class="subtitle">Configure MCP Router for any IDE - automatically generates configuration</p>
+    <h1>ifin Platform Setup</h1>
+    <p class="subtitle">Configure ifin Platform for any IDE - automatically generates configuration</p>
     
     <!-- IDE Selection -->
     <div class="section">
@@ -247,7 +247,7 @@
             <label>API Key</label>
             <input type="password" id="chutesKey" placeholder="cpk_..." oninput="updateStatus()">
           </div>
-          <div class="status missing" id="chutes-status">⚠️ Not configured</div>
+          <div class="status missing" id="chutes-status">Not configured</div>
         </div>
         
         <div class="provider-card" id="glm-card">
@@ -256,7 +256,7 @@
             <label>API Key</label>
             <input type="password" id="glmKey" placeholder="sk-..." oninput="updateStatus()">
           </div>
-          <div class="status missing" id="glm-status">⚠️ Not configured</div>
+          <div class="status missing" id="glm-status">Not configured</div>
         </div>
         
         <div class="provider-card" id="openai-card">
@@ -265,7 +265,7 @@
             <label>API Key</label>
             <input type="password" id="openaiKey" placeholder="sk-..." oninput="updateStatus()">
           </div>
-          <div class="status missing" id="openai-status">⚠️ Not configured</div>
+          <div class="status missing" id="openai-status">Not configured</div>
         </div>
       </div>
     </div>
@@ -334,7 +334,7 @@
       } else {
         card.classList.remove('enabled');
         status.className = 'status missing';
-        status.textContent = '⚠️ Not configured';
+        status.textContent = 'Not configured';
       }
     }
     

@@ -1,20 +1,20 @@
 # README.md
 
-## MCP Router for Antigravity
+## MCP Router
 
-A resilient MCP router that lets Antigravity use external LLMs and selected external tools through one stable MCP server.
+A resilient MCP platform that lets supported MCP clients use external LLMs, local extensions, and selected external tools through one stable MCP server.
 
-It is designed for providers that Antigravity does not natively support, including providers such as OpenAI, GLM, and local/self-hosted runtimes.
+It is designed for providers and workflows that local clients do not natively support, including providers such as OpenAI, GLM, and local or self-hosted runtimes.
 
 ---
 
 ## Why this exists
 
-Antigravity can talk to MCP servers, but unsupported external LLM providers still need a compatibility layer.
+MCP-capable clients can talk to MCP servers, but unsupported external LLM providers still need a compatibility layer.
 
 This project provides that layer.
 
-Instead of teaching Antigravity how to speak to every provider directly, we expose one MCP server to Antigravity and handle the complexity inside the router:
+Instead of teaching every client how to speak to every provider directly, we expose one MCP server and handle the complexity inside the router:
 
 * provider-specific request mapping
 * provider-specific authentication
@@ -23,13 +23,13 @@ Instead of teaching Antigravity how to speak to every provider directly, we expo
 * health and observability
 * normalized request and response contracts
 
-The result is a simple Antigravity integration with a much stronger execution model behind it.
+The result is a simple client integration with a much stronger execution model behind it.
 
 ---
 
 ## What this router does
 
-The router sits between Antigravity and external providers.
+The router sits between supported clients and external providers.
 
 ```text
 Antigravity
@@ -57,8 +57,8 @@ Supported provider directions for the first versions:
 
 ### Primary goals
 
-* Give Antigravity one stable MCP integration point.
-* Allow external LLM providers that are not natively supported in Antigravity.
+* Give supported clients one stable MCP integration point.
+* Allow external LLM providers that are not natively supported in local clients.
 * Hide provider-specific differences behind adapters.
 * Keep the tool contract small, predictable, and easy to extend.
 
@@ -116,7 +116,7 @@ The router can enforce:
 
 ### Clean output contract
 
-Antigravity sees one consistent result shape even when providers differ internally.
+Supported clients see one consistent result shape even when providers differ internally.
 
 ---
 
@@ -133,7 +133,7 @@ This router does more:
 * it protects against known-bad recovery paths
 * it tracks attempt history
 * it warns when fallback or degraded paths were used
-* it isolates provider-specific weirdness from Antigravity
+* it isolates provider-specific weirdness from supported clients
 * it stops only when there is no safe useful path left
 
 ---
@@ -144,7 +144,7 @@ The system is built around five major layers:
 
 1. **Transport layer**
 
-   * MCP server integration for Antigravity
+   * MCP server integration for supported clients
 
 2. **Application layer**
 

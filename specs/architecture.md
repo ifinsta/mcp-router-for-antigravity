@@ -2,7 +2,7 @@
 
 ## Project
 
-MCP Router for Antigravity
+MCP Router
 
 ## Purpose
 
@@ -14,11 +14,11 @@ This version aligns the architecture directly with the hardened resilience and o
 
 ## 1. Architectural Overview
 
-The MCP Router is a local or team-hosted service that exposes a single MCP server interface to Antigravity and internally routes requests to external LLM providers and selected external tools.
+The MCP Router is a local or team-hosted service that exposes a single MCP server interface to supported clients and internally routes requests to external LLM providers and selected external tools.
 
 ### Core principle
 
-Antigravity should only need to understand one integration point:
+Supported clients should only need to understand one integration point:
 
 * one MCP server
 * one stable tool contract
@@ -26,7 +26,7 @@ Antigravity should only need to understand one integration point:
 
 The router is responsible for translating between:
 
-* **Antigravity-facing MCP tools**
+* **client-facing MCP tools**
 * **internal normalized router contracts**
 * **provider-specific HTTP APIs or remote services**
 

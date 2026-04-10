@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "buildDate": "2026-04-09T19:43:17.536Z",
+  "platform": "windows",
+  "architecture": "x64",
+  "components": {
+    "application": {
+      "name": "ifin Platform",
+      "executable": "ifin Platform.exe",
+      "installPath": "%ProgramFiles%\\ifin Platform",
+      "uninstallPath": "%ProgramFiles%\\ifin Platform\\Uninstall ifin Platform.exe"
+    },
+    "mcpServer": {
+      "name": "ifin Platform Server",
+      "executable": "%ProgramFiles%\\ifin Platform\\ifin Platform.exe",
+      "args": [
+        "--mcp-stdio"
+      ],
+      "transport": "stdio",
+      "timeout": 30000
+    },
+    "browsers": {
+      "supported": [
+        "chrome",
+        "edge",
+        "firefox"
+      ],
+      "autoDetect": true,
+      "configPath": "%USERPROFILE%\\.mcp-router-browser.json"
+    }
+  },
+  "features": {
+    "headlessMode": true,
+    "performanceMonitoring": true,
+    "networkSimulation": true,
+    "deviceEmulation": true,
+    "crossBrowser": true,
+    "multiTab": true
+  },
+  "compatibility": {
+    "windows": [
+      "10",
+      "11"
+    ],
+    "node": ">=20.10.0",
+    "chrome": ">=90",
+    "edge": ">=90",
+    "firefox": ">=88"
+  }
+}

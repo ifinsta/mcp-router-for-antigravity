@@ -3,92 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCP Test System</title>
+  <title>ifin Platform Browser</title>
+  <link rel="stylesheet" href="variables.css">
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
 <div id="app">
-
-  <!-- ================================================================
-       A. Header Bar
-       ================================================================ -->
   <header class="header">
-    <span class="header__logo">MCP Test System</span>
+    <div class="brand-lockup">
+      <img class="brand-logo brand-logo--dark" src="assets/ifin-logo-dark.svg" alt="ifin">
+      <img class="brand-logo brand-logo--light" src="assets/ifin-logo-light.svg" alt="ifin">
+      <div class="brand-copy">
+        <span class="header__logo">ifin Platform Browser</span>
+        <span class="header__subtitle">Operational browser surface</span>
+      </div>
+    </div>
     <span class="header__spacer"></span>
     <span class="status-dot" id="connectionDot" title="Disconnected"></span>
     <span class="badge badge--empty" id="activeTestBadge" title="Active tests">0</span>
-    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M7.429 1.525a3.5 3.5 0 011.142 0l.598.103a.75.75 0 01.583.514l.318.955a.5.5 0 00.34.327l.222.074a.5.5 0 00.46-.074l.82-.572a.75.75 0 01.77-.03l.521.3a3.5 3.5 0 01.571.989l.2.558a.75.75 0 01-.188.748l-.503.63a.5.5 0 00-.107.456l.04.23a.5.5 0 00.254.382l.877.513a.75.75 0 01.355.69l-.02.6a3.5 3.5 0 01-.26 1.106l-.28.522a.75.75 0 01-.696.395l-.81-.024a.5.5 0 00-.415.2l-.143.182a.5.5 0 00-.074.46l.318.955a.75.75 0 01-.114.782l-.42.453a3.5 3.5 0 01-.988.57l-.558.2a.75.75 0 01-.748-.187l-.63-.504a.5.5 0 00-.456-.107l-.23.04a.5.5 0 00-.382.255l-.513.877a.75.75 0 01-.69.354l-.6-.02a3.5 3.5 0 01-1.106-.26l-.522-.279a.75.75 0 01-.395-.696l.024-.81a.5.5 0 00-.2-.416l-.182-.143a.5.5 0 00-.46-.073l-.955.318a.75.75 0 01-.782-.114l-.453-.42a3.5 3.5 0 01-.57-.99l-.2-.557a.75.75 0 01.187-.748l.504-.63a.5.5 0 00.107-.456l-.04-.23a.5.5 0 00-.255-.382l-.877-.513a.75.75 0 01-.354-.69l.02-.6a3.5 3.5 0 01.26-1.106l.279-.522a.75.75 0 01.696-.395l.81.024a.5.5 0 00.416-.2l.143-.182a.5.5 0 00.073-.46l-.318-.955a.75.75 0 01.114-.782l.42-.453a3.5 3.5 0 01.99-.571l.557-.2a.75.75 0 01.748.188l.63.503a.5.5 0 00.456.107l.23-.04a.5.5 0 00.382-.254l.513-.877a.75.75 0 01.69-.355zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
-    </button>
+    <button class="icon-btn" id="settingsBtn" title="Theme: Auto" aria-label="Theme: Auto" data-theme-toggle type="button">Auto</button>
   </header>
 
-  <!-- ================================================================
-       B. Navigation Control
-       ================================================================ -->
   <section class="nav-control">
     <div class="nav-control__url-row">
       <input type="text" class="nav-control__url-input" id="urlInput" placeholder="Enter URL..." aria-label="URL input">
-      <button class="btn btn--primary btn--sm" id="goBtn">Go</button>
+      <button class="btn btn--primary btn--sm" id="goBtn" type="button">Go</button>
     </div>
     <div class="nav-control__actions">
       <div class="nav-control__group">
-        <button class="btn btn--sm" id="backBtn" title="Back" aria-label="Back">&#8592;</button>
-        <button class="btn btn--sm" id="forwardBtn" title="Forward" aria-label="Forward">&#8594;</button>
-        <button class="btn btn--sm" id="refreshBtn" title="Refresh" aria-label="Refresh">&#8635;</button>
+        <button class="btn btn--sm btn--icon" id="backBtn" title="Back" aria-label="Back" type="button">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M9.5 3.5L5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn btn--sm btn--icon" id="forwardBtn" title="Forward" aria-label="Forward" type="button">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M6.5 3.5L11 8l-4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn btn--sm btn--icon" id="refreshBtn" title="Refresh" aria-label="Refresh" type="button">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M12.5 6.5A4.5 4.5 0 107.5 12.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11.5 3.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
       <div class="nav-control__group" id="viewportPresets">
-        <button class="btn btn--sm" data-viewport="375" title="Mobile 375px">Mobile</button>
-        <button class="btn btn--sm" data-viewport="768" title="Tablet 768px">Tablet</button>
-        <button class="btn btn--sm btn--active" data-viewport="1440" title="Desktop 1440px">Desktop</button>
+        <button class="btn btn--sm" data-viewport="375" title="Mobile 375px" type="button">Mobile</button>
+        <button class="btn btn--sm" data-viewport="768" title="Tablet 768px" type="button">Tablet</button>
+        <button class="btn btn--sm btn--active" data-viewport="1440" title="Desktop 1440px" type="button">Desktop</button>
       </div>
       <span class="viewport-label" id="viewportLabel">1440 &times; 900</span>
-      <button class="btn btn--sm btn--scroll" id="scrollBtn" title="Simulate User Scroll">&#128071; Scroll</button>
-      <button class="btn btn--sm btn--audit" id="designAuditBtn" title="Run Design Audit">&#128269; Audit</button>
+      <button class="btn btn--sm btn--scroll" id="scrollBtn" title="Simulate user scroll" type="button">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 2.5v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 9.5L8 12l2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Scroll</span>
+      </button>
+      <button class="btn btn--sm btn--audit" id="designAuditBtn" title="Run design audit" type="button">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M7 3.5h5M7 7.5h5M7 11.5h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3.5 3.5h1.5v1.5H3.5zM3.5 7.5h1.5V9H3.5zM3.5 11.5h1.5V13H3.5z" fill="currentColor"/></svg>
+        <span>Audit</span>
+      </button>
     </div>
   </section>
 
-  <!-- ================================================================
-       Main scrollable dashboard
-       ================================================================ -->
   <main class="dashboard" id="dashboard">
-
-    <!-- C. Core Web Vitals -->
     <section class="card vitals" id="vitalsCard">
       <div class="card__header">
         <span class="card__title">Core Web Vitals</span>
       </div>
       <div class="card__body" id="vitalsBody">
         <div class="vitals__gauges" id="vitalsGauges">
-          <!-- LCP Gauge -->
           <div class="gauge" data-metric="lcp">
             <div class="gauge__ring">
               <svg viewBox="0 0 80 80">
                 <circle class="gauge__track" cx="40" cy="40" r="35"/>
                 <circle class="gauge__fill color-neutral" cx="40" cy="40" r="35"/>
               </svg>
-              <span class="gauge__value" id="lcpValue">—</span>
+              <span class="gauge__value" id="lcpValue">--</span>
             </div>
             <span class="gauge__label">LCP</span>
           </div>
-          <!-- FID/INP Gauge -->
           <div class="gauge" data-metric="fid">
             <div class="gauge__ring">
               <svg viewBox="0 0 80 80">
                 <circle class="gauge__track" cx="40" cy="40" r="35"/>
                 <circle class="gauge__fill color-neutral" cx="40" cy="40" r="35"/>
               </svg>
-              <span class="gauge__value" id="fidValue">—</span>
+              <span class="gauge__value" id="fidValue">--</span>
             </div>
             <span class="gauge__label">FID / INP</span>
           </div>
-          <!-- CLS Gauge -->
           <div class="gauge" data-metric="cls">
             <div class="gauge__ring">
               <svg viewBox="0 0 80 80">
                 <circle class="gauge__track" cx="40" cy="40" r="35"/>
                 <circle class="gauge__fill color-neutral" cx="40" cy="40" r="35"/>
               </svg>
-              <span class="gauge__value" id="clsValue">—</span>
+              <span class="gauge__value" id="clsValue">--</span>
             </div>
             <span class="gauge__label">CLS</span>
           </div>
@@ -96,18 +99,17 @@
         <div class="vitals__secondary">
           <div class="secondary-metric">
             <span class="secondary-metric__label">FCP</span>
-            <span class="secondary-metric__value" id="fcpValue">—</span>
+            <span class="secondary-metric__value" id="fcpValue">--</span>
           </div>
           <div class="secondary-metric">
             <span class="secondary-metric__label">TTFB</span>
-            <span class="secondary-metric__value" id="ttfbValue">—</span>
+            <span class="secondary-metric__value" id="ttfbValue">--</span>
           </div>
         </div>
         <div class="vitals__updated" id="vitalsUpdated">Awaiting data&hellip;</div>
       </div>
     </section>
 
-    <!-- D. Test Results Feed -->
     <section class="card test-results" id="testResultsCard">
       <div class="card__header">
         <span class="card__title">Test Results</span>
@@ -122,13 +124,14 @@
       </div>
       <div class="result-list" id="resultList">
         <div class="empty-state" id="resultEmpty">
-          <span class="empty-state__icon">&#9744;</span>
+          <span class="empty-state__icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M5 3.5h7l3 3V16a1 1 0 01-1 1H5a1 1 0 01-1-1V4.5a1 1 0 011-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 3.5v3h3" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </span>
           <span>No test results yet</span>
         </div>
       </div>
     </section>
 
-    <!-- E. Performance Timeline -->
     <section class="card timeline" id="timelineCard">
       <div class="card__header">
         <span class="card__title">Performance Timeline</span>
@@ -138,7 +141,9 @@
           <div class="timeline__scale" id="timelineScale"></div>
           <div class="timeline__rows" id="timelineRows">
             <div class="empty-state" id="timelineEmpty">
-              <span class="empty-state__icon">&#9202;</span>
+              <span class="empty-state__icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" fill="none"><path d="M4 14h12M4 10h7M4 6h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
               <span>No resources loaded</span>
             </div>
           </div>
@@ -148,30 +153,33 @@
           <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:var(--accent-amber)"></span>Script</span>
           <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:var(--accent-green)"></span>CSS</span>
           <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:var(--accent-purple)"></span>Image</span>
-          <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:#f0883e"></span>Font</span>
+          <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:#c27832"></span>Font</span>
           <span class="timeline__legend-item"><span class="timeline__legend-swatch" style="background:var(--accent-cyan)"></span>XHR</span>
         </div>
       </div>
     </section>
 
-    <!-- F. Screenshot Gallery -->
     <section class="card screenshots" id="screenshotsCard">
       <div class="card__header">
         <span class="card__title">Screenshots</span>
         <span style="flex:1"></span>
-        <button class="btn btn--sm" id="captureBtn">&#128247; Capture</button>
+        <button class="btn btn--sm btn--icon" id="captureBtn" type="button">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M6.5 5.5L8 4h4l1.5 1.5H16a1 1 0 011 1V14a1 1 0 01-1 1H4a1 1 0 01-1-1V6.5a1 1 0 011-1h2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>Capture</span>
+        </button>
       </div>
       <div class="card__body">
         <div class="screenshot-grid" id="screenshotGrid">
           <div class="empty-state" id="screenshotEmpty" style="grid-column:1/-1">
-            <span class="empty-state__icon">&#128444;</span>
+            <span class="empty-state__icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="5.5" width="13" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 12l2-2 2 1.5 2.5-3 2 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
             <span>No screenshots captured</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- G. DOM Inspector (collapsible) -->
     <section class="card card--collapsible collapsed dom-inspector" id="domInspectorCard">
       <div class="card__header" id="domInspectorToggle">
         <span class="card__title">DOM Inspector</span>
@@ -179,7 +187,9 @@
       <div class="card__body">
         <div class="dom-tree" id="domTree">
           <div class="empty-state" id="domEmpty">
-            <span class="empty-state__icon">&#128270;</span>
+            <span class="empty-state__icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M8 5.5H5.5v9H14.5V9.5H11a1 1 0 01-1-1V5.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 5.5h3.5L14.5 6.5V9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </span>
             <span>Inspect an element to begin</span>
           </div>
         </div>
@@ -187,17 +197,16 @@
       </div>
     </section>
 
-    <!-- H. Console Mirror (collapsible) -->
     <section class="card card--collapsible collapsed console-mirror" id="consoleMirrorCard">
       <div class="card__header" id="consoleMirrorToggle">
         <span class="card__title">Console</span>
       </div>
       <div class="card__body" style="padding:0">
         <div class="console-filters" id="consoleFilters">
-          <button class="console-filter-btn active" data-filter="all">All</button>
-          <button class="console-filter-btn" data-filter="error">Errors</button>
-          <button class="console-filter-btn" data-filter="warn">Warnings</button>
-          <button class="console-filter-btn" data-filter="info">Info</button>
+          <button class="console-filter-btn active" data-filter="all" type="button">All</button>
+          <button class="console-filter-btn" data-filter="error" type="button">Errors</button>
+          <button class="console-filter-btn" data-filter="warn" type="button">Warnings</button>
+          <button class="console-filter-btn" data-filter="info" type="button">Info</button>
         </div>
         <div class="console-entries" id="consoleEntries">
           <div class="empty-state" id="consoleEmpty">
@@ -207,7 +216,6 @@
       </div>
     </section>
 
-    <!-- I. Design Audit (collapsible) -->
     <section class="card card--collapsible collapsed design-audit" id="designAuditCard">
       <div class="card__header" id="designAuditToggle">
         <span class="card__title">Design Audit</span>
@@ -215,37 +223,36 @@
       </div>
       <div class="card__body" id="designAuditBody">
         <div class="design-audit__score" id="designAuditScore">
-          <span class="design-audit__score-value">—</span>
+          <span class="design-audit__score-value">--</span>
           <span class="design-audit__score-label">Design Score</span>
         </div>
         <div class="design-audit__sections" id="designAuditSections">
           <div class="empty-state" id="designAuditEmpty">
-            <span class="empty-state__icon">&#128269;</span>
-            <span>Click "Audit" to run a design audit</span>
+            <span class="empty-state__icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 12l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <span>Run Audit to review the current page</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- J. Interactions (collapsible) -->
     <section class="card card--collapsible collapsed interactions" id="interactionsCard">
       <div class="card__header" id="interactionsToggle">
         <span class="card__title">Interactions</span>
         <span class="badge badge--empty" id="interactionsBadge" title="Completed interactions">0</span>
       </div>
       <div class="card__body" id="interactionsBody">
-        <!-- Single Element Actions -->
         <div class="interactions__section">
           <label class="interactions__label">CSS Selector</label>
           <input type="text" class="interactions__input" id="interactionSelector" placeholder="e.g., #username, button[type='submit']">
           <div class="interactions__actions">
-            <button class="btn btn--sm" id="interactClickBtn" title="Click element">Click</button>
-            <button class="btn btn--sm" id="interactHoverBtn" title="Hover over element">Hover</button>
-            <button class="btn btn--sm" id="interactWaitBtn" title="Wait for element">Wait</button>
+            <button class="btn btn--sm" id="interactClickBtn" title="Click element" type="button">Click</button>
+            <button class="btn btn--sm" id="interactHoverBtn" title="Hover over element" type="button">Hover</button>
+            <button class="btn btn--sm" id="interactWaitBtn" title="Wait for element" type="button">Wait</button>
           </div>
         </div>
 
-        <!-- Type Action -->
         <div class="interactions__section">
           <label class="interactions__label">Type Text</label>
           <input type="text" class="interactions__input" id="interactionText" placeholder="Text to type">
@@ -257,10 +264,9 @@
               <input type="checkbox" id="interactionPressEnter"> Press Enter
             </label>
           </div>
-          <button class="btn btn--sm btn--primary" id="interactTypeBtn">Type</button>
+          <button class="btn btn--sm btn--primary" id="interactTypeBtn" type="button">Type</button>
         </div>
 
-        <!-- Form Fill -->
         <div class="interactions__section">
           <label class="interactions__label">Form Fill</label>
           <div id="formFieldsContainer">
@@ -274,36 +280,36 @@
                 <option value="radio">Radio</option>
                 <option value="click">Click</option>
               </select>
-              <button class="btn btn--sm form-field__remove" title="Remove field">&times;</button>
+              <button class="btn btn--sm form-field__remove" title="Remove field" type="button">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </button>
             </div>
           </div>
           <div class="interactions__form-actions">
-            <button class="btn btn--sm" id="addFormFieldBtn">+ Add Field</button>
-            <button class="btn btn--sm btn--primary" id="interactFillFormBtn">Fill Form</button>
+            <button class="btn btn--sm" id="addFormFieldBtn" type="button">Add Field</button>
+            <button class="btn btn--sm btn--primary" id="interactFillFormBtn" type="button">Fill Form</button>
           </div>
         </div>
 
-        <!-- Results -->
         <div class="interactions__results" id="interactionsResults" style="display:none">
           <div class="interactions__results-header">Result</div>
           <pre class="interactions__results-content" id="interactionsResultsContent"></pre>
         </div>
       </div>
     </section>
+  </main>
 
-  </main><!-- /.dashboard -->
-
-  <!-- Screenshot modal overlay -->
   <div class="modal-overlay" id="screenshotModal">
-    <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    <button class="modal-close" id="modalClose" aria-label="Close" type="button">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
     <img id="modalImg" src="" alt="Screenshot preview">
   </div>
 
-  <!-- Timeline tooltip -->
   <div class="timeline__tooltip" id="timelineTooltip"></div>
+</div>
 
-</div><!-- /#app -->
-
+<script src="theme.js"></script>
 <script src="sidepanel.js"></script>
 </body>
 </html>

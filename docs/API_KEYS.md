@@ -332,6 +332,7 @@ for (const provider of providers) {
 
 ## Related Documentation
 
-- [Hybrid Architecture](./HYBRID_ARCHITECTURE.md)
-- [Quick Start Guide](../HYBRID_QUICKSTART.md)
+- [Integration Architecture](./INTEGRATIONS.md)
+- [Quick Start Guide](./QUICKSTART.md)
+- [Documentation Index](./README.md)
 - [VS Code Secret Storage](https://code.visualstudio.com/api/references/vscode-api#SecretStorage)

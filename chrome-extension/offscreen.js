@@ -1,5 +1,5 @@
 /**
- * MCP Router Offscreen Document
+ * ifin Platform Browser Offscreen Document
  *
  * This script runs in an offscreen document to keep the service worker alive.
  * Chrome won't terminate the service worker while an offscreen document exists.

@@ -4,6 +4,10 @@
  * Provides router health status, provider health, and operational warnings
  */
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import * as net from 'node:net';
 import { getLogger } from '../infra/logger.js';
 import { getMetricsCollector } from '../infra/metrics.js';
 import {
@@ -17,6 +21,12 @@ import {
 } from './types.js';
 import { getConfig } from '../infra/config.js';
 import { getAllProviders, getProviderHealth } from './registry.js';
+import {
+  buildSystemReadiness,
+  createIntegrationContext,
+  detectAllIntegrationRecords,
+  detectRepoRoot,
+} from '../integration/desktopIntegrations.js';
 
 const logger = getLogger('health-service');
 
@@ -51,6 +61,7 @@ export async function getHealth(): Promise<HealthResponse> {
 
     // Get provider health summaries
     const providerHealth = await getProviderHealthSummaries();
+    const localSystem = await checkLocalSystemReadiness();
 
     // Determine overall status
     const status = determineOverallStatus(configHealth, discoveryHealth, executionHealth);
@@ -69,6 +80,7 @@ export async function getHealth(): Promise<HealthResponse> {
       discovery: discoveryHealth,
       execution: executionHealth,
       providers: providerHealth,
+      localSystem,
       warnings,
       metrics: getMetricsCollector().getSnapshot(),
       timestamp: now,
@@ -109,6 +121,7 @@ export async function getHealth(): Promise<HealthResponse> {
         warnings: [],
       },
       providers: [],
+      localSystem: undefined,
       warnings: [],
       timestamp: Date.now(),
     };
@@ -297,6 +310,101 @@ async function getProviderHealthSummaries(): Promise<ProviderHealthSummary[]> {
   );
 
   return summaries;
+}
+
+async function checkLocalSystemReadiness() {
+  const config = getConfig();
+  const repoRoot = detectRepoRoot(process.cwd());
+  const browserPaths = {
+    chrome: findFirstExistingPath([
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      path.join(os.homedir(), 'AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'),
+    ]),
+    edge: findFirstExistingPath([
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+      path.join(os.homedir(), 'AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe'),
+    ]),
+    firefox: findFirstExistingPath([
+      'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
+      'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe',
+      path.join(os.homedir(), 'AppData\\Local\\Mozilla Firefox\\firefox.exe'),
+    ]),
+    safari: null,
+  };
+
+  const launcherMode = process.argv.includes('--mcp-stdio') && process.execPath.toLowerCase().endsWith('.exe')
+    ? 'installed'
+    : repoRoot
+      ? 'repo'
+      : 'auto';
+
+  const records = detectAllIntegrationRecords(
+    createIntegrationContext({
+      platform: process.platform,
+      homedir: os.homedir(),
+      appDataDir: process.env['APPDATA'] ?? path.join(os.homedir(), 'AppData', 'Roaming'),
+      localAppDataDir: process.env['LOCALAPPDATA'] ?? path.join(os.homedir(), 'AppData', 'Local'),
+      repoRoot,
+      installedExecutablePath: process.execPath.toLowerCase().endsWith('.exe') ? process.execPath : null,
+      localApiPort: config.server.extensionApiPort,
+      bridgePort: 9315,
+      env: process.env,
+    }),
+    launcherMode,
+    browserPaths,
+    null
+  );
+
+  return buildSystemReadiness(
+    createIntegrationContext({
+      platform: process.platform,
+      homedir: os.homedir(),
+      appDataDir: process.env['APPDATA'] ?? path.join(os.homedir(), 'AppData', 'Roaming'),
+      localAppDataDir: process.env['LOCALAPPDATA'] ?? path.join(os.homedir(), 'AppData', 'Local'),
+      repoRoot,
+      installedExecutablePath: process.execPath.toLowerCase().endsWith('.exe') ? process.execPath : null,
+      localApiPort: config.server.extensionApiPort,
+      bridgePort: 9315,
+      env: process.env,
+    }),
+    launcherMode,
+    records,
+    {
+      localApi: {
+        status: await probePort(config.server.extensionApiPort) ? 'connected' : 'degraded',
+      },
+      browserBridge: {
+        status: await probePort(9315) ? 'connected' : 'degraded',
+      },
+    }
+  );
+}
+
+function findFirstExistingPath(candidates: string[]): string | null {
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+async function probePort(port: number): Promise<boolean> {
+  return await new Promise((resolve) => {
+    const socket = net.connect({ host: '127.0.0.1', port });
+
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.once('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.setTimeout(800, () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
 }
 
 /**

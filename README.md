@@ -1,13 +1,13 @@
 # README.md
 
-## MCP Router for Antigravity
+## ifin Platform
 
-A production-grade MCP router that allows Antigravity to use external LLMs and selected external tools through one stable, resilient MCP server.
+A production-grade MCP platform that connects supported clients, local extensions, browser tooling, and external LLM providers through one stable, resilient MCP server.
 
-The software is built for teams that want:
+The software is built for developers and teams that want:
 
-* unsupported external LLM providers inside Antigravity
-* a strict compatibility layer between Antigravity and provider APIs
+* one stable MCP layer across multiple supported clients
+* a strict compatibility layer between local clients and provider APIs
 * resilience under degraded provider conditions
 * strong typing, strong validation, and strong operational visibility
 * one clean integration point instead of many fragile direct integrations
@@ -16,9 +16,9 @@ The software is built for teams that want:
 
 ## What it is
 
-MCP Router for Antigravity is an MCP server that sits between Antigravity and external providers.
+ifin Platform is an MCP server that sits between supported clients and external providers.
 
-Antigravity talks to the router through MCP.
+Clients talk to the router through MCP.
 The router handles:
 
 * request validation
@@ -28,15 +28,15 @@ The router handles:
 * retry and fallback decisions
 * circuit-breaker and concurrency protection
 * health and observability
-* response normalization back to Antigravity
+* response normalization back to the calling client
 
-The result is a small, stable Antigravity-facing tool surface, even when the underlying providers differ significantly.
+The result is a small, stable MCP-facing tool surface, even when the underlying providers differ significantly.
 
 ---
 
 ## What problem it solves
 
-Antigravity can connect to MCP servers, but external model providers often differ in:
+MCP-capable clients can connect to MCP servers, but external model providers often differ in:
 
 * authentication style
 * payload format
@@ -46,7 +46,7 @@ Antigravity can connect to MCP servers, but external model providers often diffe
 * timeout and error behavior
 * compatibility with so-called OpenAI-compatible APIs
 
-This project isolates those differences behind provider adapters and exposes one predictable execution model to Antigravity.
+This project isolates those differences behind provider adapters and exposes one predictable execution model to supported clients.
 
 ---
 
@@ -110,7 +110,7 @@ The router includes:
 ## System overview
 
 ```text
-Antigravity
+Supported MCP client
    │
    │ MCP
    ▼
@@ -138,11 +138,11 @@ MCP Router
 
 ## Why the architecture works
 
-The software succeeds because it keeps the boundary to Antigravity simple while keeping the inside disciplined.
+The software succeeds because it keeps the boundary to supported clients simple while keeping the inside disciplined.
 
-### The Antigravity side stays simple
+### The client side stays simple
 
-Antigravity sees:
+Supported clients see:
 
 * one MCP server
 * few tools
@@ -170,7 +170,7 @@ This keeps the system understandable, testable, and hard to break accidentally.
 ### `llm.chat`
 
 ```text
-Antigravity
+Supported MCP client
   → calls `llm.chat`
   → tool input is validated
   → request is normalized into domain format
@@ -449,7 +449,7 @@ mcp-router-for-antigravity/
 ### Prerequisites
 
 * Node.js runtime compatible with the project version
-* access to Antigravity MCP configuration
+* access to supported client MCP configuration
 * credentials for the providers you want to enable
 
 ### Installation
@@ -487,18 +487,35 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 npm run start
 ```
 
-### Connect Antigravity
+### Connect an MCP client
 
-Configure Antigravity to launch the router as an MCP server.
+Configure a supported MCP client to launch the router as an MCP server.
 
-Example shape:
+Repo checkout example:
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["dist/index.js"],
+      "args": ["dist/src/index.js"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "GLM_API_KEY": "${GLM_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Installed Windows app example:
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "C:\\Program Files\\ifin Platform\\ifin Platform.exe",
+      "args": ["--mcp-stdio"],
       "env": {
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "GLM_API_KEY": "${GLM_API_KEY}"
@@ -585,7 +602,7 @@ Covers:
 Covers:
 
 * MCP tool registration
-* Antigravity communication
+* client communication over MCP
 * end-to-end tool invocation
 * degraded-success warnings
 * structured failures
@@ -611,13 +628,13 @@ Coverage and test thresholds are enforced in CI for critical-path modules.
 
 ## Example usage scenarios
 
-### Use OpenAI in Antigravity through the router
+### Use OpenAI through the router
 
-Ask Antigravity to use `llm.chat` with `provider=openai` and a supported model. The router validates the request, executes it, and returns normalized output.
+Ask a supported MCP client to use `llm.chat` with `provider=openai` and a supported model. The router validates the request, executes it, and returns normalized output.
 
-### Use GLM even if Antigravity does not support it natively
+### Use GLM even if your client does not support it natively
 
-Ask Antigravity to call the same `llm.chat` tool but with `provider=glm`. The router adapts request and response behavior without changing the Antigravity-facing contract.
+Ask the client to call the same `llm.chat` tool but with `provider=glm`. The router adapts request and response behavior without changing the MCP-facing contract.
 
 ### Recover from a temporary provider failure
 
@@ -669,7 +686,7 @@ That means the software described here assumes:
 * resilience controls are active
 * health and metrics are operational
 * the test pyramid is in place
-* Antigravity integration works end to end
+* supported client integration works end to end
 
 ---
 
@@ -691,4 +708,4 @@ Do not submit changes that:
 
 This software is built around one idea:
 
-**Antigravity should experience a simple, stable, predictable MCP interface, even when the outside world is unreliable, inconsistent, or hostile.**
+**Supported clients should experience a simple, stable, predictable MCP interface, even when the outside world is unreliable, inconsistent, or hostile.**

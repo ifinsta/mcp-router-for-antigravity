@@ -24,9 +24,9 @@ describe('TemplateRegistry', () => {
   // --------------------------------------------------------------------------
 
   describe('list()', () => {
-    it('should return all 8 built-in templates', () => {
+    it('should return all 20 built-in templates', () => {
       const templates = registry.list();
-      assert.strictEqual(templates.length, 8);
+      assert.strictEqual(templates.length, 20);
     });
 
     it('should contain expected template names', () => {
@@ -170,7 +170,7 @@ describe('TemplateRegistry', () => {
   // --------------------------------------------------------------------------
 
   describe('built-in template structure', () => {
-    it('all 8 templates have valid structure', () => {
+    it('all 20 templates have valid structure', () => {
       const templates = registry.list();
       for (const t of templates) {
         assert.ok(typeof t.name === 'string' && t.name.length > 0, `${t.name}: name`);
@@ -212,9 +212,9 @@ describe('TemplateRegistry', () => {
       assert.strictEqual(a, b);
     });
 
-    it('should return a registry with 8 templates', () => {
+    it('should return a registry with 20 templates', () => {
       const reg = getTemplateRegistry();
-      assert.strictEqual(reg.list().length, 8);
+      assert.strictEqual(reg.list().length, 20);
     });
   });
 });

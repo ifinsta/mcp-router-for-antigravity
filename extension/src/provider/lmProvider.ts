@@ -19,7 +19,7 @@ const logger = getLogger('lm-provider');
 
 /**
  * Main Language Model Chat Provider implementation
- * Bridges Antigravity's chat UI with the MCP Router backend
+ * Bridges the editor chat UI with the MCP Router backend
  */
 export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatProvider, vscode.Disposable {
   private client: RouterClient;
@@ -65,7 +65,7 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
         const newConfig = getExtensionConfig();
         const errors = validateConfig(newConfig);
         if (errors.length > 0) {
-          vscode.window.showErrorMessage(`MCP Router config error: ${errors[0]}`);
+          vscode.window.showErrorMessage(`ifin Platform config error: ${errors[0]}`);
           logger.error('Configuration validation failed', errors);
           return;
         }
@@ -313,7 +313,7 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
     logger.warn(`Reached maximum tool calling iterations (${MAX_TOOL_ITERATIONS})`);
     progress.report(
       new vscode.LanguageModelTextPart(
-        '\n\n⚠️ Maximum tool calling iterations reached. The conversation may be incomplete.'
+        '\n\nMaximum tool calling iterations reached. The conversation may be incomplete.'
       )
     );
   }
@@ -346,12 +346,12 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
     const sanitized = sanitizeErrorMessage(error);
     
     return [
-      `⚠️ Error processing request with ${model.name}`,
+      `Error processing request with ${model.name}`,
       '',
       `Details: ${sanitized}`,
       '',
       'Please check:',
-      '- MCP Router is running',
+      '- ifin Platform is running',
       '- Router URL is configured correctly in settings',
       '- Model is available and healthy',
     ].join('\n');
@@ -361,7 +361,7 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
    * Clean up resources
    */
   dispose(): void {
-    logger.info('Disposing MCP Router Language Model Provider');
+    logger.info('Disposing ifin Platform Language Model Provider');
     
     for (const disposable of this.disposables) {
       disposable.dispose();

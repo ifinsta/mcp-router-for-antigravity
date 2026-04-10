@@ -1,7 +1,7 @@
 /**
  * MCP Server Bootstrap
  *
- * Initializes and runs the MCP server for Antigravity integration
+ * Initializes and runs the MCP server for local client integration
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -59,6 +59,7 @@ import {
   registerTestHoverTool,
   registerTestWaitForTool,
 } from './testingToolHandlers.js';
+import { registerAssignmentTools } from './assignmentToolHandlers.js';
 import { startExtensionAPIServer } from './extensionApiServer.js';
 
 const logger = getLogger('mcp-server');
@@ -81,7 +82,7 @@ export async function createMCPServer(): Promise<McpServer> {
     // Create MCP server
     const server = new McpServer(
       {
-        name: 'mcp-router-for-antigravity',
+        name: 'mcp-router',
         version: '1.0.0',
       },
       {
@@ -148,6 +149,9 @@ export async function createMCPServer(): Promise<McpServer> {
     registerTestFillFormTool(server);
     registerTestHoverTool(server);
     registerTestWaitForTool(server);
+
+    // Register assignment mode tools
+    registerAssignmentTools(server);
 
     logger.info('All tools registered');
 

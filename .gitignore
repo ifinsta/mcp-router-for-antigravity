@@ -91,3 +91,6 @@ artifacts/
 .env.development.local
 .env.test.local
 .env.production.local
+*.exe
+installers/*.blockmap
+installers/win-unpacked/

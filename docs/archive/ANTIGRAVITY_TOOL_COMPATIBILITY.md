@@ -361,5 +361,5 @@ const response = await openai.chat.completions.create({
 
 - [Language Model Provider API](https://code.visualstudio.com/api/references/vscode-api#LanguageModelChatProvider)
 - [VS Code LM API Limitations](https://github.com/microsoft/vscode/issues/223532)
-- [Antigravity Custom Models Plan](../antigravity-custom-models.md)
-- [Hybrid Architecture](./HYBRID_ARCHITECTURE.md)
+- [Integration Architecture](../INTEGRATIONS.md)
+- [Documentation Index](./README.md)

@@ -95,7 +95,7 @@ export async function streamRouterResponse(
       throw error;
     }
 
-    throw new ResponseMappingError('Failed to stream response to Antigravity', error);
+    throw new ResponseMappingError('Failed to stream response to the editor client', error);
   }
 }
 

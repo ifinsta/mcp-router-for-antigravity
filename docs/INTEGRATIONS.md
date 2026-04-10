@@ -112,7 +112,7 @@ mcp-router-for-antigravity/
 │   └── tsconfig.json
 │
 └── docs/
-    └── HYBRID_ARCHITECTURE.md    # This file
+    └── INTEGRATIONS.md          # This file
 ```
 
 ## API Contracts
@@ -343,7 +343,7 @@ npx vsce package
 ### Compatibility
 
 - Router API is versioned internally
-- Extension expects router v1.0.0+
+- Extension expects router v1.1.0+
 - Breaking changes will be documented in CHANGELOG
 
 ## Troubleshooting
@@ -397,7 +397,6 @@ npx vsce package
 
 ## References
 
-- [Antigravity Model Selector Investigation Results](./antigravity-model-selector-investigation-results.md)
-- [Custom Models Guide](./antigravity-custom-models.md)
+- [Documentation Index](./README.md)
 - [VS Code Language Model API](https://code.visualstudio.com/api/extension-guides/chat)
 - [MCP Protocol Specification](https://modelcontextprotocol.io/)

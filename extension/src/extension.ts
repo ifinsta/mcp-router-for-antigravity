@@ -8,7 +8,7 @@ import { getLogger } from './infra/logger';
 const logger = getLogger('extension');
 
 export function activate(context: vscode.ExtensionContext) {
-  logger.info('Activating Antigravity Custom Models extension...');
+  logger.info('Activating ifin Platform Integrations extension...');
 
   try {
     // Create API key manager for secret storage
@@ -46,12 +46,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(settingsCommand);
     context.subscriptions.push(mcpSetupCommand);
 
-    logger.info('MCP Router language model provider and MCP server provider registered successfully');
+    logger.info('ifin Platform language model provider and MCP server provider registered successfully');
 
     // Fire-and-forget migration check for removed settings
     checkForRemovedSettings();
   } catch (error) {
-    logger.error('Failed to register MCP Router language model provider', error);
+    logger.error('Failed to register ifin Platform language model provider', error);
     throw error;
   }
 }
@@ -85,7 +85,7 @@ function checkForRemovedSettings(): void {
 
   if (hasLegacySettings) {
     vscode.window.showInformationMessage(
-      'MCP Router: API key settings have moved to secure storage. Use the "Configure API Keys" command to set up your provider keys.',
+      'ifin Platform: API key settings have moved to secure storage. Use the "Configure API Keys" command to set up your provider keys.',
       'Configure Now'
     ).then(selection => {
       if (selection === 'Configure Now') {
@@ -96,5 +96,5 @@ function checkForRemovedSettings(): void {
 }
 
 export function deactivate() {
-  logger.info('Deactivating Antigravity Custom Models extension');
+  logger.info('Deactivating ifin Platform Integrations extension');
 }

@@ -2,7 +2,7 @@
 
 ## Project
 
-MCP Router for Antigravity
+MCP Router
 
 ## Purpose
 
@@ -36,7 +36,7 @@ That means:
 
 A working MCP router that:
 
-* connects to Antigravity
+* connects to supported MCP clients
 * exposes `llm.chat`, `llm.list_models`, and `router.health`
 * supports OpenAI and GLM
 * normalizes outputs across both providers

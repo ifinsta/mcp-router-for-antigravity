@@ -1,0 +1,45 @@
+{
+  "appId": "com.ifinsta.ifin-platform",
+  "productName": "ifin Platform",
+  "copyright": "Copyright (c) 2024",
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
+  "directories": {
+    "buildResources": "C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\build\\resources",
+    "output": "C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\installers"
+  },
+  "files": [
+    "dist/**/*",
+    "node_modules/**/*",
+    "package.json",
+    "electron/**/*"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\electron\\icon.png",
+    "artifactName": "${productName}-${version}-setup.${ext}",
+    "sign": null,
+    "signDlls": null,
+    "signAndEditExecutable": null
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "ifin Platform",
+    "perMachine": true,
+    "runAfterFinish": false,
+    "deleteAppDataOnUninstall": false
+  },
+  "publish": null
+}

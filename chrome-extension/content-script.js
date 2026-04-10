@@ -1,5 +1,5 @@
 /**
- * MCP Router Test System - Content Script
+ * ifin Platform Browser - Content Script
  *
  * Injected into every page. Provides:
  * - Core Web Vitals measurement (LCP, FID, CLS, FCP, TTFB, INP)

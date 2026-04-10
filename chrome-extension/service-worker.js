@@ -1,5 +1,5 @@
 /**
- * MCP Router Test System - Service Worker (Background Script)
+ * ifin Platform Browser - Service Worker (Background Script)
  * Version: 2.0.1 - Using CDP for screenshots
  *
  * The brain of the Chrome extension. Manages:
@@ -339,7 +339,7 @@ async function createOffscreenDocument() {
     await chrome.offscreen.createDocument({
       url: 'offscreen.html',
       reasons: ['WORKERS'], // We need workers for WebSocket
-      justification: 'WebSocket connection for MCP Router testing system'
+      justification: 'WebSocket connection for ifin Platform Browser'
     });
 
     offscreenCreated = true;
@@ -1179,7 +1179,7 @@ function initializeServiceWorker() {
     chrome.offscreen.createDocument({
       url: 'offscreen.html',
       reasons: ['WORKERS'],
-      justification: 'WebSocket connection for MCP Router testing system'
+      justification: 'WebSocket connection for ifin Platform Browser'
     }).then(() => {
       offscreenCreated = true;
       console.log('[MCP-SW] Offscreen document created');

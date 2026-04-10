@@ -1,7 +1,7 @@
 /**
  * Extension API Server
- * 
- * HTTP server that exposes API endpoints for the Antigravity extension
+ *
+ * HTTP server that exposes API endpoints for the local IDE extension layer
  * This runs alongside the MCP stdio server
  */
 

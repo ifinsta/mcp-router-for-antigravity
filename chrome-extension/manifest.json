@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "MCP Router Test System",
+  "name": "ifin Platform Browser",
   "version": "1.0.1",
-  "description": "Master Testing System - Browser control and UI/UX testing via MCP Router",
+  "description": "Browser automation, diagnostics, and extension-backed control for ifin Platform",
   "permissions": [
     "activeTab",
     "tabs",

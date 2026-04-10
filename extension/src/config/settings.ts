@@ -80,7 +80,7 @@ const PROVIDER_DEFAULTS: Record<string, ProviderSettings> = {
 
 /**
  * Get the current extension configuration from VS Code settings.
- * All settings are accessible in VS Code via @ext:ifinsta.antigravity-custom-models
+ * All settings are accessible in VS Code via @ext:ifinsta.ifin-platform-integrations
  */
 export function getExtensionConfig(): ExtensionConfig {
   const config = vscode.workspace.getConfiguration(CONFIGURATION_SECTION);

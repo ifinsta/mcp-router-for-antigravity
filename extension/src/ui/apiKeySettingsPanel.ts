@@ -43,7 +43,7 @@ export class ApiKeySettingsPanel {
 
     const panel = vscode.window.createWebviewPanel(
       ApiKeySettingsPanel.viewType,
-      'MCP Router - API Keys',
+      'ifin Platform Integrations',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -83,7 +83,7 @@ export class ApiKeySettingsPanel {
           await this.update();
           break;
         case 'setupMCP':
-          await this.handleMCPSetup(message.ide, message.config);
+          await this.handleMCPSetup(message.ide);
           break;
       }
     } catch (error: any) {
@@ -98,7 +98,7 @@ export class ApiKeySettingsPanel {
   /**
    * Handle MCP setup for current IDE
    */
-  private async handleMCPSetup(ide: string, config: any): Promise<void> {
+  private async handleMCPSetup(ide: string): Promise<void> {
     const os = process.platform;
     const home = process.env.HOME || process.env.USERPROFILE || '';
     const appData = process.env.APPDATA || (home ? `${home}/AppData/Roaming` : '');
@@ -143,8 +143,8 @@ export class ApiKeySettingsPanel {
     this.panel.webview.postMessage({
       command: 'mcpConfigReady',
       configPath,
-      config,
-      message: `Configuration ready for ${ide}. Path: ${configPath}`,
+      setupCommand: `setup-mcp ${ide} --mode auto`,
+      message: `ifin Platform can configure ${ide} at ${configPath}. Use the Windows app Integrations screen or run the setup command.`,
     });
   }
 
@@ -301,7 +301,7 @@ export class ApiKeySettingsPanel {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel.webview.cspSource} 'unsafe-inline'; script-src 'unsafe-inline';">
-  <title>MCP Router API Keys</title>
+  <title>ifin Platform Integrations</title>
   <style>
     * {
       margin: 0;
@@ -318,6 +318,20 @@ export class ApiKeySettingsPanel {
     
     .header {
       margin-bottom: 30px;
+    }
+
+    .header-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      color: var(--vscode-foreground);
+      flex-shrink: 0;
     }
     
     .header h1 {
@@ -493,14 +507,22 @@ export class ApiKeySettingsPanel {
 </head>
 <body>
   <div class="header">
-    <h1>🔑 MCP Router Settings</h1>
-    <p>Configure API keys and set up MCP server for your IDE</p>
+    <div class="header-lockup">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="38" height="38" rx="10" stroke="currentColor" stroke-width="2"></rect>
+        <rect x="10" y="10" width="5" height="20" rx="2.5" fill="currentColor"></rect>
+        <rect x="18" y="10" width="5" height="12" rx="2.5" fill="var(--vscode-textLink-foreground)"></rect>
+        <path d="M25 30V14C25 11.7909 26.7909 10 29 10H31V14H29V30H25Z" fill="currentColor"></path>
+      </svg>
+      <h1>ifin Platform Integrations</h1>
+    </div>
+    <p>Manage provider API keys and local client setup.</p>
   </div>
   
   <div style="margin-bottom: 20px;">
-    <button class="btn-primary" onclick="showTab('api-keys')" id="tab-api-keys">🔑 API Keys</button>
-    <button class="btn-secondary" onclick="showTab('mcp-setup')" id="tab-mcp-setup">⚙️ MCP IDE Setup</button>
-    <button class="btn-secondary refresh-btn" onclick="refresh()">↻ Refresh</button>
+    <button class="btn-primary" onclick="showTab('api-keys')" id="tab-api-keys">API Keys</button>
+    <button class="btn-secondary" onclick="showTab('mcp-setup')" id="tab-mcp-setup">Client Setup</button>
+    <button class="btn-secondary refresh-btn" onclick="refresh()">Refresh</button>
   </div>
   
   <div id="api-keys-tab">
@@ -512,9 +534,9 @@ export class ApiKeySettingsPanel {
   <div id="mcp-setup-tab" style="display: none;">
     <div class="provider-card">
       <div class="provider-header">
-        <span class="provider-name">🚀 MCP Server Setup</span>
+        <span class="provider-name">MCP Client Setup</span>
       </div>
-      <div class="provider-desc">Configure MCP Router for your current IDE. Works with Qoder, Cursor, Windsurf, Claude Desktop, and Antigravity.</div>
+      <div class="provider-desc">Detect the current client target, show the config path, and hand off setup to the ifin Platform app or CLI.</div>
       
       <div class="form-group">
         <label style="margin-bottom: 8px; display: block; font-weight: 500;">Detected IDE</label>
@@ -526,17 +548,17 @@ export class ApiKeySettingsPanel {
       <div class="form-group">
         <label style="margin-bottom: 8px; display: block; font-weight: 500;">Config Path</label>
         <div style="padding: 10px; background: var(--vscode-input-background); border-radius: 4px; font-family: var(--vscode-editor-font-family); font-size: 12px; word-break: break-all;">
-          <span id="config-path">Click "Generate Configuration" to detect</span>
+          <span id="config-path">Click "Detect Setup" to inspect the current client path</span>
         </div>
       </div>
       
       <div class="button-group" style="margin-top: 16px;">
-        <button class="btn-primary" onclick="generateMCPConfig()">🔧 Generate Configuration</button>
-        <button class="btn-secondary" onclick="copyMCPConfig()">📋 Copy to Clipboard</button>
+        <button class="btn-primary" onclick="generateMCPConfig()">Detect Setup</button>
+        <button class="btn-secondary" onclick="copyMCPConfig()">Copy Setup Command</button>
       </div>
       
       <div id="mcp-output" style="margin-top: 16px; display: none;">
-        <label style="margin-bottom: 8px; display: block; font-weight: 500;">Generated Configuration</label>
+        <label style="margin-bottom: 8px; display: block; font-weight: 500;">Recommended Setup Command</label>
         <pre style="padding: 12px; background: var(--vscode-textCodeBlock-background); border-radius: 4px; font-family: var(--vscode-editor-font-family); font-size: 12px; overflow-x: auto; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;"></pre>
       </div>
       
@@ -546,7 +568,7 @@ export class ApiKeySettingsPanel {
   
   <script>
     const vscode = acquireVsCodeApi();
-    let currentMCPConfig = null;
+    let currentSetupCommand = null;
     
     // Detect IDE from VS Code environment
     function detectIDE() {
@@ -582,41 +604,23 @@ export class ApiKeySettingsPanel {
     function generateMCPConfig() {
       const ide = detectIDE();
       document.getElementById('current-ide').textContent = ide.charAt(0).toUpperCase() + ide.slice(1);
-      
-      const config = {
-        mcpServers: {
-          'mcp-router': {
-            command: 'node',
-            args: ['C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\dist\\index.js'],
-            env: {
-              ROUTER_DEFAULT_PROVIDER: 'chutes',
-              ROUTER_DEFAULT_MODEL: 'Qwen/Qwen2.5-72B-Instruct'
-            }
-          }
-        }
-      };
-      
-      currentMCPConfig = config;
-      
+
       vscode.postMessage({ 
-        command: 'setupMCP', 
-        ide,
-        config 
+        command: 'setupMCP',
+        ide
       });
-      
-      document.getElementById('mcp-output').style.display = 'block';
-      document.getElementById('mcp-output').querySelector('pre').textContent = JSON.stringify(config, null, 2);
     }
     
     function copyMCPConfig() {
-      if (!currentMCPConfig) {
+      if (!currentSetupCommand) {
         generateMCPConfig();
+        return;
       }
       
-      navigator.clipboard.writeText(JSON.stringify(currentMCPConfig, null, 2)).then(() => {
-        showMessage('mcp', '✅ Configuration copied to clipboard!', 'success');
+      navigator.clipboard.writeText(currentSetupCommand).then(() => {
+        showMessage('mcp', 'Setup command copied to clipboard.', 'success');
       }).catch(err => {
-        showMessage('mcp', '❌ Failed to copy: ' + err.message, 'error');
+        showMessage('mcp', 'Failed to copy: ' + err.message, 'error');
       });
     }
     
@@ -684,7 +688,10 @@ export class ApiKeySettingsPanel {
           break;
         case 'mcpConfigReady':
           document.getElementById('config-path').textContent = message.configPath;
-          showMessage('mcp', '✅ ' + message.message, 'success');
+          currentSetupCommand = message.setupCommand;
+          document.getElementById('mcp-output').style.display = 'block';
+          document.getElementById('mcp-output').querySelector('pre').textContent = message.setupCommand;
+          showMessage('mcp', message.message, 'success');
           break;
       }
     });
@@ -698,8 +705,8 @@ export class ApiKeySettingsPanel {
    */
   private renderProviderCard(provider: ProviderApiKeyConfig): string {
     const statusBadge = provider.isConfigured
-      ? '<span class="status-badge status-configured">✓ Configured</span>'
-      : '<span class="status-badge status-not-configured">✗ Not Configured</span>';
+      ? '<span class="status-badge status-configured">Configured</span>'
+      : '<span class="status-badge status-not-configured">Not Configured</span>';
 
     return `
       <div class="provider-card" id="card-${provider.provider}">

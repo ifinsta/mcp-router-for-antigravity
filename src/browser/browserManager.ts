@@ -24,6 +24,9 @@ import { getLogger } from '../infra/logger.js';
 import { getExtensionBridge } from './extensionBridge.js';
 import { createCDPClient, waitForCDP } from './cdpClient.js';
 import type { CDPClient } from './cdpClient.js';
+import { FirefoxDriver, type FirefoxSession, type FirefoxConfig } from './firefoxDriver.js';
+import { SafariDriver, type SafariSession, type SafariConfig } from './safariDriver.js';
+import { EdgeDriver, type EdgeSession, type EdgeConfig } from './edgeDriver.js';
 
 // ES module compatibility - derive __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -213,17 +216,19 @@ export class BrowserManager {
 
     try {
       let instance: ChromeDriverInstance;
+      let extensionId: string | undefined;
 
       switch (config.type) {
         case BrowserType.CHROME:
           instance = await this.launchChrome(config);
+          extensionId = instance.extensionId;
           break;
         case BrowserType.FIREFOX:
-          throw new Error('Firefox browser driver not implemented yet');
+          return this.launchFirefox(config, sessionId);
         case BrowserType.SAFARI:
-          throw new Error('Safari browser driver not implemented yet');
+          return this.launchSafari(config, sessionId);
         case BrowserType.EDGE:
-          throw new Error('Edge browser driver not implemented yet');
+          return this.launchEdge(config, sessionId);
         default:
           throw new Error(`Unsupported browser type: ${config.type}`);
       }
@@ -237,12 +242,12 @@ export class BrowserManager {
         isActive: true,
         createdAt: Date.now(),
         lastActivity: Date.now(),
-        extensionId: instance.extensionId,
+        extensionId,
       };
 
       this.sessions.set(sessionId, session);
 
-      logger.info('Browser launched successfully', { sessionId, extensionId: instance.extensionId });
+      logger.info('Browser launched successfully', { sessionId, extensionId });
       return sessionId;
     } catch (error) {
       logger.error('Failed to launch browser', error instanceof Error ? error : new Error(String(error)), { config });
@@ -1335,6 +1340,245 @@ export class BrowserManager {
     };
 
     return driver;
+  }
+
+  /**
+   * Launch Firefox browser
+   */
+  private async launchFirefox(config: BrowserConfig, sessionId: string): Promise<string> {
+    const firefoxDriver = FirefoxDriver.getInstance();
+    const firefoxConfig: FirefoxConfig = {
+      headless: config.headless,
+      ...(config.viewport !== undefined ? { viewport: { width: config.viewport.width, height: config.viewport.height } } : {}),
+      ...(config.userAgent !== undefined ? { userAgent: config.userAgent } : {}),
+    };
+
+    const firefoxSessionId = await firefoxDriver.launch(firefoxConfig);
+    const firefoxSession = firefoxDriver.getSession(firefoxSessionId);
+
+    const session: BrowserSession = {
+      sessionId,
+      browserType: config.type,
+      config,
+      instance: {
+        extensionId: 'firefox-only',
+        process: firefoxSession?.process ?? spawn('echo', ['firefox-placeholder']),
+        tabId: null,
+        remoteDebuggingPort: 0,
+        cdpClient: null,
+        navigate: async (url) => {
+          await firefoxDriver.navigate(firefoxSessionId, url);
+          return { success: true, url, loadTime: 0 };
+        },
+        screenshot: async (options) => {
+          const result = await firefoxDriver.screenshot(firefoxSessionId);
+          return result ?? '';
+        },
+        executeScript: async (code) => {
+          return await firefoxDriver.executeScript(firefoxSessionId, code);
+        },
+        setViewport: async (width, height) => {
+          // Firefox viewport changes require Marionette - placeholder implementation
+          logger.warn('Firefox setViewport not fully implemented');
+        },
+        getMetrics: async () => {
+          // Firefox metrics require Marionette - placeholder implementation
+          return { metrics: [] };
+        },
+        getWebVitals: async () => {
+          return { lcp: null, fid: null, cls: null, note: 'Web Vitals not available in Firefox mode' };
+        },
+        runDesignAudit: async () => {
+          return { score: 0, note: 'Design audit not available in Firefox mode' };
+        },
+        simulateUserScroll: async (speed) => {
+          return { totalScrollDistance: 0, note: 'User scroll not available in Firefox mode' };
+        },
+        startProfiling: async () => {
+          throw new Error('Profiling not available in Firefox mode');
+        },
+        stopProfiling: async () => {
+          throw new Error('Profiling not available in Firefox mode');
+        },
+        close: async () => {
+          await firefoxDriver.close(firefoxSessionId);
+        },
+      },
+      pages: new Map(),
+      isActive: true,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      extensionId: 'firefox-only',
+    };
+
+    this.sessions.set(sessionId, session);
+    logger.info('Firefox launched successfully', { sessionId });
+    return sessionId;
+  }
+
+  /**
+   * Launch Safari browser
+   */
+  private async launchSafari(config: BrowserConfig, sessionId: string): Promise<string> {
+    const safariDriver = SafariDriver.getInstance();
+    const safariConfig: SafariConfig = {
+      headless: config.headless,
+      ...(config.viewport !== undefined ? { viewport: { width: config.viewport.width, height: config.viewport.height } } : {}),
+      ...(config.userAgent !== undefined ? { userAgent: config.userAgent } : {}),
+      enableRemoteAutomation: true,
+    };
+
+    const safariSessionId = await safariDriver.launch(safariConfig);
+    const safariSession = safariDriver.getSession(safariSessionId);
+
+    const session: BrowserSession = {
+      sessionId,
+      browserType: config.type,
+      config,
+      instance: {
+        extensionId: 'safari-only',
+        process: safariSession?.process ?? spawn('echo', ['safari-placeholder']),
+        tabId: null,
+        remoteDebuggingPort: 0,
+        cdpClient: null,
+        navigate: async (url) => {
+          await safariDriver.navigate(safariSessionId, url);
+          return { success: true, url, loadTime: 0 };
+        },
+        screenshot: async (options) => {
+          const result = await safariDriver.screenshot(safariSessionId);
+          return result ?? '';
+        },
+        executeScript: async (code) => {
+          return await safariDriver.executeScript(safariSessionId, code);
+        },
+        setViewport: async (width, height) => {
+          logger.warn('Safari setViewport not fully implemented');
+        },
+        getMetrics: async () => {
+          return { metrics: [] };
+        },
+        getWebVitals: async () => {
+          return { lcp: null, fid: null, cls: null, note: 'Web Vitals not available in Safari mode' };
+        },
+        runDesignAudit: async () => {
+          return { score: 0, note: 'Design audit not available in Safari mode' };
+        },
+        simulateUserScroll: async (speed) => {
+          return { totalScrollDistance: 0, note: 'User scroll not available in Safari mode' };
+        },
+        startProfiling: async () => {
+          throw new Error('Profiling not available in Safari mode');
+        },
+        stopProfiling: async () => {
+          throw new Error('Profiling not available in Safari mode');
+        },
+        close: async () => {
+          await safariDriver.close(safariSessionId);
+        },
+      },
+      pages: new Map(),
+      isActive: true,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      extensionId: 'safari-only',
+    };
+
+    this.sessions.set(sessionId, session);
+    logger.info('Safari launched successfully', { sessionId });
+    return sessionId;
+  }
+
+  /**
+   * Launch Edge browser
+   */
+  private async launchEdge(config: BrowserConfig, sessionId: string): Promise<string> {
+    const edgeDriver = EdgeDriver.getInstance();
+    const edgeConfig: EdgeConfig = {
+      headless: config.headless,
+      ...(config.viewport !== undefined ? {
+        viewport: {
+          width: config.viewport.width,
+          height: config.viewport.height,
+          ...(config.viewport.deviceScaleFactor !== undefined ? { deviceScaleFactor: config.viewport.deviceScaleFactor } : {}),
+        }
+      } : {}),
+      ...(config.userAgent !== undefined ? { userAgent: config.userAgent } : {}),
+      ...(config.locale !== undefined ? { locale: config.locale } : {}),
+      ...(config.timezone !== undefined ? { timezone: config.timezone } : {}),
+    };
+
+    const edgeSessionId = await edgeDriver.launch(edgeConfig);
+    const edgeSession = edgeDriver.getSession(edgeSessionId);
+
+    if (!edgeSession) {
+      throw new Error('Failed to get Edge session');
+    }
+
+    const session: BrowserSession = {
+      sessionId,
+      browserType: config.type,
+      config,
+      instance: {
+        extensionId: 'edge-only',
+        process: edgeSession.process,
+        tabId: null,
+        remoteDebuggingPort: edgeSession.remoteDebuggingPort,
+        cdpClient: edgeSession.cdpClient,
+        navigate: async (url) => {
+          const result = await edgeDriver.navigate(edgeSessionId, url);
+          return { success: true, ...result };
+        },
+        screenshot: async (options) => {
+          const screenshotOpts: { format?: 'png' | 'jpeg'; quality?: number; fullPage?: boolean } = {};
+          if (options?.type !== undefined) screenshotOpts.format = options.type;
+          if (options?.quality !== undefined) screenshotOpts.quality = options.quality;
+          if (options?.fullPage !== undefined) screenshotOpts.fullPage = options.fullPage;
+          const result = await edgeDriver.screenshot(edgeSessionId, screenshotOpts);
+          return result;
+        },
+        executeScript: async (code) => {
+          return await edgeDriver.executeScript(edgeSessionId, code);
+        },
+        setViewport: async (width, height, deviceScaleFactor, mobile) => {
+          const viewportOpts: { width: number; height: number; deviceScaleFactor?: number; mobile?: boolean } = { width, height };
+          if (deviceScaleFactor !== undefined) viewportOpts.deviceScaleFactor = deviceScaleFactor;
+          if (mobile !== undefined) viewportOpts.mobile = mobile;
+          await edgeDriver.setViewport(edgeSessionId, viewportOpts);
+        },
+        getMetrics: async () => {
+          return { metrics: await edgeDriver.getMetrics(edgeSessionId) };
+        },
+        getWebVitals: async () => {
+          // Edge Web Vitals via CDP - similar to Chrome
+          return { lcp: null, fid: null, cls: null, fcp: null, ttfb: null, note: 'Web Vitals via CDP' };
+        },
+        runDesignAudit: async () => {
+          return { score: 0, note: 'Design audit not available in Edge mode' };
+        },
+        simulateUserScroll: async (speed) => {
+          return { totalScrollDistance: 0, note: 'User scroll not available in Edge mode' };
+        },
+        startProfiling: async () => {
+          throw new Error('Profiling not available in Edge mode');
+        },
+        stopProfiling: async () => {
+          throw new Error('Profiling not available in Edge mode');
+        },
+        close: async () => {
+          await edgeDriver.close(edgeSessionId);
+        },
+      },
+      pages: new Map(),
+      isActive: true,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      extensionId: 'edge-only',
+    };
+
+    this.sessions.set(sessionId, session);
+    logger.info('Edge launched successfully', { sessionId });
+    return sessionId;
   }
 
   /**

@@ -28,7 +28,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'openai:gpt-4o',
-    name: 'GPT-4o (via MCP Router)',
+    name: 'GPT-4o (via ifin Platform)',
     provider: 'openai',
     family: 'gpt-4o',
     healthy: true,
@@ -36,7 +36,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'openai:gpt-4.1-mini',
-    name: 'GPT-4.1 Mini (via MCP Router)',
+    name: 'GPT-4.1 Mini (via ifin Platform)',
     provider: 'openai',
     family: 'gpt-4.1-mini',
     healthy: true,
@@ -44,7 +44,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'anthropic:claude-3-5-sonnet-20241022',
-    name: 'Claude 3.5 Sonnet (via MCP Router)',
+    name: 'Claude 3.5 Sonnet (via ifin Platform)',
     provider: 'anthropic',
     family: 'claude-3-5-sonnet',
     healthy: true,
@@ -52,7 +52,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'anthropic:claude-3-5-haiku-20241022',
-    name: 'Claude 3.5 Haiku (via MCP Router)',
+    name: 'Claude 3.5 Haiku (via ifin Platform)',
     provider: 'anthropic',
     family: 'claude-3-5-haiku',
     healthy: true,
@@ -60,7 +60,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'anthropic:claude-3-opus-20240229',
-    name: 'Claude 3 Opus (via MCP Router)',
+    name: 'Claude 3 Opus (via ifin Platform)',
     provider: 'anthropic',
     family: 'claude-3-opus',
     healthy: true,
@@ -68,7 +68,7 @@ const DEFAULT_MODEL_CATALOG: RouterModelInfo[] = [
   },
   {
     id: 'anthropic:claude-3-haiku-20240307',
-    name: 'Claude 3 Haiku (via MCP Router)',
+    name: 'Claude 3 Haiku (via ifin Platform)',
     provider: 'anthropic',
     family: 'claude-3-haiku',
     healthy: true,
