@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Integrations from './integrations';
+import { ModeSelection } from './modeSelection';
+import { BrowserPreview } from './preview';
+import { BrowserPairing } from './browserPairing';
 import type {
   IntegrationPreview,
   IntegrationRecord,
@@ -109,6 +112,25 @@ const sections: SectionConfig[] = [
   },
 ];
 
+function StatusCard({ title, status, details, icon }: {
+  title: string;
+  status: 'good' | 'warning' | 'error';
+  details: string;
+  icon: string;
+}) {
+  const colors = { good: 'var(--status-good)', warning: 'var(--status-warning)', error: 'var(--status-poor)' };
+  return (
+    <div className="status-card">
+      <div className="status-card-header">
+        <span className="status-card-icon">{icon}</span>
+        <span className="status-card-title">{title}</span>
+        <span className="status-dot" style={{ backgroundColor: colors[status] }} />
+      </div>
+      <div className="status-card-details">{details}</div>
+    </div>
+  );
+}
+
 function getInitialTheme(): ThemeMode {
   if (typeof window === 'undefined') {
     return 'dark';
@@ -149,6 +171,17 @@ function getDefaultBrowserSettings(): BrowserSettings {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function getStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function hasNoProviderConfigurationWarning(warnings: string[]): boolean {
+  return warnings.some((warning) => {
+    const normalized = warning.toLowerCase();
+    return normalized.includes('no providers configured') || normalized.includes('no providers available for discovery');
+  });
 }
 
 function normalizeBrowserSettings(value: unknown): BrowserSettings {
@@ -247,6 +280,16 @@ export default function App() {
   });
   const [logs, setLogs] = useState<string[]>([]);
   const [appVersion, setAppVersion] = useState('');
+  const [modeSelected, setModeSelected] = useState<boolean>(true); // assume selected until checked
+  const [currentMode, setCurrentMode] = useState<string>('agent');
+  const [browserBridgeStatus, setBrowserBridgeStatus] = useState<'connected' | 'degraded' | 'not_connected'>('not_connected');
+  const [browserTabCount, setBrowserTabCount] = useState<number>(0);
+  const [routerVersion, setRouterVersion] = useState<string>('');
+  const [routerHealthStatus, setRouterHealthStatus] = useState<'healthy' | 'degraded' | 'disconnected'>('disconnected');
+  const [routerHealthDetail, setRouterHealthDetail] = useState<string>('The local API is not reachable.');
+  const [providersConfigured, setProvidersConfigured] = useState<boolean>(true);
+  const [browserTabs, setBrowserTabs] = useState<Array<{ tabId: string; url: string; title: string; isActive: boolean }>>([]);
+  const [showBrowserPairing, setShowBrowserPairing] = useState<boolean>(false);
 
   useEffect(() => {
     loadInitialData();
@@ -255,6 +298,90 @@ export default function App() {
     return () => {
       window.electronAPI.removeAllListeners();
     };
+  }, []);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/health');
+        if (res.ok) {
+          const data = await res.json() as unknown;
+          if (!isRecord(data)) {
+            throw new Error('Health response returned an unexpected shape.');
+          }
+
+          setRouterVersion(typeof data.version === 'string' ? data.version : '');
+
+          const warnings = [
+            ...getStringArray(data.warnings),
+            ...getStringArray(isRecord(data.config) ? data.config.warnings : undefined),
+            ...getStringArray(isRecord(data.discovery) ? data.discovery.warnings : undefined),
+          ];
+          const noProvidersConfigured = hasNoProviderConfigurationWarning(warnings);
+          setProvidersConfigured(!noProvidersConfigured);
+
+          const reportedStatus = typeof data.status === 'string' ? data.status : 'degraded';
+          if (reportedStatus === 'healthy') {
+            setRouterHealthStatus('healthy');
+            setRouterHealthDetail('All configured providers are reachable.');
+          } else {
+            setRouterHealthStatus('degraded');
+            setRouterHealthDetail(
+              noProvidersConfigured
+                ? 'Mode switching available; providers not configured.'
+                : warnings[0] || 'Router is reachable with limited provider availability.'
+            );
+          }
+
+          const bridgeState = isRecord(data.browserBridge)
+            ? data.browserBridge
+            : isRecord(data.browser)
+              ? data.browser
+              : null;
+
+          if (bridgeState) {
+            setBrowserBridgeStatus(bridgeState.connected === true ? 'connected' : 'not_connected');
+            setBrowserTabCount(typeof bridgeState.tabCount === 'number' ? bridgeState.tabCount : 0);
+          } else {
+            setBrowserBridgeStatus('not_connected');
+            setBrowserTabCount(0);
+          }
+          return;
+        }
+
+        setRouterHealthStatus('disconnected');
+        setRouterHealthDetail(`The local API returned ${res.status}.`);
+        setProvidersConfigured(true);
+        setBrowserBridgeStatus('not_connected');
+        setBrowserTabCount(0);
+      } catch {
+        setRouterHealthStatus('disconnected');
+        setRouterHealthDetail('The local API is not reachable.');
+        setProvidersConfigured(true);
+        setBrowserBridgeStatus('not_connected');
+        setBrowserTabCount(0);
+      }
+    };
+
+    const fetchTabs = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/browser/tabs');
+        if (res.ok) {
+          const data = await res.json();
+          setBrowserTabs(data.tabs || []);
+        }
+      } catch {
+        setBrowserTabs([]);
+      }
+    };
+
+    checkHealth();
+    fetchTabs();
+    const interval = setInterval(() => {
+      checkHealth();
+      fetchTabs();
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -288,6 +415,50 @@ export default function App() {
     [integrationRecords]
   );
 
+  const routerCardState = useMemo(() => {
+    if (routerHealthStatus === 'healthy') {
+      return {
+        status: 'good' as const,
+        details: `Running${routerVersion ? ` (v${routerVersion})` : ''}. All configured providers are reachable.`,
+      };
+    }
+
+    if (routerHealthStatus === 'degraded') {
+      return {
+        status: 'warning' as const,
+        details: `Reachable${routerVersion ? ` (v${routerVersion})` : ''}. ${routerHealthDetail}`,
+      };
+    }
+
+    if (mcpServerStatus.running) {
+      return {
+        status: 'warning' as const,
+        details: 'Starting. Waiting for the local API to respond.',
+      };
+    }
+
+    return {
+      status: 'error' as const,
+      details: 'Stopped',
+    };
+  }, [mcpServerStatus.running, routerHealthDetail, routerHealthStatus, routerVersion]);
+
+  const localApiDetail = useMemo(() => {
+    if (!providersConfigured && routerHealthStatus === 'degraded') {
+      return 'Reachable. Mode switching available; providers not configured.';
+    }
+
+    if (routerHealthStatus === 'healthy') {
+      return `Reachable${routerVersion ? ` on router v${routerVersion}` : ''}.`;
+    }
+
+    if (mcpServerStatus.running && routerHealthStatus === 'disconnected') {
+      return 'Waiting for the local API to finish starting.';
+    }
+
+    return systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.detail || 'No local API status yet';
+  }, [mcpServerStatus.running, providersConfigured, routerHealthStatus, routerVersion, systemReadiness]);
+
   const loadIntegrations = async () => {
     try {
       const result = await window.electronAPI.integrationAPI.list();
@@ -305,13 +476,22 @@ export default function App() {
 
   const loadInitialData = async () => {
     try {
-      const [info, browsers, status, version, integrations] = await Promise.all([
+      const [info, browsers, status, version, integrations, modeConfig] = await Promise.all([
         window.electronAPI.getSystemInfo(),
         window.electronAPI.getBrowserConfig(),
         window.electronAPI.getMCPServerStatus(),
         window.electronAPI.getAppVersion(),
         window.electronAPI.integrationAPI.list(),
+        window.electronAPI.modeAPI.get(),
       ]);
+
+      // Check mode selection
+      if (!modeConfig) {
+        setModeSelected(false);
+      } else {
+        setCurrentMode(modeConfig.mode);
+        setModeSelected(true);
+      }
 
       const normalizedBrowserSettings = normalizeBrowserSettings(browsers);
       setSystemInfo(info);
@@ -329,6 +509,20 @@ export default function App() {
     } catch (error) {
       console.error('Failed to load initial data:', error);
     }
+  };
+
+  const handleModeSelect = async (mode: 'agent' | 'router') => {
+    await window.electronAPI.modeAPI.set(mode);
+    setCurrentMode(mode);
+    setModeSelected(true);
+    // Also try to sync to router
+    try {
+      await fetch('http://localhost:3000/api/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+    } catch { /* router may not be running */ }
   };
 
   const setupEventListeners = () => {
@@ -544,11 +738,11 @@ export default function App() {
   };
 
   const openExtensionGuide = () => {
-    void window.electronAPI.openURL('https://github.com/ifinsta/mcp-router-for-antigravity/blob/main/docs/INTEGRATIONS.md');
+    void window.electronAPI.openURL('https://github.com/ifinsta/ifin-platform/blob/main/docs/INTEGRATIONS.md');
   };
 
   const openBrowserGuide = () => {
-    void window.electronAPI.openURL('https://github.com/ifinsta/mcp-router-for-antigravity/blob/main/docs/BROWSER.md');
+    void window.electronAPI.openURL('https://github.com/ifinsta/ifin-platform/blob/main/docs/BROWSER.md');
   };
 
   const getStatusLabel = (status: string) => {
@@ -620,6 +814,9 @@ export default function App() {
     if (activeTab === 'browser') {
       return (
         <>
+          <button type="button" className="btn-primary" onClick={() => setShowBrowserPairing(true)}>
+            Setup Guide
+          </button>
           <button type="button" className="btn-primary" onClick={saveBrowserConfig}>
             Save Browser Settings
           </button>
@@ -716,6 +913,33 @@ export default function App() {
 
   const renderOverview = () => (
     <div className="workspace-section">
+      <div className="status-summary">
+        <StatusCard
+          icon="⚡"
+          title="Mode"
+          status="good"
+          details={currentMode === 'router' ? 'Router Mode' : 'Agent Mode'}
+        />
+        <StatusCard
+          icon="🔌"
+          title="MCP Server"
+            status={routerCardState.status}
+            details={routerCardState.details}
+        />
+        <StatusCard
+          icon="🌐"
+          title="Browser Bridge"
+          status={browserBridgeStatus === 'connected' ? 'good' : browserBridgeStatus === 'degraded' ? 'warning' : 'error'}
+          details={browserBridgeStatus === 'connected' ? `Connected (${browserTabCount} tab${browserTabCount !== 1 ? 's' : ''})` : 'Not Connected'}
+        />
+        <StatusCard
+          icon="🤖"
+          title="Native Models"
+          status={currentMode === 'router' ? 'good' : 'warning'}
+          details={currentMode === 'router' ? 'Enabled (Router Mode)' : 'Disabled (Agent Mode)'}
+        />
+      </div>
+
       <div className="stats-grid">
         <div className="metric-panel">
           <span className="metric-label">System Readiness</span>
@@ -736,9 +960,7 @@ export default function App() {
           <strong className="metric-value">
             {getStatusLabel(systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.status || 'degraded')}
           </strong>
-          <span className="metric-detail">
-            {systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.detail || 'No local API status yet'}
-          </span>
+          <span className="metric-detail">{localApiDetail}</span>
         </div>
         <div className="metric-panel">
           <span className="metric-label">Browser Bridge</span>
@@ -858,6 +1080,8 @@ export default function App() {
 
     return (
       <div className="workspace-section">
+        <BrowserPreview />
+
         <div className="content-grid two-column">
           {browserExtensionRecord ? (
             <section className="panel-block">
@@ -924,6 +1148,56 @@ export default function App() {
             </section>
           ) : null}
         </div>
+
+        <section className="panel-block">
+          <div className="panel-header">
+            <h3>Managed Tabs</h3>
+            <span className="panel-note">{browserTabs.length} tab{browserTabs.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="tabs-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+            {browserTabs.length === 0 ? (
+              <div className="empty-state">No tabs available. Connect a browser to see managed tabs.</div>
+            ) : (
+              browserTabs.map((tab) => (
+                <div
+                  key={tab.tabId}
+                  className="tab-item"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    background: tab.isActive ? 'rgba(63, 185, 80, 0.1)' : 'var(--bg-secondary)',
+                    border: `1px solid ${tab.isActive ? 'var(--accent-green)' : 'var(--border-default)'}`,
+                    borderRadius: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '12px' }}>🌐</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {tab.title || 'Untitled'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {tab.url}
+                    </div>
+                  </div>
+                  {tab.isActive && (
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-green)',
+                        boxShadow: '0 0 6px var(--accent-green)',
+                      }}
+                      title="Active tab"
+                    />
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         <section className="panel-block">
           <div className="panel-header">
@@ -1015,9 +1289,45 @@ export default function App() {
     </div>
   );
 
+  const handleModeSwitch = async (mode: 'agent' | 'router') => {
+    await window.electronAPI.modeAPI.set(mode);
+    setCurrentMode(mode);
+    try {
+      await fetch('http://localhost:3000/api/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+    } catch { /* ignore */ }
+  };
+
   const renderSettings = () => (
     <div className="workspace-section">
       <div className="settings-grid">
+        {/* Mode Setting */}
+        <section className="panel-block">
+          <div className="panel-header">
+            <h3>Operating Mode</h3>
+            <span className="panel-note">Choose how ifin Platform manages your AI models</span>
+          </div>
+          <div className="mode-toggle">
+            <button
+              type="button"
+              className={`mode-toggle-btn ${currentMode === 'agent' ? 'active' : ''}`}
+              onClick={() => handleModeSwitch('agent')}
+            >
+              🤖 Agent Mode
+            </button>
+            <button
+              type="button"
+              className={`mode-toggle-btn ${currentMode === 'router' ? 'active' : ''}`}
+              onClick={() => handleModeSwitch('router')}
+            >
+              🔀 Router Mode
+            </button>
+          </div>
+        </section>
+
         <section className="panel-block">
           <div className="panel-header">
             <h3>Appearance</h3>
@@ -1080,7 +1390,7 @@ export default function App() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => window.electronAPI.openURL('https://github.com/ifinsta/mcp-router-for-antigravity')}
+              onClick={() => window.electronAPI.openURL('https://github.com/ifinsta/ifin-platform')}
             >
               Open Repository
             </button>
@@ -1109,6 +1419,14 @@ export default function App() {
 
     return renderSettings();
   };
+
+  if (!modeSelected) {
+    return <ModeSelection onSelect={handleModeSelect} />;
+  }
+
+  if (showBrowserPairing) {
+    return <BrowserPairing onClose={() => setShowBrowserPairing(false)} />;
+  }
 
   return (
     <div className="app-shell" data-theme={theme}>

@@ -1,8 +1,13 @@
 # Archived Documentation
 
-This folder contains historical planning notes, implementation summaries, sprint logs,
-and overlapping guides that are no longer part of the primary documentation path.
+This folder now keeps only legacy guides and reference notes that still have
+standalone value.
 
-These files are kept for project history and traceability. When you need current
-instructions, start with [`../README.md`](../README.md) and the active docs in the
-parent `docs/` directory instead.
+When you need current instructions, start with [`../README.md`](../README.md)
+and the active docs in the parent `docs/` directory instead.
+
+## Index
+
+- [`antigravity-tool-compat.md`](./antigravity-tool-compat.md)
+- [`external-agent-integration.md`](./external-agent-integration.md)
+- [`performance-guide.md`](./performance-guide.md)

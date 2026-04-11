@@ -26,6 +26,7 @@ const state = {
   viewport: { width: 1440, height: 900 },
   consoleFilter: 'all',
   consoleAutoScroll: true,
+  tabs: [],
 };
 
 /* ==========================================================================
@@ -82,6 +83,11 @@ const dom = {
   designAuditBtn: $('#designAuditBtn'),
   // Scroll simulation
   scrollBtn: $('#scrollBtn'),
+  // Tabs
+  tabsCard: $('#tabsCard'),
+  tabsBadge: $('#tabsBadge'),
+  tabsList: $('#tabsList'),
+  tabsEmpty: $('#tabsEmpty'),
   // Interactions
   interactionsCard: $('#interactionsCard'),
   interactionsBadge: $('#interactionsBadge'),
@@ -595,6 +601,80 @@ function displayDesignAuditResults(data) {
   dom.designAuditSections.innerHTML = html;
 }
 
+/** J. Tabs Management */
+function updateTabs(tabs) {
+  state.tabs = tabs || [];
+
+  // Update badge
+  dom.tabsBadge.textContent = state.tabs.length;
+  dom.tabsBadge.className = state.tabs.length > 0 ? 'badge' : 'badge badge--empty';
+
+  // Remove empty state
+  if (dom.tabsEmpty) dom.tabsEmpty.remove();
+
+  // Build tabs list
+  if (state.tabs.length === 0) {
+    dom.tabsList.innerHTML = `
+      <div class="empty-state" id="tabsEmpty">
+        <span class="empty-state__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="5.5" width="13" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 8.5h7M6.5 11.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </span>
+        <span>No tabs managed</span>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+  for (const tab of state.tabs) {
+    html += `
+      <div class="tab-item ${tab.isActive ? 'active' : ''}" data-tab-id="${escAttr(tab.tabId)}">
+        <span class="tab-favicon">🌐</span>
+        <div class="tab-content">
+          <div class="tab-title">${escHtml(tab.title || 'Untitled')}</div>
+          <div class="tab-url">${escHtml(tab.url || '')}</div>
+        </div>
+        <span class="tab-indicator" title="Active tab"></span>
+      </div>`;
+  }
+  dom.tabsList.innerHTML = html;
+
+  // Add click handlers for tab switching
+  dom.tabsList.querySelectorAll('.tab-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tabId = item.dataset.tabId;
+      if (tabId) {
+        onSwitchTab(tabId);
+      }
+    });
+  });
+}
+
+async function onSwitchTab(tabId) {
+  addConsoleEntry({
+    level: 'info',
+    message: `Switching to tab: ${tabId}`,
+    timestamp: Date.now(),
+  });
+
+  const result = await sendToServiceWorker('switch-tab', { tabId });
+
+  if (!result.success) {
+    addConsoleEntry({
+      level: 'error',
+      message: `Failed to switch tab: ${result.error || 'Unknown error'}`,
+      timestamp: Date.now(),
+    });
+  } else {
+    addConsoleEntry({
+      level: 'info',
+      message: `Switched to tab: ${tabId}`,
+      timestamp: Date.now(),
+    });
+    // Refresh tabs list
+    sendToServiceWorker('get-tabs', {});
+  }
+}
+
 /**
  * Build a collapsible audit sub-section.
  */
@@ -1059,6 +1139,9 @@ function initServiceWorkerListener() {
           dom.viewportLabel.innerHTML = `${msg.width} &times; ${msg.height}`;
         }
         break;
+      case 'tabs-update':
+        updateTabs(msg.tabs || []);
+        break;
       default:
         // Handle events forwarded from content scripts
         if (msg.type === 'event' && msg.event === 'design-audit-result') {
@@ -1281,6 +1364,9 @@ function init() {
 
   // Request initial state from service worker
   sendToServiceWorker('sidepanel-ready', {});
+
+  // Request tabs list
+  sendToServiceWorker('get-tabs', {});
 }
 
 document.addEventListener('DOMContentLoaded', init);

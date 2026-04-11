@@ -132,6 +132,7 @@ interface LauncherResolution {
   available: boolean;
   command: string | null;
   args: string[];
+  env: Record<string, string>;
   displayPath: string | null;
   reason?: string | undefined;
 }
@@ -331,6 +332,11 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
     context.installedExecutablePath.length > 0 &&
     fs.existsSync(context.installedExecutablePath);
 
+  const installedEntryPath = installedAvailable && context.installedExecutablePath
+    ? path.join(path.dirname(context.installedExecutablePath), 'resources', 'app.asar', 'dist', 'src', 'index.js')
+    : null;
+  const installedEntryAvailable = typeof installedEntryPath === 'string' && installedEntryPath.length > 0;
+
   const repoEntryPath = context.repoRoot
     ? path.join(context.repoRoot, 'dist', 'src', 'index.js')
     : null;
@@ -341,6 +347,7 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
     available: boolean,
     command: string | null,
     args: string[],
+    env: Record<string, string>,
     displayPath: string | null,
     reason?: string
   ): LauncherResolution => ({
@@ -349,47 +356,58 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
     available,
     command,
     args,
+    env,
     displayPath,
     reason,
   });
 
   if (launcherMode === 'installed') {
-    if (!installedAvailable) {
-      return buildResolution(null, false, null, [], null, 'Installed launcher is not available on this machine.');
+    if (!installedAvailable || !installedEntryAvailable || !installedEntryPath || !context.installedExecutablePath) {
+      return buildResolution(
+        null,
+        false,
+        null,
+        [],
+        {},
+        null,
+        'Installed launcher is not available on this machine.',
+      );
     }
 
     return buildResolution(
       'installed',
       true,
       context.installedExecutablePath,
-      ['--mcp-stdio'],
+      [installedEntryPath],
+      { ELECTRON_RUN_AS_NODE: '1' },
       context.installedExecutablePath,
     );
   }
 
   if (launcherMode === 'repo') {
     if (!repoAvailable || !repoEntryPath) {
-      return buildResolution(null, false, null, [], null, 'Repo launcher is not available from this app context.');
+      return buildResolution(null, false, null, [], {}, null, 'Repo launcher is not available from this app context.');
     }
 
-    return buildResolution('repo', true, 'node', [repoEntryPath], repoEntryPath);
+    return buildResolution('repo', true, 'node', [repoEntryPath], {}, repoEntryPath);
   }
 
-  if (installedAvailable) {
+  if (installedAvailable && installedEntryAvailable && installedEntryPath && context.installedExecutablePath) {
     return buildResolution(
       'installed',
       true,
       context.installedExecutablePath,
-      ['--mcp-stdio'],
+      [installedEntryPath],
+      { ELECTRON_RUN_AS_NODE: '1' },
       context.installedExecutablePath,
     );
   }
 
   if (repoAvailable && repoEntryPath) {
-    return buildResolution('repo', true, 'node', [repoEntryPath], repoEntryPath);
+    return buildResolution('repo', true, 'node', [repoEntryPath], {}, repoEntryPath);
   }
 
-  return buildResolution(null, false, null, [], null, 'No launcher target is currently available.');
+  return buildResolution(null, false, null, [], {}, null, 'No launcher target is currently available.');
 }
 
 export function previewMcpClientConfig(
@@ -399,7 +417,7 @@ export function previewMcpClientConfig(
 ): IntegrationPreview {
   const target = requireMcpClientDefinition(context, targetId);
   const launcher = resolveLauncher(context, launcherMode);
-  const env = getConfiguredEnv(context);
+  const env = { ...launcher.env, ...getConfiguredEnv(context) };
   const existing = readJsonObject(target.configPath);
   const requiresReplace = existing.exists && !existing.valid;
 

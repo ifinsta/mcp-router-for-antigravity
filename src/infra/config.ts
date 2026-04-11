@@ -5,12 +5,17 @@
  */
 
 import 'dotenv/config';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { z } from 'zod';
 import {
   createConfigurationError,
   createMissingSecretError,
   isRouterError,
 } from '../core/errors.js';
+import type { ModeConfig, RouterMode, ModeSource } from '../core/types.js';
+import { getLogger } from './logger.js';
 
 // ============================================================================
 // Configuration Schema
@@ -129,6 +134,26 @@ const ServerConfigSchema = z.object({
 });
 
 /**
+ * Mode configuration schema
+ */
+const ModeConfigSchema = z.object({
+  mode: z.enum(['agent', 'router']).default('agent'),
+  modeLastUpdated: z.string().default(() => new Date().toISOString()),
+  modeSource: z.enum(['user_selection', 'migration', 'default']).default('default'),
+});
+
+/**
+ * Security configuration schema
+ */
+const SecurityConfigSchema = z.object({
+  domainAllowlist: z.array(z.string()).default([]),
+  auditEnabled: z.boolean().default(false),
+  secretPatterns: z.array(z.string()).default([]),
+  sessionIsolation: z.boolean().default(false),
+  riskActions: z.array(z.string()).default(['form_submit', 'file_download', 'auth_flow']),
+});
+
+/**
  * Complete application configuration schema
  */
 const AppConfigSchema = z.object({
@@ -137,6 +162,8 @@ const AppConfigSchema = z.object({
   resilience: ResilienceConfigSchema,
   providers: ProvidersConfigSchema,
   server: ServerConfigSchema.default({ extensionApiPort: 3000 }),
+  mode: ModeConfigSchema.default({ mode: 'agent', modeLastUpdated: new Date().toISOString(), modeSource: 'default' }),
+  security: SecurityConfigSchema.default({ domainAllowlist: [], auditEnabled: false, secretPatterns: [], sessionIsolation: false, riskActions: ['form_submit', 'file_download', 'auth_flow'] }),
 });
 
 // ============================================================================
@@ -208,6 +235,14 @@ export interface AppConfig {
   };
   server: {
     extensionApiPort: number;
+  };
+  mode: ModeConfig;
+  security: {
+    domainAllowlist: readonly string[];
+    auditEnabled: boolean;
+    secretPatterns: readonly string[];
+    sessionIsolation: boolean;
+    riskActions: readonly string[];
   };
 }
 
@@ -282,21 +317,144 @@ function getArrayEnv(name: string, defaultValue?: string[]): string[] {
 }
 
 /**
+ * Load boolean environment variable
+ */
+function getBooleanEnv(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name];
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return value === 'true';
+}
+
+/**
+ * Get the path to the mode configuration file
+ */
+function getModeConfigPath(): string {
+  return path.join(os.homedir(), '.ifin-platform', 'mode.json');
+}
+
+/**
+ * Load mode configuration from file or environment
+ * Priority: file > env var > default
+ */
+function loadModeConfig(): ModeConfig {
+  const modeConfigPath = getModeConfigPath();
+
+  // First, try to load from persisted file (represents user choice)
+  if (fs.existsSync(modeConfigPath)) {
+    try {
+      const content = fs.readFileSync(modeConfigPath, 'utf-8');
+      const parsed = JSON.parse(content) as unknown;
+      const validated = ModeConfigSchema.safeParse(parsed);
+      if (validated.success) {
+        return validated.data;
+      }
+    } catch {
+      // Fall through to env var
+    }
+  }
+
+  // Fall back to environment variable
+  const envMode = process.env['ROUTER_MODE'];
+  if (envMode !== undefined && (envMode === 'agent' || envMode === 'router')) {
+    return {
+      mode: envMode,
+      modeLastUpdated: new Date().toISOString(),
+      modeSource: 'default',
+    };
+  }
+
+  // Default to agent mode
+  return {
+    mode: 'agent',
+    modeLastUpdated: new Date().toISOString(),
+    modeSource: 'default',
+  };
+}
+
+function getConfiguredProviderNamesFromEnv(): string[] {
+  const providers: string[] = [];
+
+  if (typeof process.env['OPENAI_API_KEY'] === 'string' && process.env['OPENAI_API_KEY'].trim().length > 0) {
+    providers.push('openai');
+  }
+  if (typeof process.env['GLM_API_KEY'] === 'string' && process.env['GLM_API_KEY'].trim().length > 0) {
+    providers.push('glm');
+  }
+  if (typeof process.env['OLLAMA_BASE_URL'] === 'string' && process.env['OLLAMA_BASE_URL'].trim().length > 0) {
+    providers.push('ollama');
+  }
+  if (typeof process.env['CHUTES_API_KEY'] === 'string' && process.env['CHUTES_API_KEY'].trim().length > 0) {
+    providers.push('chutes');
+  }
+  if (typeof process.env['ANTHROPIC_API_KEY'] === 'string' && process.env['ANTHROPIC_API_KEY'].trim().length > 0) {
+    providers.push('anthropic');
+  }
+  if (
+    typeof process.env['AZURE_OPENAI_API_KEY'] === 'string' &&
+    process.env['AZURE_OPENAI_API_KEY'].trim().length > 0 &&
+    typeof process.env['AZURE_OPENAI_RESOURCE'] === 'string' &&
+    process.env['AZURE_OPENAI_RESOURCE'].trim().length > 0 &&
+    typeof process.env['AZURE_OPENAI_DEPLOYMENT'] === 'string' &&
+    process.env['AZURE_OPENAI_DEPLOYMENT'].trim().length > 0
+  ) {
+    providers.push('azure-openai');
+  }
+
+  return providers;
+}
+
+function getDefaultModelForProvider(provider: string): string {
+  switch (provider) {
+    case 'glm':
+      return 'GLM-4.7';
+    case 'anthropic':
+      return 'claude-sonnet-4-20250514';
+    case 'chutes':
+      return 'Qwen/Qwen2.5-72B-Instruct';
+    case 'azure-openai':
+      return 'gpt-4o';
+    case 'ollama':
+      return 'llama3.1';
+    case 'openai':
+    default:
+      return 'gpt-4o';
+  }
+}
+
+/**
  * Load configuration from environment variables
  */
 export function loadConfig(): AppConfig {
+  const configuredProviders = getConfiguredProviderNamesFromEnv();
+  const defaultProvider = getEnv(
+    'ROUTER_DEFAULT_PROVIDER',
+    configuredProviders[0] ?? 'openai'
+  );
+  const defaultModel = getEnv(
+    'ROUTER_DEFAULT_MODEL',
+    getDefaultModelForProvider(defaultProvider)
+  );
+  const allowedProviders = hasEnv('ALLOWED_PROVIDERS')
+    ? getArrayEnv('ALLOWED_PROVIDERS')
+    : Array.from(new Set(configuredProviders.length > 0 ? configuredProviders : [defaultProvider]));
+  const allowedModels = hasEnv('ALLOWED_MODELS')
+    ? getArrayEnv('ALLOWED_MODELS')
+    : [];
+
   const rawConfig = {
     router: {
-      defaultProvider: getEnv('ROUTER_DEFAULT_PROVIDER'),
-      defaultModel: getEnv('ROUTER_DEFAULT_MODEL'),
+      defaultProvider,
+      defaultModel,
       timeoutMs: getIntEnv('ROUTER_TIMEOUT_MS', 45000),
       logLevel: getEnv('ROUTER_LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error',
       globalConcurrencyLimit: getIntEnv('GLOBAL_CONCURRENCY_LIMIT', 20),
       totalRequestBudgetMs: getIntEnv('TOTAL_REQUEST_BUDGET_MS', 60000),
     },
     policy: {
-      allowedProviders: getArrayEnv('ALLOWED_PROVIDERS'),
-      allowedModels: getArrayEnv('ALLOWED_MODELS'),
+      allowedProviders,
+      allowedModels,
       maxInputChars: getIntEnv('MAX_INPUT_CHARS', 120000),
       maxOutputTokens: getIntEnv('MAX_OUTPUT_TOKENS', 4000),
       maxCostUsdPerRequest: hasEnv('MAX_COST_USD_PER_REQUEST')
@@ -320,6 +478,14 @@ export function loadConfig(): AppConfig {
       providerConcurrency: {} as Record<string, number>,
     },
     providers: {} as AppConfig['providers'],
+    mode: loadModeConfig(),
+    security: {
+      domainAllowlist: getArrayEnv('SECURITY_DOMAIN_ALLOWLIST', []),
+      auditEnabled: process.env['SECURITY_AUDIT_ENABLED'] === 'true',
+      secretPatterns: getArrayEnv('SECURITY_SECRET_PATTERNS', []),
+      sessionIsolation: process.env['SECURITY_SESSION_ISOLATION'] === 'true',
+      riskActions: getArrayEnv('SECURITY_RISK_ACTIONS', ['form_submit', 'file_download', 'auth_flow']),
+    },
   };
 
   // Load provider configurations
@@ -418,19 +584,19 @@ export function validateConfig(config: unknown): ConfigValidationResult {
     // Check that at least one provider is configured
     const providers = Object.keys(result.config.providers);
     if (providers.length === 0) {
-      result.errors.push('No providers configured. Set at least one provider API key.');
+      result.warnings.push('No providers configured. Set at least one provider API key.');
     }
 
     // Check that default provider is allowed
     if (!result.config.policy.allowedProviders.includes(result.config.router.defaultProvider)) {
-      result.errors.push(
+      result.warnings.push(
         `Default provider '${result.config.router.defaultProvider}' is not in allowed providers list.`
       );
     }
 
     // Check that default provider is configured
     if (!providers.includes(result.config.router.defaultProvider)) {
-      result.errors.push(
+      result.warnings.push(
         `Default provider '${result.config.router.defaultProvider}' is not configured (missing API key).`
       );
     }
@@ -583,6 +749,19 @@ export function updateProviderApiKey(provider: string, apiKey: string): void {
   }
 
   console.error(`[Config] API key stored for provider: ${provider} (env: ${envVarName})`);
+
+  // Sync the provider registry so the new key is immediately usable
+  try {
+    const { registerProviderFromConfig } = require('../core/registry.js') as typeof import('../core/registry.js');
+    void registerProviderFromConfig(provider).then(() => {
+      try {
+        const { clearHealthCache } = require('../core/health.js') as typeof import('../core/health.js');
+        clearHealthCache();
+      } catch { /* non-critical */ }
+    });
+  } catch (error) {
+    console.error(`[Config] Failed to sync provider registry for ${provider}:`, error);
+  }
 }
 
 /**
@@ -605,4 +784,86 @@ export function removeProviderApiKey(provider: string): void {
     
     console.error(`[Config] API key removed for provider: ${provider}`);
   }
+}
+
+// ============================================================================
+// Mode Configuration
+// ============================================================================
+
+const modeLogger = getLogger('mode');
+
+/**
+ * Get the current router mode
+ */
+export function getMode(): RouterMode {
+  if (_loadedConfig) {
+    return _loadedConfig.mode.mode;
+  }
+  return loadModeConfig().mode;
+}
+
+/**
+ * Get the full mode configuration
+ */
+export function getModeConfig(): ModeConfig {
+  if (_loadedConfig) {
+    return _loadedConfig.mode;
+  }
+  return loadModeConfig();
+}
+
+/**
+ * Update the router mode
+ * 
+ * Updates in-memory config and persists to ~/.ifin-platform/mode.json
+ * 
+ * @param newMode - The new mode to set
+ * @param source - The source of the mode selection
+ */
+export function updateMode(newMode: RouterMode, source: ModeSource): void {
+  const currentModeConfig = _loadedConfig?.mode ?? loadModeConfig();
+  const previousMode = currentModeConfig.mode;
+  
+  // Skip if no change
+  if (previousMode === newMode && currentModeConfig.modeSource === source) {
+    return;
+  }
+  
+  // Create new mode config
+  const newModeConfig: ModeConfig = {
+    mode: newMode,
+    modeLastUpdated: new Date().toISOString(),
+    modeSource: source,
+  };
+  
+  // Update in-memory config
+  if (_loadedConfig) {
+    _loadedConfig = {
+      ..._loadedConfig,
+      mode: newModeConfig,
+    };
+  }
+  
+  // Persist to file
+  const modeConfigPath = getModeConfigPath();
+  const modeConfigDir = path.dirname(modeConfigPath);
+  
+  try {
+    // Ensure directory exists
+    if (!fs.existsSync(modeConfigDir)) {
+      fs.mkdirSync(modeConfigDir, { recursive: true });
+    }
+    
+    // Write mode config
+    fs.writeFileSync(
+      modeConfigPath,
+      JSON.stringify(newModeConfig, null, 2),
+      'utf-8'
+    );
+  } catch (error) {
+    modeLogger.error('Failed to persist mode configuration', error, { modeConfigPath });
+  }
+  
+  // Log the mode change
+  modeLogger.info('Mode updated', { previousMode, newMode, source });
 }

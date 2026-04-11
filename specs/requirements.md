@@ -112,6 +112,16 @@ The system shall expose a small and stable tool surface to supported clients.
 * `llm.chat`
 * `llm.list_models`
 * `router.health`
+* `browser.*`
+
+#### Browser intelligence tools
+
+* `browser.evidence.capture`, `browser.evidence.explain`, `browser.evidence.analyze_flake`, `browser.evidence.root_cause`
+* `browser.tabs.list_all`, `browser.tabs.switch`
+* `browser.recorder.start`, `browser.recorder.stop`, `browser.recorder.export`
+* `browser.assertions.evaluate`
+* `browser.verification.run`
+* `browser.pr_summary.generate`
 
 #### Optional future tools
 
@@ -125,6 +135,158 @@ The system shall expose a small and stable tool surface to supported clients.
 
 * Tools appear consistently regardless of underlying provider.
 * Tool names and input structure remain stable across providers.
+* The browser contract uses one unified `browser.*` family instead of separate public testing and performance families.
+* Browser outputs use one normalized shape with explicit warnings, artifacts, and structured errors.
+
+#### Browser contract requirements
+
+The browser surface shall expose a unified MCP contract for browser control and browser-native diagnostics.
+
+Required browser tool groups:
+
+* `browser.capabilities`
+* `browser.session.open`, `browser.session.close`, `browser.session.list`
+* `browser.navigate`, `browser.screenshot`, `browser.evaluate`
+* `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.wait_for`
+* `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
+* `browser.network.set_conditions`, `browser.network.reset`
+* `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
+* `browser.profile.start`, `browser.profile.stop`
+
+Browser-specific acceptance criteria:
+
+* `browser.capabilities` reports per-browser capability flags truthfully.
+* Unsupported browser operations return structured sanitized failures instead of placeholder success payloads.
+* Degraded execution paths are surfaced through warnings.
+* Screenshots, profiles, and similar outputs are returned through normalized artifact references.
+
+### FR-2.1 Dual-Mode Requirements
+
+The system shall support two operational modes with conditional feature registration.
+
+#### Modes
+
+* **Agent Mode** — host IDE's AI owns chat; ifin provides MCP tools and browser capabilities only
+* **Router Mode** — ifin owns model routing where supported; includes all Agent Mode features plus native model provider
+
+#### Acceptance criteria
+
+* Mode is user-selectable on first run via webview panels (VS Code), React overlays (Electron), or popup cards (Chrome).
+* Mode persists to `~/.ifin-platform/mode.json`.
+* Mode can be switched at runtime via VS Code QuickPick, Electron Settings toggle, or Chrome badge click.
+* `McpRouterLanguageModelProvider` is registered in VS Code extension only when in Router mode.
+* Mode API endpoints `GET/POST /api/mode` are available for programmatic access.
+* Unified status panel shows current mode on all platforms.
+
+#### Mode-specific behavior
+
+| Feature | Agent Mode | Router Mode |
+|---------|------------|-------------|
+| MCP tools | ✓ | ✓ |
+| Browser automation | ✓ | ✓ |
+| Browser bridge | ✓ | ✓ |
+| Native LM provider (VS Code) | ✗ | ✓ |
+| Provider key configuration | Optional | Required |
+
+---
+
+### FR-2.2 Browser Intelligence Requirements
+
+The system shall provide browser evidence capture, failure analysis, and verification capabilities.
+
+#### Evidence Capture
+
+* Capture structured evidence capsules including screenshots, DOM, console, network, and performance data.
+* Evidence is retrievable through normalized artifact references.
+
+#### Failure Classification
+
+* Classify failures into categories: `app_code`, `timing`, `selector_drift`, `backend_failure`, `environment`.
+* Provide human-readable explanations for classified failures.
+
+#### Flake Detection
+
+* Detect flaky test patterns across multiple runs.
+* Maintain historical tracking for flake analysis.
+* Recommend next best action for flaky tests.
+
+#### Root Cause Mapping
+
+* Map evidence to probable code ownership using heuristic analysis.
+* Provide candidate fix hints based on failure classification.
+
+#### Assertion Evaluation
+
+* Support 6-category assertion evaluation: functional, visual, a11y, performance, ux, network.
+* Return structured pass/fail results with evidence references.
+
+#### Fix Verification
+
+* Compare runs before and after code changes.
+* Provide verification verdicts (pass, fail, degraded).
+* Detect regressions in functional, visual, accessibility, and performance categories.
+
+#### PR Summary Generation
+
+* Generate GitHub-ready markdown reports from browser evidence.
+* Include repro summary, evidence capsule reference, root cause, and verification results.
+
+#### Acceptance criteria
+
+* `browser.evidence.capture` returns structured evidence capsule.
+* `browser.evidence.explain` returns classified failure explanation.
+* `browser.evidence.analyze_flake` returns flake analysis with recommendations.
+* `browser.evidence.root_cause` returns code ownership mapping.
+* `browser.assertions.evaluate` returns multi-category assertion results.
+* `browser.verification.run` returns verification verdict.
+* `browser.pr_summary.generate` returns GitHub-ready markdown.
+
+---
+
+### FR-2.3 Browser Workflow Recording Requirements
+
+The system shall support record-to-test generation for browser workflows.
+
+#### Acceptance criteria
+
+* `browser.recorder.start` initiates recording of browser interactions.
+* `browser.recorder.stop` ends recording and stores workflow.
+* `browser.recorder.export` generates executable `browser.*` workflow code.
+* Generated workflows include stable assertions.
+* Optional visual and performance expectations are supported.
+
+---
+
+### FR-2.4 Browser Context Auto-Injection Requirements
+
+The system shall automatically inject browser context into AI conversations.
+
+#### Acceptance criteria
+
+* Browser context is automatically attached when an active session exists.
+* Context includes: URL, page title, active tab id, selected text (when available), artifact references.
+* Injection is configurable for privacy and noise control.
+* Works in both Agent Mode and Router Mode.
+
+---
+
+### FR-2.5 Security Policy Requirements
+
+The system shall enforce security controls for browser and external operations.
+
+#### Acceptance criteria
+
+* Domain allowlists are enforced for browser navigation.
+* Action audit logs are maintained for compliance and debugging.
+* Secrets are redacted from logs and responses.
+* High-risk action warnings are supported.
+* Session isolation and permission control are enforced.
+
+#### Configuration
+
+* `SECURITY_ALLOWED_DOMAINS` — comma-separated domain allowlist
+* `SECURITY_AUDIT_LOG_ENABLED` — enable/disable audit logging
+* `SECURITY_SECRET_REDACTION_PATTERNS` — patterns for secret redaction
 
 ### FR-3 External LLM provider support
 
@@ -382,6 +544,17 @@ The system shall support the following initial configuration values:
 * `MAX_OUTPUT_TOKENS`
 * `MAX_COST_USD_PER_REQUEST`
 * provider-specific API keys and base URLs
+
+### Mode Configuration
+
+* `ROUTER_MODE` — 'agent' or 'router', persisted to `~/.ifin-platform/mode.json`
+* `AUTO_INJECT_BROWSER_CONTEXT` — enable/disable browser context auto-injection
+
+### Security Configuration
+
+* `SECURITY_ALLOWED_DOMAINS` — comma-separated domain allowlist for browser navigation
+* `SECURITY_AUDIT_LOG_ENABLED` — enable/disable action audit logging
+* `SECURITY_SECRET_REDACTION_PATTERNS` — patterns for secret redaction
 
 ## Security Requirements
 

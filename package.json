@@ -6,8 +6,7 @@
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "bin": {
-    "ifin-platform": "./bin/mcp-router-for-antigravity.js",
-    "mcp-router-for-antigravity": "./bin/mcp-router-for-antigravity.js",
+    "ifin-platform": "./bin/ifin-platform.js",
     "setup-mcp": "./bin/setup-mcp.js"
   },
   "files": [
@@ -18,6 +17,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:ide-extension": "npm --prefix extension run build",
     "build:watch": "tsc --watch",
     "build:renderer": "cd electron/renderer && pnpm exec webpack --mode production",
     "build:electron": "echo 'Electron is now built with the main project' && exit 0",
@@ -34,11 +34,14 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "node --import tsx --test test/**/*.test.ts",
+    "test:ide-extension": "npm --prefix extension run test:unit",
     "test:coverage": "c8 node --import tsx --test test/**/*.test.ts",
     "test:contract": "node --import tsx --test test/contract/**/*.test.ts",
     "test:chaos": "node --import tsx --test test/chaos/**/*.test.ts",
     "test:load": "node --import tsx --test test/load/**/*.test.ts",
     "test:windows": "node --import tsx --test test/windows/**/*.test.ts",
+    "package:ide-extension": "npm --prefix extension run package",
+    "rebuild:ide-extension": "npm run build:ide-extension && npm run test:ide-extension && npm run package:ide-extension",
     "clean": "node -e \"const fs=require('fs');['dist','coverage','build','installers'].forEach(d=>{try{fs.rmSync(d,{recursive:true,force:true})}catch{}})\"",
     "ci": "pnpm run typecheck && pnpm run lint && pnpm run test",
     "setup": "node bin/setup-mcp.js",
@@ -95,10 +98,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ifinsta/mcp-router-for-antigravity"
+    "url": "https://github.com/ifinsta/ifin-platform"
   },
   "bugs": {
-    "url": "https://github.com/ifinsta/mcp-router-for-antigravity/issues"
+    "url": "https://github.com/ifinsta/ifin-platform/issues"
   },
-  "homepage": "https://github.com/ifinsta/mcp-router-for-antigravity"
+  "homepage": "https://github.com/ifinsta/ifin-platform"
 }

@@ -21,9 +21,41 @@
     <div class="popup-header__status">
       <span class="status-dot" id="popupStatusDot" title="Disconnected"></span>
       <span class="status-label" id="popupStatusLabel">Disconnected</span>
+      <span id="mode-badge" class="mode-badge" style="display: none;">
+        <span id="mode-badge-text">Agent</span>
+      </span>
       <button class="btn btn--ghost btn--icon" id="themeToggleBtn" data-theme-toggle type="button">Auto</button>
     </div>
   </header>
+
+  <!-- Status Summary -->
+  <div id="status-summary" class="status-summary">
+    <div class="status-item">
+      <span class="status-item-dot" id="mcp-status-dot"></span>
+      <span class="status-item-label">MCP</span>
+    </div>
+    <div class="status-item">
+      <span class="status-item-dot" id="bridge-status-dot"></span>
+      <span class="status-item-label">Bridge</span>
+    </div>
+  </div>
+
+  <!-- Mode Selection (shown on first run) -->
+  <div id="mode-selection" class="section mode-selection" style="display: none;">
+    <h3 class="section-title">Choose Your Mode</h3>
+    <div class="mode-cards-compact">
+      <button class="mode-card-compact" data-mode="agent">
+        <span class="mode-card-icon">🤖</span>
+        <span class="mode-card-label">Agent Mode</span>
+        <span class="mode-card-desc">Use your IDE's AI</span>
+      </button>
+      <button class="mode-card-compact" data-mode="router">
+        <span class="mode-card-icon">🔀</span>
+        <span class="mode-card-label">Router Mode</span>
+        <span class="mode-card-desc">Use ifin-managed models</span>
+      </button>
+    </div>
+  </div>
 
   <section class="popup-section">
     <div class="popup-section__title">Server Connection</div>

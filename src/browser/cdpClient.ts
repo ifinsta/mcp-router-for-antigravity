@@ -41,6 +41,7 @@ export interface CDPClient {
   off(event: string, handler: (params: unknown) => void): void;
   close(): void;
   isConnected(): boolean;
+  getTargetId(): string;
   // High-level operations
   navigateTo(url: string, options?: { timeout?: number; waitUntil?: 'load' | 'DOMContentLoaded' | 'networkIdle' }): Promise<{ url: string; loadTime: number }>;
   captureScreenshot(options?: CDPScreenshotOptions): Promise<string>;

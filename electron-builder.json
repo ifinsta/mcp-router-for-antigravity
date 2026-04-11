@@ -24,7 +24,7 @@
         ]
       }
     ],
-    "icon": "C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\electron\\icon.png",
+    "icon": "C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\electron\\icon.ico",
     "artifactName": "${productName}-${version}-setup.${ext}",
     "sign": null,
     "signDlls": null,

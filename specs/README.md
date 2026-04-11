@@ -400,7 +400,7 @@ Secrets must never be hardcoded.
 ## Suggested project structure
 
 ```text
-mcp-router-for-antigravity/
+ifin-platform/
   src/
     index.ts
     server/
@@ -482,6 +482,7 @@ This repository is currently defined by:
 
 * `requirements.md`
 * `architecture.md`
+* `implementation-plan.md`
 * resilience-first system behavior
 
 The first implementation target is:
@@ -490,6 +491,7 @@ The first implementation target is:
 * `llm.chat`
 * `llm.list_models`
 * `router.health`
+* `browser.*`
 * OpenAI adapter
 * GLM adapter
 * resilience layer baseline
@@ -520,6 +522,8 @@ The first implementation target is:
 
 * health enrichment
 * metrics
+* browser capability truthfulness
+* unified browser artifacts
 * local/self-hosted adapters
 * stronger policy features
 * structured output support
@@ -576,10 +580,12 @@ The first release is successful when:
 
 * `requirements.md`
 * `architecture.md`
-* future: `implementation-plan.md`
+* `implementation-plan.md`
 
 ---
 
 ## Next step
 
-The next practical step is to scaffold the implementation repository and create the first working MCP server with the three initial tools.
+The next practical step is to keep hardening the implementation around the
+current public tool families, especially the normalized `browser.*` surface and
+its capability-truthfulness guarantees.

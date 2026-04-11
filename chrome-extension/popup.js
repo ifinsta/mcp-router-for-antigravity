@@ -11,6 +11,7 @@ const state = {
   webVitals: { lcp: null, fid: null, cls: null },
   activeSessions: 0,
   monitorActive: false,
+  mode: null, // 'agent' | 'router' | null (not yet selected)
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -29,6 +30,11 @@ const dom = {
   miniFidVal: $('#miniFidVal'),
   miniClsBar: $('#miniClsBar'),
   miniClsVal: $('#miniClsVal'),
+  modeSelection: $('#mode-selection'),
+  modeBadge: $('#mode-badge'),
+  modeBadgeText: $('#mode-badge-text'),
+  mcpStatusDot: $('#mcp-status-dot'),
+  bridgeStatusDot: $('#bridge-status-dot'),
 };
 
 const THRESHOLDS = {
@@ -59,6 +65,18 @@ function formatMetric(metric, value) {
   return `${(value / threshold.divisor).toFixed(threshold.precision)}${threshold.unit}`;
 }
 
+function updateStatusDots() {
+  // MCP status - based on WebSocket connection to router
+  if (dom.mcpStatusDot) {
+    dom.mcpStatusDot.className = 'status-item-dot ' + (state.connected ? 'connected' : '');
+  }
+
+  // Bridge status - same as connection status for now
+  if (dom.bridgeStatusDot) {
+    dom.bridgeStatusDot.className = 'status-item-dot ' + (state.connected ? 'connected' : '');
+  }
+}
+
 function updateConnectionStatus(status) {
   state.connectionStatus = status;
   state.connected = status === 'connected';
@@ -67,6 +85,7 @@ function updateConnectionStatus(status) {
   dom.statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
   dom.connectBtn.textContent = state.connected ? 'Disconnect' : 'Connect';
   dom.connectBtn.className = state.connected ? 'btn btn--danger' : 'btn btn--primary';
+  updateStatusDots();
 }
 
 function setMiniBar(metric, value, barEl, valueEl) {
@@ -181,6 +200,51 @@ function bindEvents() {
   });
 }
 
+function showModeSelection() {
+  if (dom.modeSelection) dom.modeSelection.style.display = 'block';
+
+  // Add click handlers for mode cards
+  document.querySelectorAll('.mode-card-compact').forEach(card => {
+    card.addEventListener('click', () => {
+      const mode = card.dataset.mode;
+      selectMode(mode);
+    });
+  });
+}
+
+function showModeBadge(mode) {
+  if (dom.modeSelection) dom.modeSelection.style.display = 'none';
+  if (dom.modeBadge) dom.modeBadge.style.display = 'inline-flex';
+  if (dom.modeBadgeText) dom.modeBadgeText.textContent = mode === 'router' ? 'Router' : 'Agent';
+}
+
+async function selectMode(mode) {
+  // Persist locally
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.set({ ifinPlatformMode: mode });
+  }
+  state.mode = mode;
+
+  // Show badge
+  showModeBadge(mode);
+
+  // Sync to router via WebSocket (if connected)
+  try {
+    chrome.runtime.sendMessage({ type: 'set-mode', mode });
+  } catch { /* ignore */ }
+
+  // Also try HTTP directly
+  try {
+    const host = dom.hostInput?.value || 'localhost';
+    const port = dom.portInput?.value || '3000';
+    await fetch(`http://${host}:${port}/api/mode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    });
+  } catch { /* router may not be running */ }
+}
+
 function init() {
   if (window.ifinTheme) {
     window.ifinTheme.init();
@@ -189,6 +253,7 @@ function init() {
   bindEvents();
   initListener();
   updateConnectionStatus('disconnected');
+  updateStatusDots();
 
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     chrome.storage.local.get(['mcpHost', 'mcpPort'], (result) => {
@@ -197,6 +262,27 @@ function init() {
       }
       if (result.mcpPort) {
         dom.portInput.value = result.mcpPort;
+      }
+    });
+
+    // Check mode selection
+    chrome.storage.local.get(['ifinPlatformMode'], (result) => {
+      if (result.ifinPlatformMode) {
+        state.mode = result.ifinPlatformMode;
+        showModeBadge(state.mode);
+      } else {
+        showModeSelection();
+      }
+
+      // Make mode badge clickable to toggle mode
+      const modeBadgeEl = document.getElementById('mode-badge');
+      if (modeBadgeEl) {
+        modeBadgeEl.style.cursor = 'pointer';
+        modeBadgeEl.title = 'Click to switch mode';
+        modeBadgeEl.addEventListener('click', () => {
+          const newMode = state.mode === 'agent' ? 'router' : 'agent';
+          selectMode(newMode);
+        });
       }
     });
   }

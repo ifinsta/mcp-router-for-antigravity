@@ -24,7 +24,7 @@
         ]
       }
     ],
-    "icon": "electron/icon.png",
+    "icon": "electron/icon.ico",
     "artifactName": "${productName}-${version}-setup.${ext}",
     "sign": null,
     "signDlls": null,

@@ -76,6 +76,31 @@ export interface NormalizedUsage {
 }
 
 /**
+ * Streaming chunk type sent to the extension via SSE
+ * Provider-agnostic normalized shape
+ */
+export interface ExtensionStreamChunk {
+  /** Chunk type discriminator */
+  type: 'text' | 'tool_call' | 'done' | 'error' | 'usage';
+  /** Text delta for 'text' chunks */
+  content?: string | undefined;
+  /** Tool call id for 'tool_call' chunks */
+  toolCallId?: string | undefined;
+  /** Tool call name for 'tool_call' chunks */
+  toolCallName?: string | undefined;
+  /** Tool call arguments JSON for 'tool_call' chunks */
+  toolCallArgs?: string | undefined;
+  /** Finish reason for 'done' chunks */
+  finishReason?: string | undefined;
+  /** Error code for 'error' chunks */
+  errorCode?: string | undefined;
+  /** Error message for 'error' chunks */
+  errorMessage?: string | undefined;
+  /** Usage info for 'usage' chunks */
+  usage?: NormalizedUsage | undefined;
+}
+
+/**
  * Normalized chat response format
  * All provider responses are normalized to this shape
  */
@@ -864,4 +889,451 @@ export interface ConsensusResponse {
   recommended: number;
   totalLatencyMs: number;
   strategy: string;
+}
+
+// ============================================================================
+// Dual-Mode Types
+// ============================================================================
+
+/**
+ * Operating mode of the router
+ */
+export type RouterMode = 'agent' | 'router';
+
+/**
+ * Source of the mode selection
+ */
+export type ModeSource = 'user_selection' | 'migration' | 'default';
+
+/**
+ * Mode configuration state
+ */
+export interface ModeConfig {
+  readonly mode: RouterMode;
+  readonly modeLastUpdated: string; // ISO8601
+  readonly modeSource: ModeSource;
+}
+
+// ============================================================================
+// Security Types
+// ============================================================================
+
+/**
+ * Result of a security policy check
+ */
+export type SecurityCheckResult = 'allowed' | 'blocked';
+
+/**
+ * A single audit log entry
+ */
+export interface SecurityAuditEntry {
+  readonly timestamp: string; // ISO8601
+  readonly action: string;
+  readonly domain: string;
+  readonly actor: string;
+  readonly result: SecurityCheckResult;
+  readonly reason?: string;
+}
+
+/**
+ * Security policy configuration
+ */
+export interface SecurityPolicyConfig {
+  readonly domainAllowlist: readonly string[];
+  readonly auditEnabled: boolean;
+  readonly secretPatterns: readonly string[];
+  readonly sessionIsolation: boolean;
+  readonly riskActions: readonly string[];
+}
+
+/**
+ * Full security policy state
+ */
+export interface SecurityPolicyState {
+  readonly config: SecurityPolicyConfig;
+  readonly auditLog: readonly SecurityAuditEntry[];
+}
+
+// ============================================================================
+// Browser Capability Matrix Types
+// ============================================================================
+
+/** Supported browser identifiers */
+export type SupportedBrowser = 'chrome' | 'edge' | 'firefox' | 'safari';
+
+/** Capability entry for a browser */
+export interface BrowserCapabilityEntry {
+  readonly browser: SupportedBrowser;
+  readonly displayName: string;
+  readonly capabilities: readonly string[];
+  readonly limitations: readonly string[];
+  readonly supportLevel: 'full' | 'core' | 'limited' | 'experimental';
+}
+
+/** Full capability matrix */
+export type BrowserCapabilityMatrix = readonly BrowserCapabilityEntry[];
+
+// ============================================================================
+// Evidence Capsule Types
+// ============================================================================
+
+/**
+ * Console log entry from browser
+ */
+export interface BrowserConsoleEntry {
+  readonly level: 'error' | 'warning' | 'log' | 'info' | 'debug';
+  readonly message: string;
+  readonly timestamp: string;
+  readonly source?: string;
+}
+
+/**
+ * Network request entry from browser
+ */
+export interface BrowserNetworkEntry {
+  readonly url: string;
+  readonly method: string;
+  readonly status: number;
+  readonly statusText: string;
+  readonly duration: number;
+  readonly size: number;
+  readonly timestamp: string;
+}
+
+/**
+ * Action timeline entry
+ */
+export interface ActionTimelineEntry {
+  readonly timestamp: string;
+  readonly action: string;
+  readonly selector?: string;
+  readonly value?: string;
+  readonly result: 'success' | 'failure';
+  readonly error?: string;
+}
+
+/**
+ * Session metadata
+ */
+export interface BrowserSessionMetadata {
+  readonly url: string;
+  readonly title: string;
+  readonly tabId: string;
+  readonly userAgent?: string;
+  readonly viewport?: { width: number; height: number };
+}
+
+/**
+ * Failure info in a capsule
+ */
+export interface CapsuleFailureInfo {
+  readonly type: string;
+  readonly message: string;
+  readonly stack?: string;
+}
+
+/**
+ * Browser evidence data
+ */
+export interface BrowserEvidence {
+  readonly screenshots: readonly string[]; // base64
+  readonly domSnapshot?: string;
+  readonly a11ySnapshot?: string;
+  readonly console: {
+    readonly errors: readonly BrowserConsoleEntry[];
+    readonly warnings: readonly BrowserConsoleEntry[];
+    readonly logs: readonly BrowserConsoleEntry[];
+  };
+  readonly networkRequests: readonly BrowserNetworkEntry[];
+  readonly performanceMetrics: Record<string, number>;
+  readonly sessionMetadata: BrowserSessionMetadata;
+  readonly actionTimeline: readonly ActionTimelineEntry[];
+}
+
+/**
+ * Complete evidence capsule
+ */
+export interface EvidenceCapsule {
+  readonly capsuleId: string;
+  readonly timestamp: string;
+  readonly failure: CapsuleFailureInfo;
+  readonly browser: BrowserEvidence;
+}
+
+// ============================================================================
+// Failure Explanation Types
+// ============================================================================
+
+/**
+ * Classification of failure types for structured explanation
+ */
+export type FailureClass = 'app_code' | 'timing' | 'selector_drift' | 'backend_failure' | 'environment';
+
+/**
+ * Structured explanation of a failure based on evidence analysis
+ */
+export interface FailureExplanation {
+  /** Human-readable description of what failed */
+  readonly what: string;
+  /** Description of the first observed bad state */
+  readonly firstBadState: string;
+  /** Classified failure category */
+  readonly failureClass: FailureClass;
+  /** Confidence score from 0 to 1 */
+  readonly confidence: number;
+  /** References to evidence that supports this classification */
+  readonly evidence: readonly string[];
+}
+
+// ============================================================================
+// Assertion Model Types
+// ============================================================================
+
+/**
+ * Categories for assertion checks
+ */
+export type AssertionCategory = 'functional' | 'visual' | 'accessibility' | 'performance' | 'ux' | 'network';
+
+/**
+ * Severity level for assertion results
+ */
+export type AssertionSeverity = 'critical' | 'warning' | 'info';
+
+/**
+ * Individual assertion check result
+ */
+export interface AssertionCheck {
+  /** Category of the assertion */
+  readonly category: AssertionCategory;
+  /** Human-readable description of what was checked */
+  readonly description: string;
+  /** Whether the assertion passed */
+  readonly passed: boolean;
+  /** Actual value observed (optional) */
+  readonly actual?: string;
+  /** Expected value (optional) */
+  readonly expected?: string;
+  /** Severity level for failed assertions */
+  readonly severity: AssertionSeverity;
+  /** Reference to evidence that supports this assertion */
+  readonly evidence?: string;
+}
+
+/**
+ * Complete assertion evaluation result
+ */
+export interface AssertionResult {
+  /** ID of the evidence capsule that was evaluated */
+  readonly capsuleId: string;
+  /** ISO timestamp of when the evaluation was performed */
+  readonly timestamp: string;
+  /** Total number of checks performed */
+  readonly totalChecks: number;
+  /** Number of checks that passed */
+  readonly passed: number;
+  /** Number of checks that failed */
+  readonly failed: number;
+  /** All assertion checks performed */
+  readonly assertions: readonly AssertionCheck[];
+}
+
+// ============================================================================
+// Fix Verification Types
+// ============================================================================
+
+/**
+ * Result of a single verification rerun
+ */
+export interface VerificationRerun {
+  /** Index of this rerun (0-based) */
+  readonly runIndex: number;
+  /** ID of the evidence capsule used for this rerun */
+  readonly capsuleId: string;
+  /** Assertion results from this rerun */
+  readonly assertions: AssertionResult;
+  /** ISO timestamp of when this rerun was performed */
+  readonly timestamp: string;
+}
+
+/**
+ * Overall verdict for a fix verification
+ */
+export type VerificationVerdict = 'fixed' | 'still_failing' | 'flaky' | 'inconclusive';
+
+/**
+ * Complete fix verification result
+ */
+export interface VerificationResult {
+  /** ID of the patch being verified */
+  readonly patchId: string;
+  /** Information about the original failure */
+  readonly originalFailure: {
+    /** ID of the original evidence capsule */
+    readonly capsuleId: string;
+    /** Assertion results from the original failure */
+    readonly assertions: AssertionResult;
+  };
+  /** Results from each rerun */
+  readonly reruns: readonly VerificationRerun[];
+  /** Overall verdict of the verification */
+  readonly overallVerdict: VerificationVerdict;
+  /** Human-readable summary of the verification */
+  readonly summary: string;
+}
+
+// ============================================================================
+// Root Cause Mapping Types
+// ============================================================================
+
+/**
+ * Categories for candidate fixes
+ */
+export type CandidateFixCategory = 'selector' | 'timing' | 'api' | 'config' | 'code_logic';
+
+/**
+ * A suggested fix for a root cause
+ */
+export interface CandidateFix {
+  /** Human-readable description of the fix */
+  readonly description: string;
+  /** Confidence score from 0 to 1 */
+  readonly confidence: number;
+  /** Category of the fix */
+  readonly category: CandidateFixCategory;
+}
+
+/**
+ * Root cause mapping from evidence capsule to actionable insights
+ */
+export interface RootCauseMapping {
+  /** ID of the source evidence capsule */
+  readonly capsuleId: string;
+  /** Structured failure explanation from classifier */
+  readonly failureExplanation: FailureExplanation;
+  /** Likely UI component involved (e.g., "Login Form", "API Handler /users") */
+  readonly likelyComponent: string;
+  /** Likely event handler or callback (e.g., "onClick handler", "fetch callback") */
+  readonly likelyHandler: string;
+  /** Likely API call if applicable (e.g., "POST /api/auth/login") or null */
+  readonly likelyApiCall: string | null;
+  /** List of suggested fixes with confidence scores */
+  readonly candidateFixes: readonly CandidateFix[];
+  /** ISO timestamp of when the mapping was generated */
+  readonly timestamp: string;
+}
+
+// ============================================================================
+// Flake Analysis Types
+// ============================================================================
+
+/**
+ * Recommended action for addressing a flaky test/failure
+ */
+export type FlakeRecommendation =
+  | 'retry'
+  | 'add_wait'
+  | 'fix_selector'
+  | 'fix_backend'
+  | 'fix_environment'
+  | 'investigate';
+
+/**
+ * Analysis result for flaky test/failure detection
+ */
+export interface FlakeAnalysis {
+  /** IDs of the evidence capsules analyzed */
+  readonly capsuleIds: string[];
+  /** Primary failure class identified */
+  readonly failureClass: FailureClass;
+  /** Whether the failure is determined to be flaky */
+  readonly isFlaky: boolean;
+  /** Confidence score from 0 to 1 */
+  readonly confidence: number;
+  /** Recommended action to address the flake */
+  readonly recommendedAction: FlakeRecommendation;
+  /** Human-readable explanation of the analysis */
+  readonly reasoning: string;
+  /** Historical frequency of this failure pattern (0-1) */
+  readonly historicalFrequency: number;
+  /** Hash/key identifying this failure pattern */
+  readonly patternSignature: string;
+}
+
+// ============================================================================
+// PR Summary Types
+// ============================================================================
+
+/**
+ * Complete PR summary for CI/CD workflow integration
+ */
+export interface PRSummary {
+  /** Unique identifier for this summary */
+  readonly id: string;
+  /** ID of the source evidence capsule */
+  readonly capsuleId: string;
+  /** ISO timestamp when the summary was generated */
+  readonly generatedAt: string;
+  /** Human-readable reproduction steps */
+  readonly repro: string;
+  /** Summary of evidence collected */
+  readonly evidenceSummary: string;
+  /** Probable root cause mapping */
+  readonly probableRootCause: RootCauseMapping;
+  /** Suggested fix description */
+  readonly suggestedFix: string;
+  /** Verification result if available */
+  readonly verification: VerificationResult | null;
+  /** Full markdown report */
+  readonly markdown: string;
+  /** JSON-exportable machine-readable summary */
+  readonly machineReadable: Record<string, unknown>;
+}
+
+// ============================================================================
+// Workflow Recorder Types
+// ============================================================================
+
+/**
+ * Types of actions that can be recorded
+ */
+export type RecordedActionType = 'click' | 'type' | 'navigate' | 'select' | 'scroll' | 'wait' | 'screenshot' | 'assert';
+
+/**
+ * A single recorded browser action
+ */
+export interface RecordedAction {
+  /** Type of action performed */
+  readonly type: RecordedActionType;
+  /** CSS selector for the target element (if applicable) */
+  readonly selector?: string;
+  /** Value typed or selected (if applicable) */
+  readonly value?: string;
+  /** URL navigated to (if applicable) */
+  readonly url?: string;
+  /** ISO timestamp when the action was recorded */
+  readonly timestamp: string;
+  /** Tab ID where the action occurred */
+  readonly tabId?: string;
+  /** Additional metadata about the action */
+  readonly metadata?: Record<string, string>;
+}
+
+/**
+ * A recorded workflow with actions and generated test code
+ */
+export interface RecordedWorkflow {
+  /** Unique identifier for this workflow */
+  readonly id: string;
+  /** Human-readable name for this workflow */
+  readonly name: string;
+  /** ISO timestamp when recording started */
+  readonly startedAt: string;
+  /** ISO timestamp when recording ended (if stopped) */
+  readonly endedAt?: string;
+  /** All recorded actions in sequence */
+  readonly actions: RecordedAction[];
+  /** Generated browser.* MCP tool calls */
+  readonly generatedCode: string;
+  /** Generated assertion statements */
+  readonly generatedAssertions: string[];
 }

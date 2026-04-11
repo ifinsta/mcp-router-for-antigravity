@@ -78,6 +78,10 @@ Common Windows locations used by the application:
 - Cache directory: `%USERPROFILE%\\.mcp-router-cache`
 - Installer output: `installers\\`
 
+For MCP client launchers that target the installed Windows app, use the bundled
+router entrypoint inside `app.asar` and set `ELECTRON_RUN_AS_NODE=1`. The
+packaged Electron binary should not be launched with `--mcp-stdio`.
+
 ## Useful Commands
 
 ```bash

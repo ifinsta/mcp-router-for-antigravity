@@ -2,15 +2,16 @@
   "name": "ifin-platform-integrations",
   "displayName": "ifin Platform Integrations",
   "description": "Connect ifin Platform to supported IDE clients and local model providers through one local integration layer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ifinsta",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ifinsta/mcp-router-for-antigravity"
+    "url": "https://github.com/ifinsta/ifin-platform"
   },
+  "icon": "media/ifin-extension-icon.png",
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.106.0"
   },
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -19,154 +20,244 @@
   "contributes": {
     "commands": [
       {
-        "command": "mcpRouter.configureApiKeys",
+        "command": "ifinPlatform.configureApiKeys",
         "title": "Configure API Keys",
         "category": "ifin Platform",
         "icon": "$(key)"
       },
       {
-        "command": "mcpRouter.setupMCP",
+        "command": "ifinPlatform.setupMCP",
         "title": "Setup MCP Server for IDE",
         "category": "ifin Platform",
         "icon": "$(gear)"
+      },
+      {
+        "command": "ifinPlatform.showStatus",
+        "title": "Show Status Dashboard",
+        "category": "ifin Platform",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "ifinPlatform.switchMode",
+        "title": "Switch Mode (Agent/Router)",
+        "category": "ifin Platform"
+      },
+      {
+        "command": "ifinPlatform.showPreview",
+        "title": "Show Browser Preview",
+        "category": "ifin Platform",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "ifinPlatform.pairBrowser",
+        "title": "Setup Browser Extension",
+        "category": "ifin Platform",
+        "icon": "$(plug)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "mcpRouter.configureApiKeys"
+          "command": "ifinPlatform.configureApiKeys"
         },
         {
-          "command": "mcpRouter.setupMCP"
+          "command": "ifinPlatform.setupMCP"
+        },
+        {
+          "command": "ifinPlatform.showStatus"
+        },
+        {
+          "command": "ifinPlatform.showPreview"
+        },
+        {
+          "command": "ifinPlatform.pairBrowser"
         }
       ],
       "view/title": [
         {
-          "command": "mcpRouter.configureApiKeys",
+          "command": "ifinPlatform.configureApiKeys",
           "when": "view == chat",
+          "group": "navigation"
+        }
+      ],
+      "extension/context": [
+        {
+          "command": "ifinPlatform.configureApiKeys",
+          "when": "extension == ifinsta.ifin-platform-integrations",
           "group": "navigation"
         }
       ]
     },
     "languageModelChatProviders": [
       {
-        "vendor": "mcp-router",
+        "vendor": "ifin-platform",
         "displayName": "ifin Platform Models"
       }
     ],
     "mcpServerDefinitionProviders": [
       {
-        "id": "mcp-router-server",
+        "id": "ifin-platform-server",
         "label": "ifin Platform"
       }
     ],
     "configuration": {
       "title": "ifin Platform Integrations",
       "properties": {
-        "mcpRouter.baseUrl": {
+        "ifinPlatform.baseUrl": {
           "type": "string",
           "default": "http://localhost:3000",
           "description": "Base URL of the ifin Platform backend API"
         },
-        "mcpRouter.timeout": {
+        "ifinPlatform.timeout": {
           "type": "number",
           "default": 30000,
           "description": "Request timeout in milliseconds for router communication"
         },
-        "mcpRouter.showOnlyHealthyModels": {
+        "ifinPlatform.showOnlyHealthyModels": {
           "type": "boolean",
           "default": true,
           "description": "Only show models that pass health checks"
         },
-        "mcpRouter.autoRefreshCatalog": {
+        "ifinPlatform.autoRefreshCatalog": {
           "type": "boolean",
           "default": true,
           "description": "Automatically refresh model catalog on changes"
         },
-        "mcpRouter.logLevel": {
+        "ifinPlatform.autoInjectBrowserContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically inject browser context into AI conversations"
+        },
+        "ifinPlatform.logLevel": {
           "type": "string",
           "enum": ["error", "warn", "info", "debug"],
           "default": "info",
           "description": "Logging level for ifin Platform extension output"
         },
-        "mcpRouter.providers.glm.enabled": {
+        "ifinPlatform.routerPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the router entrypoint file or repo root. Use this when the IDE extension is installed outside the router checkout."
+        },
+        "ifinPlatform.mode": {
+          "type": "string",
+          "enum": ["agent", "router"],
+          "default": "agent",
+          "description": "Operating mode: 'agent' uses your IDE's native AI, 'router' uses ifin-managed models"
+        },
+        "ifinPlatform.models.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model used for primary conversations in the IDE extension settings UI."
+        },
+        "ifinPlatform.models.smallModel": {
+          "type": "string",
+          "default": "",
+          "description": "Lightweight helper model for fast extension-side tasks."
+        },
+        "ifinPlatform.models.byMode.code": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model override for code-oriented work."
+        },
+        "ifinPlatform.models.byMode.plan": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model override for planning work."
+        },
+        "ifinPlatform.models.byMode.debug": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model override for debugging work."
+        },
+        "ifinPlatform.models.byMode.orchestrator": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model override for orchestration flows."
+        },
+        "ifinPlatform.models.byMode.ask": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model override for lightweight ask flows."
+        },
+        "ifinPlatform.providers.glm.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable GLM (Z.AI) provider"
         },
-        "mcpRouter.providers.glm.apiKey": {
+        "ifinPlatform.providers.glm.apiKey": {
           "type": "string",
           "default": "",
           "description": "API key for GLM (Z.AI). Obtain from https://z.ai/manage-apikey/apikey-list",
           "markdownDescription": "API key for GLM (Z.AI). Obtain from [Z.AI API Keys](https://z.ai/manage-apikey/apikey-list). See [Z.AI Devpack Docs](https://docs.z.ai/devpack/overview) for details."
         },
-        "mcpRouter.providers.glm.baseUrl": {
+        "ifinPlatform.providers.glm.baseUrl": {
           "type": "string",
           "default": "https://api.z.ai/api/paas/v4",
           "description": "Base URL for the GLM (Z.AI) API endpoint"
         },
-        "mcpRouter.providers.glm.defaultModel": {
+        "ifinPlatform.providers.glm.defaultModel": {
           "type": "string",
           "default": "GLM-4.7",
           "description": "Default model for GLM provider",
           "enum": ["GLM-5.1", "GLM-5", "GLM-5-Turbo", "GLM-4.7", "GLM-4.6", "GLM-4.5", "GLM-4.5-Air"]
         },
-        "mcpRouter.providers.openai.enabled": {
+        "ifinPlatform.providers.openai.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable OpenAI provider"
         },
-        "mcpRouter.providers.openai.apiKey": {
+        "ifinPlatform.providers.openai.apiKey": {
           "type": "string",
           "default": "",
           "description": "API key for OpenAI"
         },
-        "mcpRouter.providers.openai.baseUrl": {
+        "ifinPlatform.providers.openai.baseUrl": {
           "type": "string",
           "default": "https://api.openai.com/v1",
           "description": "Base URL for the OpenAI API endpoint"
         },
-        "mcpRouter.providers.openai.defaultModel": {
+        "ifinPlatform.providers.openai.defaultModel": {
           "type": "string",
           "default": "gpt-4o",
           "description": "Default model for OpenAI provider"
         },
-        "mcpRouter.providers.anthropic.enabled": {
+        "ifinPlatform.providers.anthropic.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable Anthropic provider"
         },
-        "mcpRouter.providers.anthropic.apiKey": {
+        "ifinPlatform.providers.anthropic.apiKey": {
           "type": "string",
           "default": "",
           "description": "API key for Anthropic"
         },
-        "mcpRouter.providers.anthropic.baseUrl": {
+        "ifinPlatform.providers.anthropic.baseUrl": {
           "type": "string",
           "default": "https://api.anthropic.com",
           "description": "Base URL for the Anthropic API endpoint"
         },
-        "mcpRouter.providers.anthropic.defaultModel": {
+        "ifinPlatform.providers.anthropic.defaultModel": {
           "type": "string",
           "default": "claude-sonnet-4-20250514",
           "description": "Default model for Anthropic provider"
         },
-        "mcpRouter.providers.chutes.enabled": {
+        "ifinPlatform.providers.chutes.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable Chutes provider"
         },
-        "mcpRouter.providers.chutes.apiKey": {
+        "ifinPlatform.providers.chutes.apiKey": {
           "type": "string",
           "default": "",
           "description": "API key for Chutes"
         },
-        "mcpRouter.providers.chutes.baseUrl": {
+        "ifinPlatform.providers.chutes.baseUrl": {
           "type": "string",
           "default": "https://llm.chutes.ai/v1",
           "description": "Base URL for the Chutes API endpoint"
         },
-        "mcpRouter.providers.chutes.defaultModel": {
+        "ifinPlatform.providers.chutes.defaultModel": {
           "type": "string",
           "default": "Qwen/Qwen2.5-72B-Instruct",
           "description": "Default model for Chutes provider"
@@ -200,7 +291,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "@types/vscode": "^1.107.0",
+    "@types/vscode": "^1.106.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.55.0",

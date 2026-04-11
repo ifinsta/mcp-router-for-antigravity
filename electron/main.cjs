@@ -130,6 +130,10 @@ function readBridgePort() {
     : 9315;
 }
 
+function getInstalledServerEntryScript() {
+  return path.join(path.dirname(process.execPath), 'resources', 'app.asar', 'dist', 'src', 'index.js');
+}
+
 async function bootstrap() {
   logRuntime('Bootstrapping Electron main process');
   const { AssignmentManager } = await import(pathToFileURL(path.join(__dirname, '../dist/src/core/assignmentModes.js')).href);
@@ -494,9 +498,9 @@ async function bootstrap() {
         return { success: false, error: 'MCP server already running' };
       }
 
-      mcpServerProcess = spawn(process.execPath, ['--mcp-stdio'], {
+      mcpServerProcess = spawn(process.execPath, [getInstalledServerEntryScript()], {
         stdio: 'pipe',
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '', ...(config?.env ?? {}) },
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...(config?.env ?? {}) },
         windowsHide: true,
       });
 
@@ -805,6 +809,40 @@ async function bootstrap() {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return { success: false, error: message };
+    }
+  });
+
+  // Mode management
+  ipcMain.handle('mode:get', async () => {
+    const modePath = path.join(os.homedir(), '.ifin-platform', 'mode.json');
+    try {
+      if (fs.existsSync(modePath)) {
+        const data = JSON.parse(fs.readFileSync(modePath, 'utf-8'));
+        return data;
+      }
+    } catch (e) {
+      console.error('Failed to read mode config:', e);
+    }
+    return null; // No mode selected yet
+  });
+
+  ipcMain.handle('mode:set', async (_event, mode) => {
+    const modeDir = path.join(os.homedir(), '.ifin-platform');
+    const modePath = path.join(modeDir, 'mode.json');
+    try {
+      if (!fs.existsSync(modeDir)) {
+        fs.mkdirSync(modeDir, { recursive: true });
+      }
+      const config = {
+        mode,
+        modeLastUpdated: new Date().toISOString(),
+        modeSource: 'user_selection',
+      };
+      fs.writeFileSync(modePath, JSON.stringify(config, null, 2));
+      return config;
+    } catch (e) {
+      console.error('Failed to write mode config:', e);
+      throw e;
     }
   });
 

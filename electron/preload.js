@@ -53,5 +53,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openPath: (targetPath) => ipcRenderer.invoke('open-path', targetPath),
     getLauncherMode: () => ipcRenderer.invoke('integration:get-launcher-mode'),
     setLauncherMode: (launcherMode) => ipcRenderer.invoke('integration:set-launcher-mode', launcherMode),
+  },
+
+  // Mode API
+  modeAPI: {
+    get: () => ipcRenderer.invoke('mode:get'),
+    set: (mode) => ipcRenderer.invoke('mode:set', mode),
   }
 });

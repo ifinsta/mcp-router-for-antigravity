@@ -1,8 +1,41 @@
+import * as vscode from 'vscode';
 import { ExtensionConfig, getExtensionConfig } from '../config/settings';
 import { getLogger } from '../infra/logger';
 import { RouterConnectionError, RouterResponseError, sanitizeErrorMessage } from '../infra/errors';
 
 const logger = getLogger('router-client');
+
+/**
+ * Browser auto-context response from the router
+ */
+export interface BrowserAutoContext {
+  hasActiveSession: boolean;
+  url: string;
+  title: string;
+  activeTabId: string | number;
+  selectedText?: string;
+  lastScreenshotTimestamp?: number;
+}
+
+/**
+ * Normalized SSE chunk from the router
+ * Matches ExtensionStreamChunk on the server side
+ */
+export interface RouterStreamChunk {
+  type: 'text' | 'tool_call' | 'done' | 'error' | 'usage';
+  content?: string;
+  toolCallId?: string;
+  toolCallName?: string;
+  toolCallArgs?: string;
+  finishReason?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
+}
 
 /**
  * Model information as returned by the router
@@ -43,6 +76,24 @@ export interface RouterChatRequest {
 }
 
 /**
+ * Parsed result from streaming response
+ */
+export interface StreamResult {
+  /** Accumulated text content */
+  text: string;
+  /** Tool calls detected in the stream */
+  toolCalls: Array<{
+    id: string;
+    name: string;
+    arguments: string;
+  }>;
+  /** Finish reason */
+  finishReason: string | null;
+  /** Usage info if available */
+  usage: RouterStreamChunk['usage'] | null;
+}
+
+/**
  * Chat response from the router (non-streaming)
  */
 export interface RouterChatResponse {
@@ -68,9 +119,26 @@ export interface RouterChatResponse {
  */
 export class RouterClient {
   private config: ExtensionConfig;
+  /** Router version discovered on first health check */
+  private routerVersion: string | null = null;
 
   constructor(config?: ExtensionConfig) {
     this.config = config ?? getExtensionConfig();
+  }
+
+  /**
+   * Get the discovered router version (set after first health check)
+   */
+  get discoveredVersion(): string | null {
+    return this.routerVersion;
+  }
+
+  get baseUrl(): string {
+    return this.config.baseUrl;
+  }
+
+  get timeoutMs(): number {
+    return this.config.timeout;
   }
 
   /**
@@ -200,9 +268,43 @@ export class RouterClient {
 
   /**
    * Send a streaming chat request to the router
-   * Returns an AsyncIterable of text chunks
+   * Returns an AsyncIterable of raw SSE chunk strings (for backward compat)
+   * 
+   * @deprecated Use chatStreamTyped instead for typed chunks
    */
   async *chatStream(request: RouterChatRequest): AsyncIterable<string> {
+    for await (const chunk of this.chatStreamTyped(request)) {
+      // Emit text content for backward compatibility
+      if (chunk.type === 'text' && chunk.content) {
+        yield JSON.stringify({
+          choices: [{ delta: { content: chunk.content } }],
+        });
+      } else if (chunk.type === 'tool_call') {
+        yield JSON.stringify({
+          choices: [{ delta: { tool_calls: [{
+            id: chunk.toolCallId,
+            function: {
+              name: chunk.toolCallName,
+              arguments: chunk.toolCallArgs,
+            },
+          }] } }],
+        });
+      } else if (chunk.type === 'done') {
+        yield JSON.stringify({
+          choices: [{ delta: {}, finish_reason: chunk.finishReason }],
+        });
+      }
+    }
+  }
+
+  /**
+   * Send a streaming chat request to the router
+   * Returns an AsyncIterable of typed SSE chunks
+   */
+  async *chatStreamTyped(
+    request: RouterChatRequest,
+    cancelToken?: vscode.CancellationToken
+  ): AsyncIterable<RouterStreamChunk> {
     const url = `${this.config.baseUrl}/api/extension/chat`;
     logger.debug(`Sending streaming chat request to ${url} for model ${request.model}`);
 
@@ -216,7 +318,7 @@ export class RouterClient {
           ...request,
           stream: true,
         }),
-      });
+      }, cancelToken);
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -227,17 +329,30 @@ export class RouterClient {
         );
       }
 
+      // Capture version header
+      const versionHeader = response.headers.get('x-ifinplatform-router-version');
+      if (versionHeader && versionHeader !== 'unknown') {
+        this.routerVersion = versionHeader;
+        logger.debug(`Router version: ${versionHeader}`);
+      }
+
       if (!response.body) {
         throw new RouterResponseError('Response body is null');
       }
 
-      // Parse SSE stream
+      // Parse SSE stream with typed chunks
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
 
       try {
         while (true) {
+          if (cancelToken?.isCancellationRequested) {
+            logger.info('Streaming cancelled by token');
+            reader.releaseLock();
+            return;
+          }
+
           const { done, value } = await reader.read();
 
           if (done) {
@@ -259,12 +374,15 @@ export class RouterClient {
               }
 
               try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
+                const chunk = JSON.parse(data) as RouterStreamChunk;
                 
-                if (content) {
-                  yield content;
+                // Validate chunk has required 'type' field
+                if (!chunk.type) {
+                  logger.warn('SSE chunk missing type field, skipping');
+                  continue;
                 }
+
+                yield chunk;
               } catch (parseError) {
                 logger.warn('Failed to parse SSE chunk', parseError);
               }
@@ -329,6 +447,34 @@ export class RouterClient {
   }
 
   /**
+   * Get browser auto-context for AI injection
+   */
+  async getBrowserAutoContext(): Promise<BrowserAutoContext | null> {
+    const url = `${this.config.baseUrl}/api/browser/auto-context`;
+    logger.debug('Fetching browser auto-context');
+
+    try {
+      const response = await this.makeRequest(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        logger.warn(`Failed to fetch browser auto-context: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json() as BrowserAutoContext;
+      return data;
+    } catch (error) {
+      logger.debug('Browser auto-context fetch failed (browser may not be connected)', error);
+      return null;
+    }
+  }
+
+  /**
    * Health check for the router
    */
   async healthCheck(): Promise<boolean> {
@@ -348,9 +494,18 @@ export class RouterClient {
   /**
    * Make an HTTP request with timeout and error handling
    */
-  private async makeRequest(url: string, init: RequestInit): Promise<Response> {
+  private async makeRequest(
+    url: string,
+    init: RequestInit,
+    cancelToken?: vscode.CancellationToken
+  ): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+    // Wire VS Code cancellation token to AbortController
+    const cancelDisposable = cancelToken?.onCancellationRequested(() => {
+      controller.abort();
+    });
 
     try {
       return await fetch(url, {
@@ -366,6 +521,7 @@ export class RouterClient {
       throw error;
     } finally {
       clearTimeout(timeoutId);
+      cancelDisposable?.dispose();
     }
   }
 }

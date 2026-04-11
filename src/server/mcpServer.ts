@@ -8,6 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadAndValidateConfig } from '../infra/config.js';
 import { getLogger } from '../infra/logger.js';
+import { syncProvidersFromConfig } from '../core/registry.js';
 import {
   registerLlmChatTool,
   registerListModelsTool,
@@ -17,50 +18,9 @@ import {
   registerLlmFromTemplateTool,
   registerLlmListTemplatesTool,
 } from './toolHandlers.js';
-import {
-  registerPerfCriticalPathAnalysisTool,
-  registerPerfBundleOptimizationTool,
-  registerPerfRenderOptimizationTool,
-  registerPerfNetworkOptimizationTool,
-  registerPerfCoreWebVitalsTool,
-  registerPerfMemoryOptimizationTool,
-  registerPerfImageOptimizationTool,
-  registerPerfVanillaJsOptimizationTool,
-  registerPerfCssOptimizationTool,
-  registerPerfProfilingStrategyTool,
-  registerPerfAuditActionPlanTool,
-  registerPerfServiceWorkerTool,
-  registerPerfListTemplatesTool,
-} from './performanceToolHandlers.js';
-import { registerPerformanceDiagnosticsTools } from '../core/performanceDiagnostics.js';
-import {
-  registerPerfMeasureRealWorldTool,
-  registerPerfProfileDeepTool,
-  registerPerfMeasureNetworkTool,
-  registerPerfApplyOptimizationTool,
-  registerPerfStartMonitoringTool,
-  registerPerfStopMonitoringTool,
-  registerPerfAnalyzeBottlenecksRealTool,
-  registerPerfDesignAuditTool,
-} from './browserToolHandlers.js';
-import {
-  registerTestLaunchBrowserTool,
-  registerTestNavigateTool,
-  registerTestScreenshotTool,
-  registerTestExecuteScriptTool,
-  registerTestCloseSessionTool,
-  registerTestListSessionsTool,
-  registerTestRunAllTestsTool,
-  registerTestRunAutomatedTool,
-  registerTestOpenDashboardTool,
-  registerTestClickTool,
-  registerTestTypeTool,
-  registerTestFillFormTool,
-  registerTestHoverTool,
-  registerTestWaitForTool,
-} from './testingToolHandlers.js';
 import { registerAssignmentTools } from './assignmentToolHandlers.js';
 import { startExtensionAPIServer } from './extensionApiServer.js';
+import { registerBrowserPublicTools } from './browserPublicToolHandlers.js';
 
 const logger = getLogger('mcp-server');
 
@@ -78,6 +38,10 @@ export async function createMCPServer(): Promise<McpServer> {
       defaultModel: config.router.defaultModel,
       timeoutMs: config.router.timeoutMs,
     });
+
+    // Register provider adapters for all configured providers
+    await syncProvidersFromConfig();
+    logger.info('Provider adapters synchronized');
 
     // Create MCP server
     const server = new McpServer(
@@ -104,51 +68,7 @@ export async function createMCPServer(): Promise<McpServer> {
     registerLlmFromTemplateTool(server);
     registerLlmListTemplatesTool(server);
 
-    // Register performance optimization tools
-    registerPerfCriticalPathAnalysisTool(server);
-    registerPerfBundleOptimizationTool(server);
-    registerPerfRenderOptimizationTool(server);
-    registerPerfNetworkOptimizationTool(server);
-    registerPerfCoreWebVitalsTool(server);
-    registerPerfMemoryOptimizationTool(server);
-    registerPerfImageOptimizationTool(server);
-    registerPerfVanillaJsOptimizationTool(server);
-    registerPerfCssOptimizationTool(server);
-    registerPerfProfilingStrategyTool(server);
-    registerPerfAuditActionPlanTool(server);
-    registerPerfServiceWorkerTool(server);
-    registerPerfListTemplatesTool(server);
-
-    // Register performance diagnostics tools
-    registerPerformanceDiagnosticsTools(server);
-
-    // Register browser integration tools
-    registerPerfMeasureRealWorldTool(server);
-    registerPerfProfileDeepTool(server);
-    registerPerfMeasureNetworkTool(server);
-    registerPerfApplyOptimizationTool(server);
-    registerPerfStartMonitoringTool(server);
-    registerPerfStopMonitoringTool(server);
-    registerPerfAnalyzeBottlenecksRealTool(server);
-    registerPerfDesignAuditTool(server);
-
-    // Register master testing system tools
-    registerTestLaunchBrowserTool(server);
-    registerTestNavigateTool(server);
-    registerTestScreenshotTool(server);
-    registerTestExecuteScriptTool(server);
-    registerTestCloseSessionTool(server);
-    registerTestListSessionsTool(server);
-    registerTestRunAllTestsTool(server);
-    registerTestRunAutomatedTool(server);
-    registerTestOpenDashboardTool(server);
-
-    // Register interaction tools
-    registerTestClickTool(server);
-    registerTestTypeTool(server);
-    registerTestFillFormTool(server);
-    registerTestHoverTool(server);
-    registerTestWaitForTool(server);
+    registerBrowserPublicTools(server);
 
     // Register assignment mode tools
     registerAssignmentTools(server);

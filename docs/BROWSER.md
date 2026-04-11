@@ -1,547 +1,242 @@
-# Browser Integration Guide for Performance Optimization
+# Browser MCP Guide
 
 ## Overview
 
-The MCP Router now includes **deep browser integration** for frontend performance optimization, transforming it from a recommendation system into a comprehensive performance engineering platform.
+The default browser surface is one `browser.*` MCP family for browser control,
+diagnostics, and performance-oriented workflows.
 
-## 🚀 What's New
+This is the public contract:
 
-### Real Browser Measurement
-- **Core Web Vitals**: Accurate LCP, FID, CLS measurement from real sessions
-- **Network Performance**: Resource timing, transfer sizes, connection analysis
-- **Memory Profiling**: Heap snapshots, DOM node counts, memory pressure detection
-- **Deep Profiling**: CPU, memory, network timeline capture
+- `browser.capabilities`
+- `browser.session.open`, `browser.session.close`, `browser.session.list`
+- `browser.navigate`, `browser.screenshot`, `browser.evaluate`
+- `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.wait_for`
+- `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
+- `browser.network.set_conditions`, `browser.network.reset`
+- `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
+- `browser.profile.start`, `browser.profile.stop`
 
-### Browser Automation & Testing
-- **Performance Testing**: Automated tests across browsers and devices
-- **Network Simulation**: 3G, 4G, offline condition testing
-- **Optimization Application**: Apply optimizations directly to running pages
-- **Continuous Monitoring**: Real-time performance tracking with alerting
+The older `test_*` and `perf_*` names are not part of the default MCP bootstrap.
 
-## 🛠️ New Browser Integration Tools
+## Contract Rules
 
-### 1. `perf_measure_realworld` - Real-World Performance Measurement
+Every browser tool returns one normalized result shape with:
 
-**Purpose**: Measure actual Core Web Vitals from real browser sessions
+- `success`
+- `action`
+- `browser`
+- `sessionId`
+- `data`
+- `warnings`
+- `artifacts`
+- `error`
 
-**Usage**:
-```bash
-mcp_router perf_measure_realworld \
-  --url https://example.com \
-  --duration 10000 \
-  --samples 10
+The contract is intentionally strict:
+
+- unsupported operations return structured failures
+- degraded execution is surfaced through `warnings`
+- browser-specific transport details do not replace the normalized response shape
+- screenshots, profiles, and other captured evidence are returned through `artifacts`
+
+Current failure/error semantics:
+
+- unsupported capability: `error.code = "unsupported_browser_feature"`
+- session lookup failure: `error.code = "session_not_found"`
+- execution failure: `error.code = "browser_action_failed"`
+- missing transport/runtime support: `error.code = "transport_unavailable"`
+
+## Capability Model
+
+Use `browser.capabilities` to inspect the reported browser capability matrix.
+
+Capability flags:
+
+- `core_control`
+- `tab_management`
+- `network_control`
+- `web_vitals`
+- `design_audit`
+- `profiling`
+- `extension_augmented`
+
+Current capability matrix:
+
+| Browser | Core Control | Tabs | Network | Web Vitals | Design Audit | Profiling | Extension Augmented |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Chrome | Yes | Yes | Yes | Yes | Yes | Yes | When connected |
+| Edge | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| Firefox | Yes | No | No | No | No | No | No |
+| Safari | No | No | No | No | No | No | No |
+
+Notes:
+
+- `core_control` covers session open/close, navigation, screenshot, evaluation, click, type, fill, hover, and wait flows.
+- Chrome can still work without the extension, but the router emits degraded warnings when extension-backed augmentation is unavailable.
+- Firefox and Safari remain first-class entries in the contract because they report capability truthfully instead of pretending to support unsupported flows.
+
+## Transport Model
+
+The MCP boundary stays the same across browsers, while transport selection stays internal:
+
+- Chrome: CDP first, browser extension optional for richer augmentation
+- Edge: Chromium CDP
+- Firefox: Marionette/WebDriver-style control for core flows
+- Safari: limited implementation with explicit capability gating
+
+The public caller should rely on `browser.capabilities` and structured warnings,
+not on browser-specific transport assumptions.
+
+## Common Flows
+
+### Open a session
+
+```json
+{
+  "tool": "browser.session.open",
+  "arguments": {
+    "browserType": "chrome",
+    "headless": true,
+    "url": "https://example.com"
+  }
+}
 ```
 
-**Output**:
-- Core Web Vitals (LCP, FID, CLS, FCP, TTFB)
-- Statistical analysis (mean, median, p95)
-- Network metrics (resource count, transfer sizes)
-- Memory metrics (heap usage, DOM nodes)
-- Performance recommendations
+### Navigate and interact
 
-**Use Cases**:
-- Validate performance optimizations
-- Monitor production performance
-- Compare before/after metrics
-- User experience validation
-
-### 2. `perf_profile_deep` - Deep Performance Profiling
-
-**Purpose**: Comprehensive performance profiling using browser capabilities
-
-**Usage**:
-```bash
-mcp_router perf_profile_deep \
-  --url https://example.com \
-  --duration 30000 \
-  --profileTypes cpu,memory,network \
-  --samplingInterval 100
+```json
+{
+  "tool": "browser.navigate",
+  "arguments": {
+    "sessionId": "session_123",
+    "url": "https://example.com/dashboard",
+    "waitFor": "networkidle",
+    "timeoutMs": 30000
+  }
+}
 ```
 
-**Output**:
-- CPU performance metrics (main thread time, script execution)
-- Memory profiling (heap snapshots, allocation tracking)
-- Network events (resource loading, timing)
-- Render performance (FPS, frame time, paint time)
-- Bottleneck analysis and recommendations
-
-**Use Cases**:
-- Diagnose complex performance issues
-- Identify CPU bottlenecks
-- Detect memory leaks
-- Analyze rendering performance
-
-### 3. `perf_measure_network` - Network Performance Measurement
-
-**Purpose**: Detailed network performance analysis
-
-**Usage**:
-```bash
-mcp_router perf_measure_network \
-  --url https://example.com \
-  --include-resource-timings true
+```json
+{
+  "tool": "browser.click",
+  "arguments": {
+    "sessionId": "session_123",
+    "selector": "button[type='submit']"
+  }
+}
 ```
 
-**Output**:
-- Resource count and total transfer size
-- Slow resources identification (top 10 slowest)
-- Largest resources
-- Network bottleneck analysis
-- Compression opportunities
-
-**Use Cases**:
-- Identify slow resources
-- Optimize image loading
-- Plan CDN strategy
-- Evaluate caching effectiveness
-
-### 4. `perf_apply_optimization` - Apply Optimization to Running Page
-
-**Purpose**: Apply performance optimizations and measure impact in real-time
-
-**Usage**:
-```bash
-mcp_router perf_apply_optimization \
-  --url https://example.com \
-  --optimization-type critical-css-extraction \
-  --measure-before-after true
-
-# Or with custom script
-mcp_router perf_apply_optimization \
-  --url https://example.com \
-  --optimization-type custom \
-  --script "document.querySelectorAll('img').forEach(img => img.loading = 'lazy')"
+```json
+{
+  "tool": "browser.type",
+  "arguments": {
+    "sessionId": "session_123",
+    "selector": "#email",
+    "text": "user@example.com",
+    "clearFirst": true
+  }
+}
 ```
 
-**Output**:
-- Before/after performance comparison
-- Improvement percentages (LCP, FID, CLS, FCP)
-- Success/failure status
-- Warnings and errors
-- Next step recommendations
+### Work with tabs
 
-**Use Cases**:
-- Test optimization effectiveness
-- Validate code changes
-- Compare optimization strategies
-- Measure real impact
-
-### 5. `perf_start_monitoring` - Start Continuous Monitoring
-
-**Purpose**: Set up real-time performance monitoring with alerting
-
-**Usage**:
-```bash
-mcp_router perf_start_monitoring \
-  --url https://example.com \
-  --metrics lcp,fid,cls \
-  --sample-interval 1000 \
-  --alert-thresholds lcp:3000,fid:200,cls:0.2 \
-  --custom-metrics conversion-rate,engagement-time
+```json
+{
+  "tool": "browser.tabs.create",
+  "arguments": {
+    "sessionId": "session_123",
+    "url": "https://example.org"
+  }
+}
 ```
 
-**Output**:
-- Session ID for tracking
-- Monitoring configuration
-- Instructions for stopping
-- Real-time metric availability
+### Capture evidence
 
-**Use Cases**:
-- Production performance monitoring
-- A/B testing performance impact
-- User experience tracking
-- Performance budget enforcement
-
-### 6. `perf_stop_monitoring` - Stop Monitoring & Export Data
-
-**Purpose**: Stop monitoring and export collected metrics
-
-**Usage**:
-```bash
-mcp_router perf_stop_monitoring \
-  --session-id session_abc123 \
-  --export-format json
+```json
+{
+  "tool": "browser.screenshot",
+  "arguments": {
+    "sessionId": "session_123",
+    "fullPage": true,
+    "type": "png"
+  }
+}
 ```
 
-**Output**:
-- Complete metrics data
-- Summary statistics
-- Alert history
-- Formatted export (JSON, CSV, Prometheus)
+### Run browser-native diagnostics
 
-**Use Cases**:
-- Export performance data for analysis
-- Generate performance reports
-- Integrate with monitoring systems
-- Archive historical data
-
-### 7. `perf_analyze_bottlenecks_real` - Real Bottleneck Analysis
-
-**Purpose**: Analyze actual performance bottlenecks from symptoms and real metrics
-
-**Usage**:
-```bash
-mcp_router perf_analyze_bottlenecks_real \
-  --url https://example.com \
-  --symptoms "slow animations,janky scrolling,high memory usage" \
-  --include-network-analysis true \
-  --include-memory-analysis true
+```json
+{
+  "tool": "browser.metrics",
+  "arguments": {
+    "sessionId": "session_123"
+  }
+}
 ```
 
-**Output**:
-- Bottleneck identification by severity
-- Evidence from real measurements
-- Core Web Vitals analysis
-- Network and memory analysis
-- Prioritized recommendations
-
-**Use Cases**:
-- Diagnose reported issues
-- Validate user complaints
-- Root cause analysis
-- Prioritize optimization efforts
-
-## 📊 Performance Metrics Explained
-
-### Core Web Vitals
-
-#### LCP (Largest Contentful Paint)
-- **Definition**: Time to render largest visible element
-- **Good**: < 2.5s
-- **Impact**: Perceived page speed, SEO ranking
-- **Optimization**: Critical CSS, image optimization, resource hints
-
-#### FID (First Input Delay)
-- **Definition**: Delay from user first interaction to response
-- **Good**: < 100ms
-- **Impact**: Interactivity, user frustration
-- **Optimization**: Reduce main thread work, code splitting
-
-#### CLS (Cumulative Layout Shift)
-- **Definition**: Sum of all layout shift scores
-- **Good**: < 0.1
-- **Impact**: Visual stability, accidental clicks
-- **Optimization**: Reserve space, font-display, element dimensions
-
-### Additional Metrics
-
-#### FCP (First Contentful Paint)
-- **Definition**: First meaningful content render
-- **Good**: < 1.8s
-- **Impact**: Perceived load speed
-
-#### TTFB (Time to First Byte)
-- **Definition**: Network request start to first byte
-- **Good**: < 800ms
-- **Impact**: Server response time, CDN effectiveness
-
-## 🎯 Performance Optimization Workflow
-
-### Workflow 1: Measure → Optimize → Validate
-
-```
-1. Measure Baseline
-   perf_measure_realworld --url https://example.com --duration 10000
-
-2. Identify Bottlenecks
-   perf_analyze_bottlenecks_real --url https://example.com --symptoms [...]
-
-3. Apply Optimization
-   perf_apply_optimization --url https://example.com --optimization-type lazy-loading
-
-4. Validate Improvement
-   perf_measure_realworld --url https://example.com --duration 10000
-
-5. Compare Results
-   Analyze before/after metrics and calculate improvement percentage
+```json
+{
+  "tool": "browser.web_vitals",
+  "arguments": {
+    "sessionId": "session_123"
+  }
+}
 ```
 
-### Workflow 2: Continuous Monitoring
-
-```
-1. Start Monitoring
-   perf_start_monitoring --url https://example.com --metrics lcp,fid,cls
-
-2. Collect Data
-   Monitor real-time metrics and alerts over time period
-
-3. Export & Analyze
-   perf_stop_monitoring --session-id session_abc --export-format json
-
-4. Identify Trends
-   Analyze historical data for patterns and regressions
-
-5. Optimize Based on Data
-   Implement data-driven optimizations
+```json
+{
+  "tool": "browser.audit.design",
+  "arguments": {
+    "sessionId": "session_123"
+  }
+}
 ```
 
-### Workflow 3: Deep Diagnostics
-
-```
-1. Deep Profile
-   perf_profile_deep --url https://example.com --duration 30000 --profileTypes cpu,memory,network
-
-2. Analyze Results
-   Review CPU, memory, network performance metrics
-   Identify bottlenecks and hotspots
-
-3. Generate Action Plan
-   Create prioritized optimization plan based on findings
-
-4. Implement & Test
-   Apply optimizations and validate with measurement
-
-5. Monitor Regression
-   Set up continuous monitoring to prevent performance degradation
+```json
+{
+  "tool": "browser.profile.start",
+  "arguments": {
+    "sessionId": "session_123"
+  }
+}
 ```
 
-## 🔧 Browser Integration Architecture
+## Degraded and Unsupported Behavior
 
-### Core Components
+The router is expected to tell the truth about browser state.
 
-```
-MCP Router Core
-    ↓
-Browser Bridge (browserBridge.ts)
-    ↓
-Performance API Monitor (performanceAPI.ts)
-    ↓
-Browser Integration Tools (browserToolHandlers.ts)
-    ↓
-Actual Browser
-```
+Examples:
 
-### Key Features
+- Chrome without the extension may succeed with `warnings` that extension augmentation is unavailable.
+- Firefox tab or profiling requests fail structurally instead of returning placeholders.
+- Safari browser calls that are not implemented fail with explicit unsupported or action-failed results.
 
-1. **Real Metrics Collection**
-   - Native browser Performance API
-   - Core Web Vitals measurement
-   - Network timing data
-   - Memory profiling
+Example unsupported response shape:
 
-2. **Browser Communication**
-   - Chrome DevTools Protocol integration
-   - Real-time data streaming
-   - Optimization script execution
-   - Session management
-
-3. **Data Analysis**
-   - Statistical analysis (mean, median, p95)
-   - Bottleneck identification
-   - Trend detection
-   - Regression detection
-
-4. **Export & Integration**
-   - Multiple formats (JSON, CSV, Prometheus)
-   - CI/CD integration
-   - Monitoring system integration
-   - Real-time streaming
-
-## 📈 Expected Performance Improvements
-
-### Quick Wins (Immediate)
-- **10-30%** LCP improvement from real measurements
-- **20-40%** FID improvement from main thread optimization
-- **30-50%** reduction in slow resources
-- Accurate performance baselines for monitoring
-
-### Medium-Term (1-4 weeks)
-- **40-60%** initial bundle reduction from actual usage
-- **50-90%** repeat visit improvement from caching
-- Eliminated memory leaks from real profiling
-- 60fps animations from optimization validation
-
-### Long-Term (1-3 months)
-- **Data-driven optimization decisions**
-- **Automated regression detection**
-- **Performance budget enforcement**
-- **Proactive issue identification**
-
-## 🌐 Cross-Browser Support
-
-### Currently Supported
-- **Chrome/Edge**: Full Performance API support
-- **Firefox**: Most Performance API features supported
-- **Safari**: Core Web Vitals support, some limitations
-
-### Planned Support
-- Full Chrome DevTools Protocol implementation
-- Multi-browser automation framework integration
-- Cross-browser performance comparison
-- Device simulation capabilities
-
-## 📊 Monitoring & Alerting
-
-### Alert Types
-
-1. **Threshold Alerts**
-   - Metric exceeds defined threshold
-   - Immediate notification
-   - Severity levels (warning, critical)
-
-2. **Regression Alerts**
-   - Performance degradation over time
-   - Percentage-based triggers
-   - Historical comparison
-
-3. **Anomaly Detection**
-   - Statistical anomaly detection
-   - ML-based pattern recognition
-   - Predictive alerting
-
-### Alert Channels
-
-- Real-time streaming to monitoring systems
-- Integration with incident management
-- Slack/Email notifications
-- Dashboard alerts
-
-## 🔒 Security & Privacy
-
-### Data Protection
-- No sensitive data collection
-- User anonymization
-- Secure data transmission
-- GDPR compliance
-
-### Browser Security
-- CORS configuration
-- Content Security Policy
-- Input validation
-- Rate limiting
-
-### Session Management
-- Secure session handling
-- Automatic cleanup
-- Resource management
-- Timeout handling
-
-## 🚀 Getting Started
-
-### Quick Start (5 minutes)
-
-```bash
-# 1. Measure current performance
-mcp_router perf_measure_realworld \
-  --url https://your-site.com \
-  --duration 10000
-
-# 2. Identify issues
-mcp_router perf_analyze_bottlenecks_real \
-  --url https://your-site.com \
-  --symptoms "slow load,janky animations"
-
-# 3. Apply optimization
-mcp_router perf_apply_optimization \
-  --url https://your-site.com \
-  --optimization-type lazy-loading
-
-# 4. Validate improvement
-mcp_router perf_measure_realworld \
-  --url https://your-site.com \
-  --duration 10000
+```json
+{
+  "success": false,
+  "action": "browser.click",
+  "browser": "safari",
+  "sessionId": "session_123",
+  "warnings": [],
+  "artifacts": [],
+  "error": {
+    "code": "unsupported_browser_feature",
+    "message": "browser.click is not supported for safari."
+  }
+}
 ```
 
-### Production Setup (1 hour)
+## Browser Extension
 
-```bash
-# 1. Set up continuous monitoring
-mcp_router perf_start_monitoring \
-  --url https://your-site.com \
-  --metrics lcp,fid,cls \
-  --alert-thresholds lcp:3000,fid:200,cls:0.2
+The browser extension is part of the Chrome execution path, not a separate
+public API surface.
 
-# 2. Export to monitoring system
-mcp_router perf_stop_monitoring \
-  --session-id session_abc123 \
-  --export-format prometheus
+It improves Chrome sessions with:
 
-# 3. Integrate with CI/CD
-# Add to your CI pipeline for automated testing
+- extension-backed browser evidence
+- richer audit and web-vitals capture paths
+- local bridge connectivity for browser-side events
 
-# 4. Set up alerting
-# Configure notifications for your team
-```
-
-## 📈 Best Practices
-
-### 1. Measure Real User Experience
-- Use real browser measurements, not synthetic tests
-- Measure across devices and network conditions
-- Collect statistically significant sample sizes
-- Monitor over time for trends
-
-### 2. Baseline Before Optimizing
-- Always measure before making changes
-- Document current state
-- Understand user-reported issues
-- Set realistic improvement targets
-
-### 3. Validate Optimizations
-- Test optimizations in real browser contexts
-- Measure before/after impact
-- Don't assume improvements without data
-- Watch for regressions
-
-### 4. Monitor Continuously
-- Performance degrades over time
-- Set up automated monitoring
-- Configure appropriate alerts
-- Review metrics regularly
-
-## 📚 Documentation
-
-- **[Documentation Index](./README.md)** - Current active documentation map
-- **[Archive](./archive/README.md)** - Historical design and reference material
-
-## 🔮 Future Enhancements
-
-### Phase 1: Foundation (Completed ✅)
-- [x] Browser Bridge architecture
-- [x] Performance API integration
-- [x] Core measurement tools
-
-### Phase 2: Advanced Profiling (In Progress 🚧)
-- [ ] Full Chrome DevTools Protocol implementation
-- [ ] Advanced memory profiling
-- [ ] Coverage analysis
-- [ ] Heap snapshot analysis
-
-### Phase 3: Automation & Testing (Planned 📋)
-- [ ] Browser automation framework integration
-- [ ] Multi-browser testing support
-- [ ] Network simulation capabilities
-- [ ] Device emulation
-
-### Phase 4: Enterprise Features (Planned 📋)
-- [ ] ML-based anomaly detection
-- [ ] Automated regression detection
-- [ ] Performance budget enforcement
-- [ ] Advanced alerting and notification
-
-## 🎯 Success Metrics
-
-- **Measurement Accuracy**: Within 5% of manual measurement
-- **Test Reliability**: 99%+ success rate
-- **Browser Coverage**: Support 95% of modern browsers
-- **Real-time Latency**: < 1s metric availability
-- **Alert Accuracy**: < 5% false positive rate
-
-## 🤝 Contributing
-
-We welcome contributions to browser integration:
-
-1. **Additional Browser Support**: Firefox DevTools Protocol, Safari Web Inspector
-2. **Enhanced Profiling**: Coverage analysis, advanced memory profiling
-3. **Automation Frameworks**: Playwright, Cypress integration
-4. **Monitoring Integration**: Prometheus, Grafana, Datadog
-5. **ML Features**: Anomaly detection, predictive analytics
-
----
-
-**Transform your MCP Router into a true performance engineering platform with deep browser integration!**
-
-Start measuring real performance today:
-```bash
-mcp_router perf_measure_realworld --url https://your-site.com --duration 10000
-```
+If the extension is unavailable, the router continues through CDP where
+possible and emits warnings instead of hiding the reduced execution mode.

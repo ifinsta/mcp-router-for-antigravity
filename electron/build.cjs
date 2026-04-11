@@ -291,7 +291,7 @@ class WindowsAppBuilder {
 ## Support Resources
 
 - **Documentation**: docs/WINDOWS.md
-- **GitHub Issues**: https://github.com/ifinsta/mcp-router-for-antigravity/issues
+- **GitHub Issues**: https://github.com/ifinsta/ifin-platform/issues
 - **Community**: Join discussions and get help
 
 ---

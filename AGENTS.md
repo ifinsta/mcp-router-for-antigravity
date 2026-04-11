@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines how humans and coding agents must work in the `mcp-router-for-antigravity` repository.
+This file defines how humans and coding agents must work in the `ifin-platform` repository.
 
 It exists to protect the architecture, resilience model, typing discipline, and operational clarity of the project.
 
@@ -231,7 +231,7 @@ Must not own:
 Expected repository shape:
 
 ```text
-mcp-router-for-antigravity/
+ifin-platform/
   README.md
   AGENTS.md
   src/

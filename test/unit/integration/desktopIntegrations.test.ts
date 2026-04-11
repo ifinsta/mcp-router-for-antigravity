@@ -87,7 +87,10 @@ describe('desktopIntegrations', () => {
     assert.strictEqual(launcher.available, true);
     assert.strictEqual(launcher.resolvedMode, 'installed');
     assert.strictEqual(launcher.command, installedExe);
-    assert.deepStrictEqual(launcher.args, ['--mcp-stdio']);
+    assert.deepStrictEqual(launcher.args, [
+      path.join(repoRoot, 'resources', 'app.asar', 'dist', 'src', 'index.js'),
+    ]);
+    assert.deepStrictEqual(launcher.env, { ELECTRON_RUN_AS_NODE: '1' });
   });
 
   it('preserves unrelated MCP servers when applying config', () => {

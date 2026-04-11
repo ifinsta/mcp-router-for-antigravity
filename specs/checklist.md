@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This checklist is the operational control sheet for the entire `mcp-router-for-antigravity` project.
+This checklist is the operational control sheet for the entire `ifin-platform` project.
 
 It is intended to be used for:
 

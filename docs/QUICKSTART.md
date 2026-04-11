@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get the MCP router running and connected to Antigravity or Qoder in under 5 minutes.
+Get the MCP router running and connected to ifin Platform or Qoder in under 5 minutes.
 
 If your AI agent can launch `npx`-based MCP servers, you can run this router directly from GitHub without cloning the repository.
 
@@ -78,7 +78,7 @@ You should see logs like:
 
 Press `Ctrl+C` to stop the server.
 
-### 5. Configure Antigravity or Qoder
+### 5. Configure ifin Platform or Qoder
 
 #### For Qoder
 
@@ -92,7 +92,7 @@ Press `Ctrl+C` to stop the server.
   "mcpServers": {
     "mcp-router": {
       "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
+      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
       "env": {
         "GLM_API_KEY": "your-glm-api-key",
         "OPENAI_API_KEY": "your-openai-api-key",
@@ -117,7 +117,7 @@ If you've cloned the repository:
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["C:\\Users\\yourusername\\mcp-router-for-antigravity\\dist\\index.js"],
+      "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\index.js"],
       "env": {
         "GLM_API_KEY": "your-glm-api-key",
         "ROUTER_DEFAULT_PROVIDER": "glm",
@@ -128,36 +128,20 @@ If you've cloned the repository:
 }
 ```
 
-#### For Antigravity
+#### For ifin Platform
 
-Add the router to your Antigravity MCP configuration file.
+Add the router to your ifin Platform MCP configuration file.
 
-Preferred setup when Antigravity supports `npx`:
+Preferred setup when ifin Platform supports `npx`:
 
-**On macOS/Linux (~/.config/antigravity/mcp_servers.json):**
-
-```json
-{
-  "mcpServers": {
-    "mcp-router": {
-      "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
-      "env": {
-        "GLM_API_KEY": "${GLM_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-**On Windows (%APPDATA%\antigravity\mcp_servers.json):**
+**On macOS/Linux (~/.config/ifin-platform/mcp_servers.json):****
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
       "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/mcp-router-for-antigravity.git"],
+      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
       "env": {
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
@@ -166,16 +150,14 @@ Preferred setup when Antigravity supports `npx`:
 }
 ```
 
-Fallback setup if Antigravity only supports local commands:
-
-**On macOS/Linux (~/.config/antigravity/mcp_servers.json):**
+**On Windows (%APPDATA%\ifin-platform\mcp_servers.json):**
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
-      "command": "node",
-      "args": ["/home/yourusername/mcp-router-for-antigravity/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
       "env": {
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
@@ -184,14 +166,32 @@ Fallback setup if Antigravity only supports local commands:
 }
 ```
 
-**On Windows (%APPDATA%\antigravity\mcp_servers.json):**
+Fallback setup if ifin Platform only supports local commands:
+
+**On macOS/Linux (~/.config/ifin-platform/mcp_servers.json):****
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["C:\\Users\\yourusername\\mcp-router-for-antigravity\\dist\\index.js"],
+      "args": ["/home/yourusername/ifin-platform/dist/index.js"],
+      "env": {
+        "GLM_API_KEY": "${GLM_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**On Windows (%APPDATA%\ifin-platform\mcp_servers.json):**
+
+```json
+{
+  "mcpServers": {
+    "mcp-router": {
+      "command": "node",
+      "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\index.js"],
       "env": {
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
@@ -216,7 +216,7 @@ Or check router health:
 Use the router_health tool to check the router status
 ```
 
-### In Antigravity
+### In ifin Platform
 
 Ask it to use the router:
 
@@ -243,7 +243,7 @@ Use llm.chat with:
 - messages: [{"role": "user", "content": "Hello!"}]
 ```
 
-**In Antigravity:**
+**In ifin Platform:**
 
 ```
 Use llm.chat with:
@@ -276,9 +276,9 @@ Use router.health to check configuration and provider status
 OPENAI_API_KEY=sk-...
 ```
 
-### Wrong File Path in Antigravity Config
+### Wrong File Path in ifin Platform Config
 
-**Error:** Antigravity can't start the MCP server
+**Error:** ifin Platform can't start the MCP server
 
 **Fix:** Use an absolute path to `dist/index.js`:
 
@@ -287,7 +287,7 @@ OPENAI_API_KEY=sk-...
 
 ### GitHub Launch Fails
 
-**Error:** Antigravity fails when using `npx github:ifinsta/mcp-router-for-antigravity`
+**Error:** ifin Platform fails when using `npx github:ifinsta/ifin-platform`
 
 **Fix:** Some MCP hosts only allow local commands or do not support `npx`. Use the local fallback config with `node` and a built `dist/index.js` path.
 
@@ -337,5 +337,5 @@ Should output `v20.10.0` or higher.
 - Review logs with `npm run start`
 - Verify your `.env` configuration
 - Ensure all prerequisites are met
-- Browse the [GitHub repository](https://github.com/ifinsta/mcp-router-for-antigravity)
-- Report issues on [GitHub Issues](https://github.com/ifinsta/mcp-router-for-antigravity/issues)
+- Browse the [GitHub repository](https://github.com/ifinsta/ifin-platform)
+- Report issues on [GitHub Issues](https://github.com/ifinsta/ifin-platform/issues)

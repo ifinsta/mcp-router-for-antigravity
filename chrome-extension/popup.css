@@ -331,3 +331,108 @@ body {
 .btn--full {
   width: 100%;
 }
+
+/* Mode Selection */
+.mode-selection {
+  padding: var(--space-3);
+}
+
+.mode-selection .section-title {
+  margin-bottom: var(--space-2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mode-cards-compact {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.mode-card-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.mode-card-compact:hover {
+  border-color: var(--accent);
+  background: var(--bg-tertiary);
+}
+
+.mode-card-icon {
+  font-size: 1.5rem;
+}
+
+.mode-card-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.mode-card-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Mode Badge */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: var(--space-2);
+}
+
+/* Status Summary */
+.status-summary {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-poor);
+}
+
+.status-item-dot.connected {
+  background: var(--status-good);
+}
+
+.status-item-dot.degraded {
+  background: var(--status-warning);
+}
+
+.status-item-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

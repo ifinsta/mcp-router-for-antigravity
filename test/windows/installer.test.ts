@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'node:test';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
+import os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -31,7 +33,7 @@ describe('Windows Installer Tests', () => {
 
     // Note: This test will pass regardless of browser presence
     // It just validates the detection logic works
-    expect(typeof found).toBe('boolean');
+    assert.equal(typeof found, 'boolean');
   });
 
   it('should detect Edge browser', async () => {
@@ -53,7 +55,7 @@ describe('Windows Installer Tests', () => {
       }
     }
 
-    expect(typeof found).toBe('boolean');
+    assert.equal(typeof found, 'boolean');
   });
 
   it('should detect Firefox browser', async () => {
@@ -75,7 +77,7 @@ describe('Windows Installer Tests', () => {
       }
     }
 
-    expect(typeof found).toBe('boolean');
+    assert.equal(typeof found, 'boolean');
   });
 
   it('should create configuration directory structure', async () => {
@@ -96,8 +98,8 @@ describe('Windows Installer Tests', () => {
         .then(() => true)
         .catch(() => false);
 
-      expect(logsExist).toBe(true);
-      expect(cacheExist).toBe(true);
+      assert.equal(logsExist, true);
+      assert.equal(cacheExist, true);
 
       // Cleanup
       await fs.promises.rm(testConfigPath, { recursive: true, force: true });
@@ -132,9 +134,9 @@ describe('Windows Installer Tests', () => {
       const content = await fs.promises.readFile(testConfigPath, 'utf-8');
       const parsed = JSON.parse(content);
 
-      expect(parsed.browsers.chrome.enabled).toBe(true);
-      expect(parsed.browsers.chrome.version).toBe('90.0');
-      expect(parsed.features.headless).toBe(true);
+      assert.equal(parsed.browsers.chrome.enabled, true);
+      assert.equal(parsed.browsers.chrome.version, '90.0');
+      assert.equal(parsed.features.headless, true);
 
       // Cleanup
       await fs.promises.unlink(testConfigPath);
@@ -145,7 +147,6 @@ describe('Windows Installer Tests', () => {
   });
 
   it('should validate Windows version compatibility', async () => {
-    const os = require('os');
     const platform = os.platform();
     const version = os.release();
 
@@ -153,8 +154,8 @@ describe('Windows Installer Tests', () => {
     // Windows 11 versions start with 10.0.22xxx or higher
     const isWindows10OrHigher = platform === 'win32' && parseFloat(version) >= 10.0;
 
-    expect(platform).toBe('win32');
-    expect(isWindows10OrHigher).toBe(true);
+    assert.equal(platform, 'win32');
+    assert.equal(isWindows10OrHigher, true);
 
     console.log(`Detected Windows version: ${version}`);
   });
@@ -166,7 +167,7 @@ describe('Windows Installer Tests', () => {
     // Node.js 20+ required
     const majorVersion = parseInt(version.split('.')[0]);
 
-    expect(majorVersion).toBeGreaterThanOrEqual(20);
+    assert.ok(majorVersion >= 20);
 
     console.log(`Detected Node.js version: v${version}`);
   });
@@ -179,45 +180,45 @@ describe('Windows Installer Tests', () => {
     // Either the command succeeds or fails with expected registry error
     const hasAccess = !stderr.includes('ERROR: The system was unable to find the specified registry key or value');
 
-    expect(typeof hasAccess).toBe('boolean');
+    assert.equal(typeof hasAccess, 'boolean');
   });
 
   it('should verify PowerShell execution', async () => {
     const { stdout, stderr } = await executeCommand('powershell -Command "Write-Host \'Test\'"');
 
-    expect(stdout.trim()).toBe('Test');
-    expect(stderr).toBe('');
+    assert.equal(stdout.trim(), 'Test');
+    assert.equal(stderr, '');
   });
 
   it('should verify firewall configuration capability', async () => {
     const { stdout, stderr } = await executeCommand('netsh advfirewall show currentprofile');
 
     // Should be able to show firewall profiles
-    expect(stdout.length).toBeGreaterThan(0);
+    assert.ok(stdout.length > 0);
 
     console.log('Firewall capability verified');
   });
 
   it('should verify shortcut creation capability', async () => {
     // Test PowerShell shortcut creation
-    const testShortcutScript = `
-      $WshShell = New-Object -comObject WScript.Shell
-      $Shortcut = $WshShell.CreateShortcut("$env:TEMP\\test-shortcut.lnk")
-      $Shortcut.TargetPath = "notepad.exe"
-      $Shortcut.Save()
-    `;
+    const shortcutPath = path.join(process.env.TEMP || '', 'test-shortcut.lnk');
+    const escapedShortcutPath = shortcutPath.replace(/\\/g, '\\\\');
+    const testShortcutCommand =
+      `powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; ` +
+      `$Shortcut = $WshShell.CreateShortcut('${escapedShortcutPath}'); ` +
+      `$Shortcut.TargetPath = 'notepad.exe'; $Shortcut.Save()"`;
 
     try {
-      await executeCommand(`powershell -Command "${testShortcutScript}"`);
+      await executeCommand(testShortcutCommand);
 
-      const shortcutExists = await fs.promises.access(path.join(process.env.TEMP || '', 'test-shortcut.lnk'), fs.constants.F_OK)
+      const shortcutExists = await fs.promises.access(shortcutPath, fs.constants.F_OK)
         .then(() => true)
         .catch(() => false);
 
-      expect(shortcutExists).toBe(true);
+      assert.equal(shortcutExists, true);
 
       // Cleanup
-      await fs.promises.unlink(path.join(process.env.TEMP || '', 'test-shortcut.lnk'));
+      await fs.promises.unlink(shortcutPath);
     } catch (error) {
       console.error('Shortcut creation test failed:', error);
       throw error;
@@ -228,8 +229,7 @@ describe('Windows Installer Tests', () => {
 // Helper function to execute commands
 function executeCommand(command: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const [cmd, ...args] = command.split(' ');
-    const child = spawn(cmd, args, { shell: true });
+    const child = spawn(command, [], { shell: true });
 
     let stdout = '';
     let stderr = '';

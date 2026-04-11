@@ -17,12 +17,12 @@ The MCP Router extension provides a beautiful, secure webview panel for managing
 
 ### Method 1: Command Palette
 1. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
-2. Type: `MCP Router: Configure API Keys`
+2. Type: `ifin Platform: Configure API Keys`
 3. Press Enter
 
 ### Method 2: Quick Access
 1. Press `Ctrl+P` (Windows/Linux) or `Cmd+P` (macOS)
-2. Type: `>MCP Router: Configure API Keys`
+2. Type: `>ifin Platform: Configure API Keys`
 3. Press Enter
 
 ## Supported Providers
@@ -209,7 +209,7 @@ npm run dev
 
 | Command | ID | Description |
 |---------|-----|-------------|
-| Configure API Keys | `mcpRouter.configureApiKeys` | Opens the API key settings panel |
+| Configure API Keys | `ifinPlatform.configureApiKeys` | Opens the API key settings panel |
 
 ### Messages
 
@@ -236,7 +236,7 @@ npm run dev
 
 ```
 ┌─────────────────────────────────────┐
-│         Antigravity UI              │
+│         ifin Platform UI            │
 │   (User clicks command)             │
 └──────────────┬──────────────────────┘
                │

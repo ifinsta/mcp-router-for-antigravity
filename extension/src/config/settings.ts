@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { CONFIGURATION_SECTION, LEGACY_CONFIGURATION_SECTION } from '../infra/identifiers';
 
 /**
  * Per-provider configuration from VS Code settings
@@ -20,6 +21,20 @@ export interface ProvidersConfig {
   chutes: ProviderSettings;
 }
 
+export interface ModeModelSettings {
+  code: string | null;
+  plan: string | null;
+  debug: string | null;
+  orchestrator: string | null;
+  ask: string | null;
+}
+
+export interface ModelSettings {
+  defaultModel: string | null;
+  smallModel: string | null;
+  byMode: ModeModelSettings;
+}
+
 /**
  * Extension configuration settings
  */
@@ -29,24 +44,98 @@ export interface ExtensionConfig {
   showOnlyHealthyModels: boolean;
   autoRefreshCatalog: boolean;
   logLevel: string;
+  routerPath: string | null;
+  models: ModelSettings;
   providers: ProvidersConfig;
 }
 
-const CONFIGURATION_SECTION = 'mcpRouter';
+function isExplicitlyConfigured<T>(
+  config: vscode.WorkspaceConfiguration,
+  key: string,
+): boolean {
+  const inspected = config.inspect<T>(key);
+
+  return (
+    inspected?.workspaceFolderValue !== undefined ||
+    inspected?.workspaceValue !== undefined ||
+    inspected?.globalValue !== undefined
+  );
+}
+
+function getConfigValue<T>(
+  config: vscode.WorkspaceConfiguration,
+  key: string,
+  defaultValue: T,
+): T {
+  return config.get<T>(key, defaultValue);
+}
+
+function normalizeOptionalPath(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readNullableSetting(
+  config: vscode.WorkspaceConfiguration,
+  legacyConfig: vscode.WorkspaceConfiguration,
+  key: string,
+): string | null {
+  return normalizeOptionalPath(
+    getConfigValueWithLegacyFallback<string>(config, legacyConfig, key, ''),
+  );
+}
+
+function getConfigValueWithLegacyFallback<T>(
+  config: vscode.WorkspaceConfiguration,
+  legacyConfig: vscode.WorkspaceConfiguration,
+  key: string,
+  defaultValue: T,
+): T {
+  if (isExplicitlyConfigured<T>(config, key)) {
+    return getConfigValue(config, key, defaultValue);
+  }
+
+  if (isExplicitlyConfigured<T>(legacyConfig, key)) {
+    return getConfigValue(legacyConfig, key, defaultValue);
+  }
+
+  return getConfigValue(config, key, defaultValue);
+}
 
 /**
  * Read a single provider's settings from VS Code configuration
  */
 function readProviderSettings(
   config: vscode.WorkspaceConfiguration,
+  legacyConfig: vscode.WorkspaceConfiguration,
   provider: string,
   defaults: ProviderSettings,
 ): ProviderSettings {
   return {
-    enabled: config.get<boolean>(`providers.${provider}.enabled`, defaults.enabled),
-    apiKey: config.get<string>(`providers.${provider}.apiKey`, defaults.apiKey),
-    baseUrl: config.get<string>(`providers.${provider}.baseUrl`, defaults.baseUrl),
-    defaultModel: config.get<string>(`providers.${provider}.defaultModel`, defaults.defaultModel),
+    enabled: getConfigValueWithLegacyFallback<boolean>(
+      config,
+      legacyConfig,
+      `providers.${provider}.enabled`,
+      defaults.enabled,
+    ),
+    apiKey: getConfigValueWithLegacyFallback<string>(
+      config,
+      legacyConfig,
+      `providers.${provider}.apiKey`,
+      defaults.apiKey,
+    ),
+    baseUrl: getConfigValueWithLegacyFallback<string>(
+      config,
+      legacyConfig,
+      `providers.${provider}.baseUrl`,
+      defaults.baseUrl,
+    ),
+    defaultModel: getConfigValueWithLegacyFallback<string>(
+      config,
+      legacyConfig,
+      `providers.${provider}.defaultModel`,
+      defaults.defaultModel,
+    ),
   };
 }
 
@@ -84,18 +173,41 @@ const PROVIDER_DEFAULTS: Record<string, ProviderSettings> = {
  */
 export function getExtensionConfig(): ExtensionConfig {
   const config = vscode.workspace.getConfiguration(CONFIGURATION_SECTION);
+  const legacyConfig = vscode.workspace.getConfiguration(LEGACY_CONFIGURATION_SECTION);
 
   return {
-    baseUrl: config.get<string>('baseUrl', 'http://localhost:3000'),
-    timeout: config.get<number>('timeout', 30000),
-    showOnlyHealthyModels: config.get<boolean>('showOnlyHealthyModels', true),
-    autoRefreshCatalog: config.get<boolean>('autoRefreshCatalog', true),
-    logLevel: config.get<string>('logLevel', 'info'),
+    baseUrl: getConfigValueWithLegacyFallback<string>(config, legacyConfig, 'baseUrl', 'http://localhost:3000'),
+    timeout: getConfigValueWithLegacyFallback<number>(config, legacyConfig, 'timeout', 30000),
+    showOnlyHealthyModels: getConfigValueWithLegacyFallback<boolean>(
+      config,
+      legacyConfig,
+      'showOnlyHealthyModels',
+      true,
+    ),
+    autoRefreshCatalog: getConfigValueWithLegacyFallback<boolean>(
+      config,
+      legacyConfig,
+      'autoRefreshCatalog',
+      true,
+    ),
+    logLevel: getConfigValueWithLegacyFallback<string>(config, legacyConfig, 'logLevel', 'info'),
+    routerPath: readNullableSetting(config, legacyConfig, 'routerPath'),
+    models: {
+      defaultModel: readNullableSetting(config, legacyConfig, 'models.defaultModel'),
+      smallModel: readNullableSetting(config, legacyConfig, 'models.smallModel'),
+      byMode: {
+        code: readNullableSetting(config, legacyConfig, 'models.byMode.code'),
+        plan: readNullableSetting(config, legacyConfig, 'models.byMode.plan'),
+        debug: readNullableSetting(config, legacyConfig, 'models.byMode.debug'),
+        orchestrator: readNullableSetting(config, legacyConfig, 'models.byMode.orchestrator'),
+        ask: readNullableSetting(config, legacyConfig, 'models.byMode.ask'),
+      },
+    },
     providers: {
-      glm: readProviderSettings(config, 'glm', PROVIDER_DEFAULTS['glm'] as ProviderSettings),
-      openai: readProviderSettings(config, 'openai', PROVIDER_DEFAULTS['openai'] as ProviderSettings),
-      anthropic: readProviderSettings(config, 'anthropic', PROVIDER_DEFAULTS['anthropic'] as ProviderSettings),
-      chutes: readProviderSettings(config, 'chutes', PROVIDER_DEFAULTS['chutes'] as ProviderSettings),
+      glm: readProviderSettings(config, legacyConfig, 'glm', PROVIDER_DEFAULTS['glm'] as ProviderSettings),
+      openai: readProviderSettings(config, legacyConfig, 'openai', PROVIDER_DEFAULTS['openai'] as ProviderSettings),
+      anthropic: readProviderSettings(config, legacyConfig, 'anthropic', PROVIDER_DEFAULTS['anthropic'] as ProviderSettings),
+      chutes: readProviderSettings(config, legacyConfig, 'chutes', PROVIDER_DEFAULTS['chutes'] as ProviderSettings),
     },
   };
 }
@@ -140,6 +252,10 @@ export function validateConfig(config: ExtensionConfig): string[] {
 
   if (config.timeout > 300000) {
     errors.push('Timeout cannot exceed 300000ms (5 minutes)');
+  }
+
+  if (config.routerPath !== null && config.routerPath.length === 0) {
+    errors.push('Router path cannot be empty when configured');
   }
 
   // Validate provider base URLs

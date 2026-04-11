@@ -220,11 +220,7 @@ export class SafariDriver {
       throw new Error('Screenshots require Safari WebDriver to be enabled');
     }
 
-    // Safari screenshot requires WebDriver - limited implementation
-    logger.warn('Safari screenshot has limited support', { sessionId });
-
-    // Return placeholder - actual screenshot requires WebDriver client
-    return '';
+    throw new Error('Safari screenshots are not implemented yet');
   }
 
   /**
@@ -240,10 +236,7 @@ export class SafariDriver {
       throw new Error('Script execution requires Safari WebDriver to be enabled');
     }
 
-    // Safari script execution requires WebDriver - limited implementation
-    logger.warn('Safari script execution has limited support', { sessionId });
-
-    return null;
+    throw new Error('Safari script execution is not implemented yet');
   }
 
   /**

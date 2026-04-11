@@ -1,19 +1,54 @@
 import * as vscode from 'vscode';
+import { RouterStreamChunk } from '../client/routerClient';
 import { ResponseMappingError } from '../infra/errors';
 import { getLogger } from '../infra/logger';
 
 const logger = getLogger('response-mapper');
 
 /**
- * Detect if a streaming response chunk contains tool calls
+ * Legacy provider chunk format (backward compat for old router versions)
+ * @deprecated Use RouterStreamChunk instead
  */
-export function hasToolCalls(chunk: any): boolean {
-  // Check for OpenAI/GLM format
+interface LegacyProviderChunk {
+  choices?: Array<{
+    delta?: {
+      content?: string;
+      tool_calls?: Array<{
+        id?: string;
+        function?: {
+          name?: string;
+          arguments?: string;
+        };
+      }>;
+    };
+  }>;
+  content_block?: {
+    type?: string;
+    id?: string;
+    name?: string;
+    input?: Record<string, unknown>;
+  };
+  delta?: {
+    text?: string;
+  };
+}
+
+/**
+ * Detect if a streaming response chunk contains tool calls
+ * Handles both new typed chunks and legacy provider formats
+ */
+export function hasToolCalls(chunk: RouterStreamChunk | LegacyProviderChunk): boolean {
+  // New typed format
+  if (isTypedChunk(chunk)) {
+    return chunk.type === 'tool_call';
+  }
+
+  // Legacy OpenAI/GLM format
   if (chunk.choices?.[0]?.delta?.tool_calls) {
     return true;
   }
   
-  // Check for Claude format
+  // Legacy Claude format
   if (chunk.content_block?.type === 'tool_use') {
     return true;
   }
@@ -23,17 +58,43 @@ export function hasToolCalls(chunk: any): boolean {
 
 /**
  * Extract tool calls from response chunk
+ * Returns normalized tool call data
  */
-export function extractToolCalls(chunk: any, provider: string): any[] {
+export function extractToolCalls(
+  chunk: RouterStreamChunk | LegacyProviderChunk,
+  _provider: string
+): Array<{ id: string; name: string; arguments: string }> {
   try {
-    // OpenAI/GLM format
-    if (chunk.choices?.[0]?.delta?.tool_calls) {
-      return chunk.choices[0].delta.tool_calls;
+    // New typed format
+    if (isTypedChunk(chunk) && chunk.type === 'tool_call') {
+      return [{
+        id: chunk.toolCallId ?? 'unknown',
+        name: chunk.toolCallName ?? 'unknown',
+        arguments: chunk.toolCallArgs ?? '{}',
+      }];
+    }
+
+    // Cast to legacy for remaining checks
+    const legacy = chunk as LegacyProviderChunk;
+
+    // Legacy OpenAI/GLM format
+    if (legacy.choices?.[0]?.delta?.tool_calls) {
+      return legacy.choices[0].delta.tool_calls
+        .filter((tc) => tc.id)
+        .map((tc) => ({
+          id: tc.id!,
+          name: tc.function?.name ?? 'unknown',
+          arguments: tc.function?.arguments ?? '{}',
+        }));
     }
     
-    // Claude format
-    if (chunk.content_block?.type === 'tool_use') {
-      return [chunk.content_block];
+    // Legacy Claude format
+    if (legacy.content_block?.type === 'tool_use') {
+      return [{
+        id: legacy.content_block.id ?? 'unknown',
+        name: legacy.content_block.name ?? 'unknown',
+        arguments: JSON.stringify(legacy.content_block.input ?? {}),
+      }];
     }
     
     return [];
@@ -46,16 +107,24 @@ export function extractToolCalls(chunk: any, provider: string): any[] {
 /**
  * Extract text content from response chunk
  */
-export function extractTextFromChunk(chunk: any): string | null {
+export function extractTextFromChunk(chunk: RouterStreamChunk | LegacyProviderChunk): string | null {
   try {
-    // OpenAI/GLM format
-    if (chunk.choices?.[0]?.delta?.content) {
-      return chunk.choices[0].delta.content;
+    // New typed format
+    if (isTypedChunk(chunk) && chunk.type === 'text') {
+      return chunk.content ?? null;
+    }
+
+    // Cast to legacy for remaining checks
+    const legacy = chunk as LegacyProviderChunk;
+
+    // Legacy OpenAI/GLM format
+    if (legacy.choices?.[0]?.delta?.content) {
+      return legacy.choices[0].delta.content;
     }
     
-    // Claude format
-    if (chunk.delta?.text) {
-      return chunk.delta.text;
+    // Legacy Claude format
+    if (legacy.delta?.text) {
+      return legacy.delta.text;
     }
     
     return null;
@@ -63,6 +132,13 @@ export function extractTextFromChunk(chunk: any): string | null {
     logger.warn('Failed to extract text from chunk', error);
     return null;
   }
+}
+
+/**
+ * Type guard: check if chunk is in new typed format
+ */
+function isTypedChunk(chunk: RouterStreamChunk | LegacyProviderChunk): chunk is RouterStreamChunk {
+  return 'type' in chunk && typeof (chunk as RouterStreamChunk).type === 'string';
 }
 
 /**

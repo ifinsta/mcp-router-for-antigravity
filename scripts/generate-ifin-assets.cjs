@@ -159,81 +159,160 @@ function drawLine(buffer, width, x1, y1, x2, y2, thickness, color) {
 
 function drawIfinMark(size) {
   const buffer = Buffer.alloc(size * size * 4);
-  const background = rgba('#141516');
-  const border = rgba('#3B434B');
-  const light = rgba('#EDF1F5');
-  const blue = rgba('#0F6CBD');
+  const frame = rgba('#F2F6F8');
+  const border = rgba('#25323A');
+  const panel = rgba('#DDE6EC');
+  const blue = rgba('#0B6DDB');
+  const blueLight = rgba('#79B7FF');
+  const ink = rgba('#111920');
+  const white = rgba('#FFFFFF');
 
-  fillRoundedRect(buffer, size, 0, 0, size, size, Math.round(size * 0.22), background);
+  fillRoundedRect(buffer, size, 0, 0, size, size, Math.round(size * 0.24), frame);
   fillRoundedRect(
     buffer,
     size,
-    Math.round(size * 0.04),
-    Math.round(size * 0.04),
-    Math.round(size * 0.92),
-    Math.round(size * 0.92),
-    Math.round(size * 0.2),
-    background,
+    Math.round(size * 0.03),
+    Math.round(size * 0.03),
+    Math.round(size * 0.94),
+    Math.round(size * 0.94),
+    Math.round(size * 0.22),
+    frame,
     border
   );
 
-  fillRoundedRect(buffer, size, Math.round(size * 0.25), Math.round(size * 0.24), Math.round(size * 0.12), Math.round(size * 0.52), Math.round(size * 0.08), light);
-  fillRoundedRect(buffer, size, Math.round(size * 0.46), Math.round(size * 0.24), Math.round(size * 0.12), Math.round(size * 0.32), Math.round(size * 0.08), blue);
-  drawLine(
+  fillRoundedRect(
     buffer,
     size,
-    Math.round(size * 0.64),
-    Math.round(size * 0.76),
-    Math.round(size * 0.64),
-    Math.round(size * 0.34),
-    Math.max(2, Math.round(size * 0.1)),
-    light
+    Math.round(size * 0.1),
+    Math.round(size * 0.13),
+    Math.round(size * 0.8),
+    Math.round(size * 0.72),
+    Math.round(size * 0.16),
+    panel
   );
+
+  fillRoundedRect(
+    buffer,
+    size,
+    Math.round(size * 0.15),
+    Math.round(size * 0.17),
+    Math.round(size * 0.18),
+    Math.round(size * 0.63),
+    Math.round(size * 0.1),
+    blue
+  );
+  fillRoundedRect(
+    buffer,
+    size,
+    Math.round(size * 0.19),
+    Math.round(size * 0.21),
+    Math.round(size * 0.1),
+    Math.round(size * 0.12),
+    Math.round(size * 0.05),
+    white
+  );
+
+  fillRoundedRect(
+    buffer,
+    size,
+    Math.round(size * 0.47),
+    Math.round(size * 0.21),
+    Math.round(size * 0.12),
+    Math.round(size * 0.49),
+    Math.round(size * 0.07),
+    ink
+  );
+  fillRoundedRect(
+    buffer,
+    size,
+    Math.round(size * 0.58),
+    Math.round(size * 0.21),
+    Math.round(size * 0.2),
+    Math.round(size * 0.11),
+    Math.round(size * 0.06),
+    ink
+  );
+  fillRoundedRect(
+    buffer,
+    size,
+    Math.round(size * 0.58),
+    Math.round(size * 0.41),
+    Math.round(size * 0.15),
+    Math.round(size * 0.1),
+    Math.round(size * 0.05),
+    ink
+  );
+
   drawLine(
     buffer,
     size,
-    Math.round(size * 0.64),
-    Math.round(size * 0.34),
-    Math.round(size * 0.78),
-    Math.round(size * 0.34),
-    Math.max(2, Math.round(size * 0.1)),
-    light
+    Math.round(size * 0.13),
+    Math.round(size * 0.84),
+    Math.round(size * 0.87),
+    Math.round(size * 0.84),
+    Math.max(2, Math.round(size * 0.06)),
+    blueLight
   );
 
   return buffer;
 }
 
-function encodeIcoFromPng(pngBuffer) {
+function encodeIcoFromPngs(pngBuffersBySize) {
+  const sizes = Object.keys(pngBuffersBySize).map(Number).sort((a, b) => a - b);
+  const count = sizes.length;
+
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(1, 4);
+  header.writeUInt16LE(count, 4);
 
-  const directory = Buffer.alloc(16);
-  directory[0] = 0;
-  directory[1] = 0;
-  directory[2] = 0;
-  directory[3] = 0;
-  directory.writeUInt16LE(1, 4);
-  directory.writeUInt16LE(32, 6);
-  directory.writeUInt32LE(pngBuffer.length, 8);
-  directory.writeUInt32LE(header.length + directory.length, 12);
+  const dirEntrySize = 16;
+  const dirSize = dirEntrySize * count;
+  const dataOffset = header.length + dirSize;
 
-  return Buffer.concat([header, directory, pngBuffer]);
+  const dirEntries = [];
+  const dataChunks = [];
+  let currentOffset = dataOffset;
+
+  for (const size of sizes) {
+    const png = pngBuffersBySize[size];
+    const entry = Buffer.alloc(dirEntrySize);
+    entry[0] = size >= 256 ? 0 : size;
+    entry[1] = size >= 256 ? 0 : size;
+    entry[2] = 0;
+    entry[3] = 0;
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(png.length, 8);
+    entry.writeUInt32LE(currentOffset, 12);
+    dirEntries.push(entry);
+    dataChunks.push(png);
+    currentOffset += png.length;
+  }
+
+  return Buffer.concat([header, ...dirEntries, ...dataChunks]);
 }
 
 function writeGeneratedIcons() {
   ensureDir(extensionIconsDir);
   ensureDir(electronDir);
+  ensureDir(extensionMediaDir);
 
   for (const size of [16, 48, 128]) {
     const png = encodePng(size, size, drawIfinMark(size));
     fs.writeFileSync(path.join(extensionIconsDir, `icon${size}.png`), png);
   }
 
+  fs.writeFileSync(path.join(extensionMediaDir, 'ifin-extension-icon.png'), encodePng(128, 128, drawIfinMark(128)));
+
   const electronPng = encodePng(256, 256, drawIfinMark(256));
   fs.writeFileSync(path.join(electronDir, 'icon.png'), electronPng);
-  fs.writeFileSync(path.join(electronDir, 'icon.ico'), encodeIcoFromPng(electronPng));
+
+  const icoPngs = {};
+  for (const size of [16, 32, 48, 64, 128, 256]) {
+    icoPngs[size] = encodePng(size, size, drawIfinMark(size));
+  }
+  fs.writeFileSync(path.join(electronDir, 'icon.ico'), encodeIcoFromPngs(icoPngs));
 }
 
 function copyBrandAssets() {

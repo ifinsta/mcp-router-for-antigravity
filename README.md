@@ -52,6 +52,28 @@ This project isolates those differences behind provider adapters and exposes one
 
 ## Key capabilities
 
+### Dual-Mode Architecture
+
+ifin Platform supports two operational modes:
+
+* **Agent Mode** — Use your IDE's AI with ifin tools. No provider keys required for basic use. The host IDE's AI owns chat.
+* **Router Mode** — Use ifin tools plus ifin-managed models. Provider keys enable routed chat features.
+
+The key principle: **Modes change only chat ownership, not the core tool or browser experience.**
+
+| Feature | Agent Mode | Router Mode |
+|---------|------------|-------------|
+| MCP tools | ✓ | ✓ |
+| Browser automation | ✓ | ✓ |
+| Browser bridge | ✓ | ✓ |
+| Native LM provider (VS Code) | ✗ | ✓ |
+| Provider key configuration | Optional | Required |
+
+Mode is selectable on first run and can be switched at any time via:
+* VS Code: QuickPick command or `ifin-platform.mode` setting
+* Electron: Settings panel toggle
+* Chrome: Badge click in popup
+
 ### Stable MCP tool surface
 
 The software exposes a small, stable set of tools:
@@ -59,8 +81,67 @@ The software exposes a small, stable set of tools:
 * `llm.chat`
 * `llm.list_models`
 * `router.health`
+* `browser.*`
 
 Optional extensions can be enabled without weakening the core contract.
+
+### Local integrations
+
+The repository also includes optional local integrations around the core router:
+
+* a Windows desktop application for local setup, packaging, and runtime management
+* an IDE extension for VS Code-compatible editors
+* a browser extension that gives the router a live in-browser bridge
+
+The browser extension exists to support:
+
+* browser automation and tab-aware control
+* page-context script execution
+* browser diagnostics and runtime inspection
+* real-time metrics collection and WebSocket-based event streaming
+* Chrome DevTools Protocol-backed profiling and extension-assisted browser control
+
+### Unified browser MCP
+
+The default browser-facing contract is now one `browser.*` family that combines
+general automation and performance-oriented workflows:
+
+* `browser.capabilities`
+* `browser.session.open`, `browser.session.close`, `browser.session.list`
+* `browser.navigate`, `browser.screenshot`, `browser.evaluate`
+* `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.wait_for`
+* `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
+* `browser.network.set_conditions`, `browser.network.reset`
+* `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
+* `browser.profile.start`, `browser.profile.stop`
+
+### Browser Intelligence Tools
+
+Tools for evidence capture, failure analysis, and workflow verification:
+
+* `browser.evidence.capture`, `browser.evidence.explain`, `browser.evidence.analyze_flake`, `browser.evidence.root_cause`
+* `browser.tabs.list_all`, `browser.tabs.switch`
+* `browser.recorder.start`, `browser.recorder.stop`, `browser.recorder.export`
+* `browser.assertions.evaluate`
+* `browser.verification.run`
+* `browser.pr_summary.generate`
+
+These tools support:
+* **Evidence capsules** — capture screenshots, DOM, console, network, performance
+* **Failure classification** — classify into app_code, timing, selector_drift, backend_failure, environment
+* **Flake detection** — multi-run analysis with recommendations
+* **Root cause mapping** — map evidence to probable code ownership
+* **Assertion evaluation** — 6-category (functional, visual, a11y, performance, ux, network)
+* **Fix verification** — compare before/after with verdicts
+* **PR summaries** — GitHub-ready markdown reports
+* **Workflow recording** — record-to-test code generation
+
+Browser execution stays transport-neutral at the MCP boundary:
+
+* Chrome uses CDP first and augments with the browser extension when available
+* Edge uses Chromium CDP without extension augmentation
+* Firefox uses Marionette/WebDriver-style control for core actions
+* Safari is surfaced through the same contract, but with limited capabilities called out explicitly
 
 ### Multi-provider support
 
@@ -104,6 +185,25 @@ The router includes:
 * secret redaction
 * sanitized provider errors
 * metrics and health signals good enough for operations
+
+### Security policy engine
+
+The router includes browser security controls:
+
+* domain allowlists for browser navigation
+* action audit logs for compliance and debugging
+* secret redaction from logs and responses
+* high-risk action warnings
+* session isolation and permission control
+
+### Browser context auto-injection
+
+The router can automatically attach browser context to AI conversations:
+
+* URL, page title, active tab id
+* selected text when available
+* last screenshot/artifact reference
+* configurable for privacy and noise control
 
 ---
 
@@ -182,7 +282,7 @@ Supported MCP client
   → provider response is validated
   → response is normalized
   → warnings and execution metadata are attached
-  → result is returned to Antigravity
+  → result is returned to the calling client
 ```
 
 ### Terminal failure behavior
@@ -235,6 +335,28 @@ Lists models for configured providers and returns partial results safely if one 
 ### `router.health`
 
 Returns router health, provider health, breaker state, and operational warnings.
+
+### `browser.*`
+
+Unified browser automation and diagnostics surface.
+
+Typical results include:
+
+* a typed `sessionId` or `tabId` when applicable
+* structured `warnings` for degraded execution
+* explicit `error.code` values for unsupported or failed operations
+* `artifacts` for screenshots and captured profiles
+
+### Browser capability matrix
+
+The router reports browser support honestly through `browser.capabilities`.
+
+Current contract intent:
+
+* Chrome: strongest coverage for control, tabs, network, web vitals, design audit, and profiling
+* Edge: strong Chromium coverage for control, tabs, network, web vitals, design audit, and profiling
+* Firefox: core control coverage, with advanced diagnostics intentionally marked unsupported
+* Safari: limited support with unsupported features surfaced explicitly instead of hidden behind placeholders
 
 ---
 
@@ -392,16 +514,20 @@ Health is visible in three layers:
 ## Project structure
 
 ```text
-mcp-router-for-antigravity/
+ifin-platform/
   README.md
   package.json
   tsconfig.json
   .env.example
+  chrome-extension/
+  electron/
+  extension/
   src/
     index.ts
     server/
       mcpServer.ts
       toolHandlers.ts
+      extensionApiServer.ts
     core/
       router.ts
       planner.ts
@@ -410,6 +536,17 @@ mcp-router-for-antigravity/
       normalizer.ts
       errors.ts
       types.ts
+      evidenceCapsule.ts
+      failureClassifier.ts
+      flakeAnalyzer.ts
+      rootCauseMapper.ts
+      assertionModel.ts
+      fixVerification.ts
+      prSummaryGenerator.ts
+      workflowRecorder.ts
+      browserContext.ts
+      browserContract.ts
+      modeManager.ts
     resilience/
       retryPolicy.ts
       requestBudget.ts
@@ -417,11 +554,18 @@ mcp-router-for-antigravity/
       concurrency.ts
       executor.ts
       attemptHistory.ts
+      securityPolicy.ts
     providers/
       openaiAdapter.ts
       glmAdapter.ts
       ollamaAdapter.ts
       compatibleAdapter.ts
+    browser/
+      browserBridge.ts
+      browserManager.ts
+      cdpClient.ts
+      extensionBridge.ts
+      multiTabManager.ts
     infra/
       config.ts
       logger.ts
@@ -479,6 +623,14 @@ MAX_COST_USD_PER_REQUEST=2.50
 OPENAI_API_KEY=
 GLM_API_KEY=
 OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# Mode Configuration
+ROUTER_MODE=router
+AUTO_INJECT_BROWSER_CONTEXT=true
+
+# Security Configuration
+SECURITY_ALLOWED_DOMAINS=*.example.com,api.trusted.com
+SECURITY_AUDIT_LOG_ENABLED=true
 ```
 
 ### Start the router
@@ -515,8 +667,9 @@ Installed Windows app example:
   "mcpServers": {
     "mcp-router": {
       "command": "C:\\Program Files\\ifin Platform\\ifin Platform.exe",
-      "args": ["--mcp-stdio"],
+      "args": ["C:\\Program Files\\ifin Platform\\resources\\app.asar\\dist\\src\\index.js"],
       "env": {
+        "ELECTRON_RUN_AS_NODE": "1",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
@@ -524,6 +677,26 @@ Installed Windows app example:
   }
 }
 ```
+
+### Drive a browser session
+
+After the router is running, a supported MCP client can use the browser surface
+like this:
+
+```json
+{
+  "tool": "browser.session.open",
+  "arguments": {
+    "browserType": "chrome",
+    "headless": true,
+    "url": "https://example.com"
+  }
+}
+```
+
+Then use the returned `sessionId` with follow-up calls such as
+`browser.navigate`, `browser.screenshot`, `browser.click`, `browser.metrics`,
+or `browser.profile.start`.
 
 ---
 
@@ -606,6 +779,14 @@ Covers:
 * end-to-end tool invocation
 * degraded-success warnings
 * structured failures
+
+### Test coverage summary
+
+The project includes comprehensive test coverage:
+
+* **232 unit tests** for core modules (evidence, failure classification, flake detection, assertions, verification)
+* **74 security/resilience tests** for policy engine, retry, breakers, concurrency
+* **163 contract tests** for provider adapters and browser contracts
 
 ---
 

@@ -23,6 +23,12 @@ npm run start
 ## Development Commands
 
 ```bash
+# IDE extension
+npm run build:ide-extension
+npm run test:ide-extension
+npm run package:ide-extension
+npm run rebuild:ide-extension
+
 # Type checking
 npm run typecheck
 
@@ -51,10 +57,12 @@ npm run clean
 npm run ci
 ```
 
+The IDE extension in `extension/` targets VS Code-compatible editors. `npm run rebuild:ide-extension` is the repeatable root-level path to rebuild the installable `.vsix` package.
+
 ## Project Structure
 
 ```
-mcp-router-for-antigravity/
+ifin-platform/
 ├── src/
 │   ├── index.ts           # Entry point
 │   ├── server/           # MCP server and tool handlers

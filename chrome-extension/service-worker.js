@@ -1113,6 +1113,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         data: message.data,
       });
     }
+
+    // Handle recording messages from content scripts
+    if (message.type === 'record-action' && sender.tab) {
+      wsSend({
+        type: 'record-action',
+        tabId: sender.tab.id,
+        action: message.action,
+      });
+    }
+
+    if (message.type === 'start-recording') {
+      wsSend({
+        type: 'start-recording',
+        name: message.name,
+      });
+    }
+
+    if (message.type === 'stop-recording') {
+      wsSend({
+        type: 'stop-recording',
+        workflowId: message.workflowId,
+      });
+    }
   } catch (err) {
     console.error('[MCP-SW] Message forwarding error:', err);
   }
@@ -1208,6 +1231,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Send current connection status to the newly opened sidepanel
     broadcastConnectionStatus(connectionStatus);
     return false;
+  }
+
+  // Handle set-mode message from popup
+  if (msg && msg.type === 'set-mode') {
+    // Forward to router via WebSocket if connected
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'set-mode', mode: msg.mode }));
+    }
+    sendResponse({ success: true });
+    return true;
   }
 
   // Handle commands from sidepanel/popup

@@ -150,6 +150,12 @@ export interface ElectronAPI {
 
   // Integration APIs
   integrationAPI: IntegrationAPI;
+
+  // Mode APIs
+  modeAPI: {
+    get: () => Promise<{ mode: string; modeLastUpdated: string; modeSource: string } | null>;
+    set: (mode: string) => Promise<{ mode: string; modeLastUpdated: string; modeSource: string }>;
+  };
 }
 
 declare global {

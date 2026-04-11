@@ -186,7 +186,7 @@ async function checkDiscoveryHealth(): Promise<DiscoveryHealth> {
 
     if (providerNames.length === 0) {
       return {
-        status: 'failed',
+        status: 'degraded',
         providers: [],
         warnings: ['No providers available for discovery'],
       };
@@ -334,7 +334,7 @@ async function checkLocalSystemReadiness() {
     safari: null,
   };
 
-  const launcherMode = process.argv.includes('--mcp-stdio') && process.execPath.toLowerCase().endsWith('.exe')
+  const launcherMode = process.execPath.toLowerCase().endsWith('.exe') && process.env['ELECTRON_RUN_AS_NODE'] === '1'
     ? 'installed'
     : repoRoot
       ? 'repo'
@@ -415,13 +415,16 @@ function determineOverallStatus(
   discoveryHealth: DiscoveryHealth,
   executionHealth: ExecutionHealth
 ): RouterStatus {
-  // If any component is invalid or failed, overall is unhealthy
+  // Invalid configuration or failed execution keeps the router unhealthy.
   if (
     configHealth.status === 'invalid' ||
-    discoveryHealth.status === 'failed' ||
     executionHealth.status === 'failed'
   ) {
     return RouterStatus.UNHEALTHY;
+  }
+
+  if (discoveryHealth.status === 'failed') {
+    return RouterStatus.DEGRADED;
   }
 
   // If any component is degraded or has warnings, overall is degraded

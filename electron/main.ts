@@ -90,11 +90,17 @@ ipcMain.handle('start-mcp-server', async (event, config: any) => {
     }
 
     const nodePath = process.execPath;
-    const serverScript = assetPaths.serverEntryScript;
+    const serverScript = app.isPackaged
+      ? path.join(path.dirname(process.execPath), 'resources', 'app.asar', 'dist', 'src', 'index.js')
+      : assetPaths.serverEntryScript;
 
     mcpServerProcess = spawn(nodePath, [serverScript], {
       stdio: 'pipe',
-      env: { ...process.env, ...config.env }
+      env: {
+        ...process.env,
+        ...(app.isPackaged ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+        ...config.env
+      }
     });
 
     mcpServerProcess.stdout?.on('data', (data) => {

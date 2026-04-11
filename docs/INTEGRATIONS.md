@@ -1,14 +1,14 @@
-# Hybrid Architecture: MCP Router + Antigravity Extension
+# Hybrid Architecture: MCP Router + ifin Platform Extension
 
 ## Overview
 
 This project now implements a **hybrid architecture** that combines:
 1. **MCP Router** - The backend execution brain (resilience, routing, providers)
-2. **VS Code Extension** - Thin UI bridge for native model selector integration
+2. **VS Code-compatible IDE Extension** - Thin UI bridge for native model selector integration
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                 Antigravity IDE                     │
+│                 ifin Platform IDE                   │
 │                                                      │
 │  ┌──────────────┐          ┌──────────────────┐    │
 │  │ Model        │          │   MCP Protocol   │    │
@@ -17,7 +17,7 @@ This project now implements a **hybrid architecture** that combines:
 │         │                           │               │
 │         ▼                           ▼               │
 │  ┌──────────────────────────────────────────┐      │
-│  │  Antigravity Custom Models Extension     │      │
+│  │  ifin Platform Custom Models Extension    │      │
 │  │  - LanguageModelChatProvider             │      │
 │  │  - Model Catalog                         │      │
 │  │  - Request/Response Mapping              │      │
@@ -68,7 +68,7 @@ This project now implements a **hybrid architecture** that combines:
 ### Separation of Concerns
 
 **Extension responsibilities:**
-- Register models in Antigravity's selector
+- Register models in ifin Platform's selector
 - Map VS Code API ↔ Router API
 - Stream responses to UI
 - Lightweight settings management
@@ -84,7 +84,7 @@ This project now implements a **hybrid architecture** that combines:
 ## Project Structure
 
 ```
-mcp-router-for-antigravity/
+ifin-platform/
 ├── src/                          # MCP Router backend
 │   ├── server/
 │   │   ├── mcpServer.ts          # MCP stdio server
@@ -93,7 +93,7 @@ mcp-router-for-antigravity/
 │   ├── providers/                # Provider adapters
 │   └── infra/                    # Config, logging
 │
-├── extension/                    # VS Code/Antigravity Extension
+├── extension/                    # VS Code/ifin Platform Extension
 │   ├── src/
 │   │   ├── extension.ts          # Entry point
 │   │   ├── provider/
@@ -210,40 +210,39 @@ npm start
 ```
 
 The router starts both:
-- MCP stdio server (for Antigravity MCP integration)
+- MCP stdio server (for ifin Platform MCP integration)
 - Extension API server (HTTP on port 3000)
 
-### Building the Extension
+### Building the IDE Extension
 
 ```bash
-cd extension
-npm install
-npm run build
+npm run build:ide-extension
 ```
 
-### Testing the Extension
+### Packaging the IDE Extension
 
-1. **Package the extension:**
-   ```bash
-   cd extension
-   npx vsce package
-   ```
-   This creates a `.vsix` file.
+```bash
+npm run rebuild:ide-extension
+```
 
-2. **Install in Antigravity:**
-   - Open Antigravity
+This builds the IDE extension, runs its unit tests, and creates the installable `.vsix` file in `extension/`.
+
+### Installing the IDE Extension
+
+1. **Install in ifin Platform:**
+   - Open ifin Platform
    - Go to Extensions view (Ctrl+Shift+X)
    - Click "..." → "Install from VSIX..."
-   - Select the generated `.vsix` file
+   - Select the generated `.vsix` file from `extension/`
 
-3. **Verify:**
-   - Open Antigravity chat
+2. **Verify:**
+   - Open ifin Platform chat
    - Click the model selector
    - You should see "MCP Router Models" with your custom models
 
-4. **Configure:**
-   - Go to Settings → Extensions → Antigravity Custom Models
-   - Set `mcpRouter.baseUrl` if your router runs on a different port
+3. **Configure:**
+   - Go to Settings → Extensions → ifin Platform Custom Models
+   - Set `ifinPlatform.baseUrl` if your router runs on a different port
 
 ### Configuration
 
@@ -258,22 +257,32 @@ OPENAI_API_KEY=sk-...
 GLM_API_KEY=...
 ```
 
-#### Extension Configuration (Antigravity Settings)
+#### Extension Configuration (ifin Platform Settings)
 
 ```json
 {
-  "mcpRouter.baseUrl": "http://localhost:3000",
-  "mcpRouter.timeout": 60000,
-  "mcpRouter.showOnlyHealthyModels": true,
-  "mcpRouter.autoRefreshCatalog": false
+  "ifinPlatform.baseUrl": "http://localhost:3000",
+  "ifinPlatform.timeout": 60000,
+  "ifinPlatform.showOnlyHealthyModels": true,
+  "ifinPlatform.models.defaultModel": "glm:glm-5",
+  "ifinPlatform.models.smallModel": "openai:gpt-4.1-mini",
+  "ifinPlatform.models.byMode.code": "",
+  "ifinPlatform.models.byMode.plan": "",
+  "ifinPlatform.models.byMode.debug": "",
+  "ifinPlatform.models.byMode.orchestrator": "",
+  "ifinPlatform.models.byMode.ask": "",
+  "ifinPlatform.autoRefreshCatalog": false,
+  "ifinPlatform.routerPath": "C:\\Users\\yourusername\\CascadeProjects\\mcp-router-for-antigravity"
 }
 ```
+
+`ifinPlatform.routerPath` is optional, but it is the safest fallback when the IDE extension is installed outside the router checkout and the repo is not the active workspace.
 
 ## Request Flow
 
 ### Complete Request Lifecycle
 
-1. **User selects model** in Antigravity's built-in selector
+1. **User selects model** in ifin Platform's built-in selector
 2. **Extension receives request** via `provideLanguageModelChatResponse()`
 3. **Request mapping**: VS Code messages → Router format
 4. **HTTP call** to `POST /api/extension/chat`
@@ -283,7 +292,7 @@ GLM_API_KEY=...
    - Retry/fallback logic
    - Circuit breaker checks
    - Provider API call
-6. **Response streaming**: Router → Extension → Antigravity UI
+6. **Response streaming**: Router → Extension → ifin Platform UI
 7. **Error handling**: Structured errors displayed to user
 
 ## Error Handling
@@ -332,12 +341,10 @@ npm start
 ### Updating the Extension
 
 ```bash
-cd extension
 git pull
 npm install
-npm run build
-npx vsce package
-# Reinstall .vsix in Antigravity
+npm run rebuild:ide-extension
+# Reinstall .vsix in ifin Platform
 ```
 
 ### Compatibility
@@ -364,7 +371,7 @@ npx vsce package
 
 ### Extension Won't Load
 
-1. Check Antigravity Developer Tools (Help → Toggle Developer Tools)
+1. Check ifin Platform Developer Tools (Help → Toggle Developer Tools)
 2. Look for errors in Console
 3. Verify extension compiled successfully
 4. Reinstall the `.vsix` file

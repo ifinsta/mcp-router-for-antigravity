@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getExtensionConfig, getProviderConfig, hasApiKeyInSettings } from '../config/settings';
 import { getLogger } from '../infra/logger';
 import { sanitizeErrorMessage } from '../infra/errors';
+import { LEGACY_SECRET_PREFIX, SECRET_PREFIX } from '../infra/identifiers';
 
 const logger = getLogger('api-key-manager');
 
@@ -20,7 +21,6 @@ export interface ProviderApiKeyConfig {
  * Manages API keys for providers using VS Code secret storage
  */
 export class ApiKeyManager {
-  private static readonly SECRET_PREFIX = 'mcp-router-api-key-';
   private secretStorage: vscode.SecretStorage;
 
   constructor(context: vscode.ExtensionContext) {
@@ -78,7 +78,7 @@ export class ApiKeyManager {
         }
       }
       // Fall back to secret storage
-      const key = await this.secretStorage.get(`${ApiKeyManager.SECRET_PREFIX}${provider}`);
+      const key = await this.secretStorage.get(`${SECRET_PREFIX}${provider}`);
       return key;
     } catch (error) {
       logger.error(`Failed to retrieve API key for ${provider}: ${sanitizeErrorMessage(error)}`);
@@ -91,7 +91,7 @@ export class ApiKeyManager {
    */
   async setApiKey(provider: string, key: string): Promise<void> {
     try {
-      await this.secretStorage.store(`${ApiKeyManager.SECRET_PREFIX}${provider}`, key);
+      await this.secretStorage.store(`${SECRET_PREFIX}${provider}`, key);
       logger.info(`API key stored for ${provider}`);
 
       // Also push to router for runtime updates
@@ -113,11 +113,36 @@ export class ApiKeyManager {
    */
   async removeApiKey(provider: string): Promise<void> {
     try {
-      await this.secretStorage.delete(`${ApiKeyManager.SECRET_PREFIX}${provider}`);
+      await this.secretStorage.delete(`${SECRET_PREFIX}${provider}`);
       logger.info(`API key removed for ${provider}`);
     } catch (error) {
       logger.error(`Failed to remove API key for ${provider}: ${sanitizeErrorMessage(error)}`);
       throw error;
+    }
+  }
+
+  /**
+   * Copy legacy secrets into the new namespace so upgraded users keep working
+   * without coupling both extensions to the same secret keys long-term.
+   */
+  async migrateLegacySecrets(): Promise<void> {
+    try {
+      for (const provider of this.getSupportedProviders()) {
+        const currentKey = await this.secretStorage.get(`${SECRET_PREFIX}${provider.provider}`);
+        if (currentKey && currentKey.length > 0) {
+          continue;
+        }
+
+        const legacyKey = await this.secretStorage.get(`${LEGACY_SECRET_PREFIX}${provider.provider}`);
+        if (!legacyKey || legacyKey.length === 0) {
+          continue;
+        }
+
+        await this.secretStorage.store(`${SECRET_PREFIX}${provider.provider}`, legacyKey);
+        logger.info(`Migrated legacy API key for ${provider.provider}`);
+      }
+    } catch (error) {
+      logger.warn(`Failed to migrate legacy API keys: ${sanitizeErrorMessage(error)}`);
     }
   }
 

@@ -14,7 +14,7 @@ This version aligns the architecture directly with the hardened resilience and o
 
 ## 1. Architectural Overview
 
-The MCP Router is a local or team-hosted service that exposes a single MCP server interface to supported clients and internally routes requests to external LLM providers and selected external tools.
+The MCP Router is a local or team-hosted service that exposes a single MCP server interface to supported clients and internally routes requests to external LLM providers and selected external tools, including the unified `browser.*` browser surface.
 
 ### Core principle
 
@@ -172,6 +172,7 @@ Thin application entry points for each tool.
 * `handleLlmChat`
 * `handleListModels`
 * `handleRouterHealth`
+* `handleBrowserTool`
 
 #### Responsibilities
 
@@ -289,7 +290,7 @@ Validates whether a request is allowed before execution.
 
 ### 4.8 Resilience Layer
 
-Owns all recovery and protection logic.
+Owns all recovery, protection, and security logic.
 
 #### Responsibilities
 
@@ -303,6 +304,7 @@ Owns all recovery and protection logic.
 * consult circuit breakers before dispatch
 * enforce bulkheads and concurrency limits
 * propagate cancellation to upstream calls when supported
+* enforce security policy for browser and external operations
 
 #### Subcomponents
 
@@ -311,10 +313,123 @@ Owns all recovery and protection logic.
 * `CircuitBreakerRegistry`
 * `ConcurrencyLimiter`
 * `AttemptRecorder`
+* `SecurityPolicyEngine`
 
 ---
 
-### 4.9 Circuit Breaker Registry
+### 4.9 Browser Orchestration Layer
+
+Owns browser-session lifecycle, browser capability reporting, transport
+selection, browser evidence collection, and browser-specific execution mapping
+behind one normalized contract.
+
+#### Responsibilities
+
+* manage browser sessions and session identifiers
+* expose browser capability truth through a typed capability model
+* select browser transport internally without leaking transport-specific payloads
+* normalize browser artifacts such as screenshots, profiles, audits, and metrics
+* surface degraded browser execution through warnings
+* reject unsupported browser operations with structured sanitized errors
+
+#### Transport policy
+
+* Chrome uses CDP as the primary control path and may use the extension for augmentation.
+* Edge uses Chromium CDP.
+* Firefox uses Marionette/WebDriver-style control for core actions.
+* Safari remains contract-visible with explicit capability gating for unsupported areas.
+
+#### Boundary rule
+
+The MCP-facing browser contract must stay transport-neutral.
+
+Public tools may expose session IDs, tab IDs, warnings, artifacts, and
+structured failures, but must not expose raw transport-native payloads as the
+primary contract.
+
+---
+
+### 4.11 Browser Intelligence Layer
+
+Owns evidence collection, failure analysis, and browser-assisted diagnostics.
+
+#### Responsibilities
+
+* capture structured evidence capsules from browser sessions
+* classify failures into categories (app_code, timing, selector_drift, backend_failure, environment)
+* detect flaky tests and patterns across multiple runs
+* map evidence to probable code ownership and root causes
+* evaluate assertions across functional, visual, a11y, performance, ux, and network categories
+* verify fixes by comparing runs before and after changes
+* generate PR-ready markdown summaries from browser evidence
+
+#### Subcomponents
+
+* `EvidenceCapsule` — capture screenshots, DOM, console, network, performance
+* `FailureClassifier` — rule-based failure classification
+* `FlakeAnalyzer` — multi-run flake detection with historical tracking
+* `RootCauseMapper` — heuristic mapping from evidence to code ownership
+* `AssertionModel` — multi-category browser assertion evaluation
+* `FixVerification` — rerun comparison with verdicts
+* `PRSummaryGenerator` — GitHub-ready markdown reports
+
+---
+
+### 4.12 Workflow Recording Layer
+
+Owns record-to-test generation and browser workflow capture.
+
+#### Responsibilities
+
+* record browser interactions as structured workflows
+* generate executable `browser.*` workflow code from recordings
+* export workflows with stable assertions
+* support visual and performance expectation generation
+
+#### Subcomponents
+
+* `WorkflowRecorder` — record-to-test with code generation
+
+---
+
+### 4.13 Browser Context Layer
+
+Owns automatic injection of browser context into AI conversations.
+
+#### Responsibilities
+
+* automatically attach compact browser context when active session exists
+* include URL, page title, active tab id, selected text, and artifact references
+* make injection configurable for privacy and noise control
+* support both Agent Mode and Router Mode contexts
+
+#### Subcomponents
+
+* `BrowserContext` — auto-injection of browser context into AI conversations
+
+---
+
+### 4.14 Security Policy Engine
+
+Enforces security controls for browser and external operations.
+
+#### Responsibilities
+
+* enforce domain allowlists for browser navigation
+* maintain action audit logs for compliance and debugging
+* redact secrets from logs and responses
+* support high-risk action warnings
+* enable session isolation and permission control
+
+#### Configuration
+
+* `SECURITY_ALLOWED_DOMAINS` — comma-separated domain allowlist
+* `SECURITY_AUDIT_LOG_ENABLED` — enable/disable audit logging
+* `SECURITY_SECRET_REDACTION_PATTERNS` — patterns for secret redaction
+
+---
+
+### 4.15 Circuit Breaker Registry
 
 Tracks health state per provider and optionally per provider+operation.
 
@@ -334,7 +449,7 @@ Tracks health state per provider and optionally per provider+operation.
 
 ---
 
-### 4.10 Request Budget Manager
+### 4.16 Request Budget Manager
 
 Controls total budget over the full execution path.
 
@@ -351,7 +466,7 @@ The first attempt must not consume nearly all available time when safe recovery 
 
 ---
 
-### 4.11 Concurrency Limiter / Bulkheads
+### 4.17 Concurrency Limiter / Bulkheads
 
 Prevents one failing provider from exhausting the router.
 
@@ -364,7 +479,41 @@ Prevents one failing provider from exhausting the router.
 
 ---
 
-### 4.12 Normalizer
+### 4.18 Dual-Mode Architecture
+
+The router supports two operational modes with conditional feature registration.
+
+#### Modes
+
+* **Agent Mode** — host IDE's AI owns chat; ifin provides MCP tools and browser capabilities
+* **Router Mode** — ifin owns model routing where supported; same MCP tools and browser capabilities
+
+#### Key principle
+
+Modes should only change chat ownership, not the core tool or browser experience.
+
+#### Implementation
+
+* `RouterMode` type with values `'agent' | 'router'`
+* Mode persistence to `~/.ifin-platform/mode.json`
+* Conditional `McpRouterLanguageModelProvider` registration in VS Code extension (Router mode only)
+* Mode API: `GET/POST /api/mode` endpoints
+* First-run mode selection UI on all platforms
+* Mode switching via VS Code QuickPick, Electron Settings, Chrome badge click
+
+#### Mode-specific behavior
+
+| Feature | Agent Mode | Router Mode |
+|---------|------------|-------------|
+| MCP tools | ✓ | ✓ |
+| Browser automation | ✓ | ✓ |
+| Browser bridge | ✓ | ✓ |
+| Native LM provider | ✗ | ✓ (VS Code) |
+| Provider key config | Optional | Required |
+
+---
+
+### 4.19 Normalizer
 
 Defines the common request and response contracts.
 
@@ -378,7 +527,7 @@ Defines the common request and response contracts.
 
 ---
 
-### 4.13 Health Service
+### 4.20 Health Service
 
 Provides runtime status of router and providers.
 
@@ -392,7 +541,7 @@ Provides runtime status of router and providers.
 
 ---
 
-### 4.14 Config and Secrets Layer
+### 4.21 Config and Secrets Layer
 
 Loads environment-driven configuration and secrets.
 
@@ -405,7 +554,7 @@ Loads environment-driven configuration and secrets.
 
 ---
 
-### 4.15 Logging and Metrics Layer
+### 4.22 Logging and Metrics Layer
 
 Provides operational visibility.
 
@@ -426,15 +575,27 @@ src/
   index.ts                  # startup entry
   server/
     mcpServer.ts            # MCP bootstrap and registration
-    toolHandlers.ts         # MCP tool handlers
+    toolHandlers.ts          # MCP tool handlers
+    extensionApiServer.ts    # HTTP/SSE API for extension and desktop
   core/
     router.ts               # orchestration and final response shaping
-    planner.ts              # attempt planning and path selection
-    registry.ts             # provider registry
-    policy.ts               # policy engine
-    normalizer.ts           # internal schema mapping
-    errors.ts               # error taxonomy and helpers
-    types.ts                # domain types and interfaces
+    planner.ts               # attempt planning and path selection
+    registry.ts              # provider registry
+    policy.ts                # policy engine
+    normalizer.ts            # internal schema mapping
+    errors.ts                # error taxonomy and helpers
+    types.ts                 # domain types and interfaces
+    evidenceCapsule.ts       # evidence capture for browser diagnostics
+    failureClassifier.ts     # failure classification engine
+    flakeAnalyzer.ts         # flaky test detection
+    rootCauseMapper.ts       # evidence to code ownership mapping
+    assertionModel.ts        # multi-category assertion evaluation
+    fixVerification.ts       # fix verification with reruns
+    prSummaryGenerator.ts    # PR-ready summary generation
+    workflowRecorder.ts      # record-to-test generation
+    browserContext.ts        # auto-injection of browser context
+    browserContract.ts       # browser capability matrix
+    modeManager.ts           # dual-mode state management
   resilience/
     retryPolicy.ts          # retry rules and backoff
     requestBudget.ts        # total budget accounting
@@ -442,6 +603,7 @@ src/
     concurrency.ts          # bulkheads and overload control
     executor.ts             # protected provider execution wrapper
     attemptHistory.ts       # attempt recording
+    securityPolicy.ts       # security policy engine
   providers/
     openaiAdapter.ts        # OpenAI integration
     glmAdapter.ts           # GLM integration
@@ -453,10 +615,18 @@ src/
     secrets.ts              # secret access utilities
     http.ts                 # shared HTTP client helpers
     clocks.ts               # monotonic timing helpers
+  browser/
+    browserBridge.ts        # browser bridge communication
+    browserManager.ts       # browser session management
+    cdpClient.ts            # Chrome DevTools Protocol client
+    extensionBridge.ts      # Chrome extension bridge
+    multiTabManager.ts      # multi-tab orchestration
   test/
     contract/
     chaos/
     load/
+    integration/
+    unit/
 ```
 
 ### Boundary rules
@@ -1004,6 +1174,96 @@ Provides router and provider health information.
 * return provider health state
 * return breaker and overload signals when relevant
 * surface configuration warnings
+
+---
+
+### 18.4 Browser Intelligence Tools
+
+Tools for evidence capture, failure analysis, and workflow verification.
+
+#### `browser.evidence.capture`
+
+Capture structured evidence from a browser session including screenshots, DOM, console, network, and performance data.
+
+#### `browser.evidence.explain`
+
+Generate human-readable explanation of captured evidence with failure classification.
+
+#### `browser.evidence.analyze_flake`
+
+Analyze multiple runs to detect flaky test patterns and classify failure sources.
+
+#### `browser.evidence.root_cause`
+
+Map evidence to probable code ownership and root cause suggestions.
+
+#### `browser.tabs.list_all`
+
+List all tabs across browser sessions with metadata.
+
+#### `browser.tabs.switch`
+
+Switch active tab within a browser session.
+
+#### `browser.recorder.start`, `browser.recorder.stop`, `browser.recorder.export`
+
+Record browser interactions and generate executable workflow code.
+
+#### `browser.assertions.evaluate`
+
+Evaluate assertions across functional, visual, a11y, performance, ux, and network categories.
+
+#### `browser.verification.run`
+
+Run fix verification comparing before and after states.
+
+#### `browser.pr_summary.generate`
+
+Generate GitHub-ready PR summary from browser evidence and verification results.
+
+---
+
+### 18.5 Dual-Mode API Endpoints
+
+HTTP endpoints for mode management and browser intelligence.
+
+#### Mode Management
+
+* `GET /api/mode` — get current mode
+* `POST /api/mode` — set mode
+
+#### Browser Tab Management
+
+* `GET /api/browser/tabs` — list all tabs
+* `GET /api/browser/auto-context` — get browser context for AI injection
+* `GET /api/browser/capabilities` — get per-browser capability matrix
+
+#### Evidence and Intelligence
+
+* `POST /api/evidence/capture` — capture evidence capsule
+* `POST /api/evidence/explain` — explain evidence
+* `POST /api/evidence/analyze-flake` — analyze flaky patterns
+* `POST /api/evidence/root-cause` — map to root cause
+
+#### Assertions and Verification
+
+* `POST /api/assertions/evaluate` — evaluate assertions
+* `POST /api/verification/run` — run fix verification
+
+#### Workflow Recording
+
+* `POST /api/recorder/start` — start recording
+* `POST /api/recorder/stop` — stop recording
+* `GET /api/recorder/export` — export workflow code
+
+#### PR Summary
+
+* `POST /api/pr-summary/generate` — generate PR summary
+
+#### Security
+
+* `GET /api/security/policy` — get security policy
+* `GET /api/security/audit-log` — get audit log
 
 ---
 

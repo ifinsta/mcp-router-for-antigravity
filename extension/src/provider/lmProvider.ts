@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { RouterClient } from '../client/routerClient';
+import { RouterClient, BrowserAutoContext } from '../client/routerClient';
 import { getExtensionConfig, validateConfig } from '../config/settings';
 import { getLogger } from '../infra/logger';
 import { sanitizeErrorMessage } from '../infra/errors';
@@ -14,6 +14,8 @@ import {
 } from './responseMapper';
 import { ToolMapper } from './toolMapper';
 import { ToolExecutor } from './toolExecutor';
+import { RouterConnectionManager } from '../infra/connectionManager';
+import { CONFIGURATION_SECTION, LEGACY_CONFIGURATION_SECTION } from '../infra/identifiers';
 
 const logger = getLogger('lm-provider');
 
@@ -25,6 +27,7 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
   private client: RouterClient;
   private catalog: ModelCatalog;
   private apiKeyManager: ApiKeyManager;
+  private connectionManager: RouterConnectionManager;
   private disposables: vscode.Disposable[] = [];
 
   /**
@@ -34,33 +37,40 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
   private readonly _onDidChangeLanguageModelChatInformation = new vscode.EventEmitter<void>();
   readonly onDidChangeLanguageModelChatInformation = this._onDidChangeLanguageModelChatInformation.event;
 
-  constructor(context: vscode.ExtensionContext, apiKeyManager: ApiKeyManager) {
+  constructor(
+    context: vscode.ExtensionContext,
+    apiKeyManager: ApiKeyManager,
+    connectionManager: RouterConnectionManager
+  ) {
     this.client = new RouterClient();
     this.catalog = new ModelCatalog(this.client);
     this.apiKeyManager = apiKeyManager;
+    this.connectionManager = connectionManager;
 
     this.disposables.push(this._onDidChangeLanguageModelChatInformation);
 
-    // Sync API keys to router on initialization, then notify model change
+    // Sync API keys to router on initialization
     this.syncApiKeysToRouter().then(() => {
-      // Signal that models are ready after initial setup
       logger.info('Firing onDidChangeLanguageModelChatInformation after API key sync');
       this._onDidChangeLanguageModelChatInformation.fire();
     }).catch(() => {
-      // Even if sync fails, still notify — fallback models should appear
       logger.info('Firing onDidChangeLanguageModelChatInformation after API key sync failure');
       this._onDidChangeLanguageModelChatInformation.fire();
     });
 
-    // Fire a second event after a short delay to ensure VS Code has fully initialized the provider
-    setTimeout(() => {
-      logger.info('Firing delayed onDidChangeLanguageModelChatInformation (2s delay)');
-      this._onDidChangeLanguageModelChatInformation.fire();
-    }, 2000);
+    // Listen for connection status changes and refresh model info
+    this.disposables.push(
+      this.connectionManager.onDidChangeStatus((status) => {
+        logger.info(`Connection status changed to ${status}, notifying model change`);
+        if (status === 'connected' || status === 'degraded') {
+          this._onDidChangeLanguageModelChatInformation.fire();
+        }
+      })
+    );
 
     // Listen for configuration changes
     const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('mcpRouter')) {
+      if (e.affectsConfiguration(CONFIGURATION_SECTION) || e.affectsConfiguration(LEGACY_CONFIGURATION_SECTION)) {
         // Validate new configuration before applying changes
         const newConfig = getExtensionConfig();
         const errors = validateConfig(newConfig);
@@ -76,8 +86,9 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
         // Reinitialize client with new config
         this.client = new RouterClient();
         this.catalog = new ModelCatalog(this.client);
+        this.connectionManager.updateClient(this.client);
         
-        // Re-sync API keys on any mcpRouter config change
+        // Re-sync API keys when current or legacy configuration changes
         logger.info('Configuration changed, syncing API keys to router');
         this.syncApiKeysToRouter().then(() => {
           logger.info('Firing onDidChangeLanguageModelChatInformation after config change');
@@ -85,6 +96,11 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
         }).catch(() => {
           logger.info('Firing onDidChangeLanguageModelChatInformation after config change (sync failed)');
           this._onDidChangeLanguageModelChatInformation.fire();
+        });
+
+        // Refresh connection manager with new client
+        this.connectionManager.refresh().catch(() => {
+          logger.warn('Failed to refresh connection manager after config change');
         });
       }
     });
@@ -155,16 +171,30 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
 
     try {
       const { provider } = parseModelId(model.id);
-      
+
+      // Check if browser context injection is enabled
+      const config = getExtensionConfig();
+      const autoInjectBrowserContext = vscode.workspace.getConfiguration('ifinPlatform').get<boolean>('autoInjectBrowserContext', true);
+
+      // Inject browser context if enabled
+      let enrichedMessages = messages;
+      if (autoInjectBrowserContext) {
+        const browserContext = await this.client.getBrowserAutoContext();
+        if (browserContext?.hasActiveSession) {
+          enrichedMessages = this.injectBrowserContext(messages, browserContext);
+          logger.debug('Browser context injected into conversation');
+        }
+      }
+
       // Check if tools are available
       const hasTools = options.tools && options.tools.length > 0;
-      
+
       if (hasTools) {
         logger.info(`Tools available: ${options.tools!.length} tools, mode: ${options.toolMode}`);
         // Use tool calling loop
         await this.handleToolCallingLoop(
           model,
-          messages,
+          enrichedMessages,
           options,
           progress,
           token
@@ -173,7 +203,7 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
         // Simple chat without tools
         await this.handleSimpleChat(
           model,
-          messages,
+          enrichedMessages,
           progress,
           token
         );
@@ -188,6 +218,32 @@ export class McpRouterLanguageModelProvider implements vscode.LanguageModelChatP
       const errorText = this.formatErrorMessage(error, model);
       progress.report(new vscode.LanguageModelTextPart(errorText));
     }
+  }
+
+  /**
+   * Inject browser context as a user message at the start of the conversation
+   * Note: VS Code's LanguageModelChatMessageRole only supports User and Assistant,
+   * so we use a User message with a special prefix to convey system context.
+   */
+  private injectBrowserContext(
+    messages: readonly vscode.LanguageModelChatRequestMessage[],
+    context: BrowserAutoContext
+  ): vscode.LanguageModelChatRequestMessage[] {
+    const contextMessage = `[Browser Context] Currently viewing: ${context.title} at ${context.url}`;
+
+    // Create a new array with the browser context as the first user message
+    // VS Code API doesn't expose System role, so we use User with context prefix
+    const contextMsg = new vscode.LanguageModelChatMessage(
+      vscode.LanguageModelChatMessageRole.User,
+      [new vscode.LanguageModelTextPart(contextMessage)]
+    );
+
+    const enriched: vscode.LanguageModelChatRequestMessage[] = [
+      contextMsg,
+      ...messages,
+    ];
+
+    return enriched;
   }
 
   /**

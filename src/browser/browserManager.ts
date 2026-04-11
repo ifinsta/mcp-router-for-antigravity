@@ -22,11 +22,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { getLogger } from '../infra/logger.js';
 import { getExtensionBridge } from './extensionBridge.js';
-import { createCDPClient, waitForCDP } from './cdpClient.js';
+import { createCDPClient, getTargets, waitForCDP } from './cdpClient.js';
 import type { CDPClient } from './cdpClient.js';
 import { FirefoxDriver, type FirefoxSession, type FirefoxConfig } from './firefoxDriver.js';
 import { SafariDriver, type SafariSession, type SafariConfig } from './safariDriver.js';
 import { EdgeDriver, type EdgeSession, type EdgeConfig } from './edgeDriver.js';
+import { createNetworkControlManager, type NetworkConditions } from './networkControl.js';
 
 // ES module compatibility - derive __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +79,15 @@ export interface BrowserSession {
   createdAt: number;
   lastActivity: number;
   extensionId?: string;
+}
+
+export interface BrowserSessionTransportInfo {
+  browserType: BrowserType;
+  extensionId?: string;
+  extensionConnected: boolean;
+  hasCdp: boolean;
+  remoteDebuggingPort: number;
+  targetId?: string;
 }
 
 /**
@@ -186,6 +196,251 @@ function getExtensionDir(): string {
   if (existsSync(fromCwd)) return fromCwd;
 
   throw new Error('Could not locate chrome-extension/ directory');
+}
+
+async function getWebVitalsViaCdp(cdp: CDPClient): Promise<unknown> {
+  const script = `
+    (function() {
+      return new Promise((resolve) => {
+        const vitals = { lcp: null, fid: null, cls: 0, fcp: null, ttfb: null, inp: null };
+        const navEntries = performance.getEntriesByType('navigation');
+        if (navEntries.length > 0) {
+          const nav = navEntries[0];
+          vitals.ttfb = nav.responseStart - nav.requestStart;
+        }
+        const paintEntries = performance.getEntriesByType('paint');
+        const fcp = paintEntries.find((entry) => entry.name === 'first-contentful-paint');
+        if (fcp) {
+          vitals.fcp = fcp.startTime;
+        }
+        const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+        if (lcpEntries.length > 0) {
+          vitals.lcp = lcpEntries[lcpEntries.length - 1].startTime;
+        }
+        const layoutShifts = performance.getEntriesByType('layout-shift');
+        layoutShifts.forEach((entry) => {
+          if (!entry.hadRecentInput) {
+            vitals.cls += entry.value;
+          }
+        });
+        if (vitals.lcp !== null) {
+          resolve(vitals);
+          return;
+        }
+        try {
+          const observer = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            if (entries.length > 0) {
+              vitals.lcp = entries[entries.length - 1].startTime;
+            }
+            observer.disconnect();
+            resolve(vitals);
+          });
+          observer.observe({ type: 'largest-contentful-paint', buffered: true });
+        } catch {
+          resolve(vitals);
+        }
+        setTimeout(() => resolve(vitals), 2000);
+      });
+    })()
+  `;
+
+  return cdp.executeScript(script, { returnByValue: true, awaitPromise: true });
+}
+
+async function runDesignAuditViaCdp(cdp: CDPClient): Promise<unknown> {
+  const script = `
+    (function() {
+      const results = {
+        colorContrast: { passes: 0, violations: [] },
+        typography: { fonts: [], issues: [], readabilityScore: 100 },
+        touchTargets: { total: 0, passing: 0, failing: 0, violations: [] },
+        layoutShifts: { score: 0, shifts: [] },
+        responsiveness: { overflowingElements: [], hasHorizontalScroll: false, viewportWidth: window.innerWidth },
+        zIndexStacking: { layers: [], maxZIndex: 0, potentialIssues: [] },
+        spacing: { commonMargins: [], commonPaddings: [], consistencyScore: 100 },
+        colorPalette: { colors: [], totalUnique: 0, groups: [] },
+        images: { total: 0, missingAlt: [], oversized: [], missingDimensions: [], lazyLoaded: 0, eagerLoaded: 0 },
+        forms: { total: 0, withLabels: 0, withoutLabels: 0, violations: [] },
+        interactiveElements: { total: 0, violations: [] },
+        score: 100
+      };
+      function getSelector(el) {
+        if (el.id) return '#' + el.id;
+        if (el.className && typeof el.className === 'string') {
+          const classes = el.className.trim().split(/\\s+/).slice(0, 2).join('.');
+          return el.tagName.toLowerCase() + (classes ? '.' + classes : '');
+        }
+        return el.tagName.toLowerCase();
+      }
+      function parseColor(color) {
+        if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return null;
+        const match = color.match(/rgba?\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)/);
+        return match ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])] : null;
+      }
+      function luminance(r, g, b) {
+        const values = [r, g, b].map((value) => value / 255);
+        const mapped = values.map((value) => value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4));
+        return 0.2126 * mapped[0] + 0.7152 * mapped[1] + 0.0722 * mapped[2];
+      }
+      const interactiveEls = document.querySelectorAll('a, button, input, select, textarea, [role="button"], [onclick]');
+      results.touchTargets.total = interactiveEls.length;
+      interactiveEls.forEach((el) => {
+        if (el.type === 'hidden') return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return;
+        if (rect.width >= 48 && rect.height >= 48) {
+          results.touchTargets.passing++;
+        } else {
+          results.touchTargets.failing++;
+          if (results.touchTargets.violations.length < 20) {
+            results.touchTargets.violations.push({ selector: getSelector(el), width: Math.round(rect.width), height: Math.round(rect.height) });
+          }
+        }
+      });
+      const images = document.querySelectorAll('img');
+      results.images.total = images.length;
+      images.forEach((img) => {
+        const src = (img.src || '').substring(0, 200);
+        if (!img.getAttribute('alt') && img.getAttribute('alt') !== '') {
+          if (results.images.missingAlt.length < 20) results.images.missingAlt.push({ src, selector: getSelector(img) });
+        }
+        if (!img.hasAttribute('width') || !img.hasAttribute('height')) {
+          if (results.images.missingDimensions.length < 20) results.images.missingDimensions.push({ src, selector: getSelector(img) });
+        }
+        if (img.naturalWidth > 0 && img.width > 0 && img.naturalWidth > img.width * 2) {
+          if (results.images.oversized.length < 20) {
+            results.images.oversized.push({ src, selector: getSelector(img), naturalWidth: img.naturalWidth, displayWidth: img.width });
+          }
+        }
+        if (img.loading === 'lazy') results.images.lazyLoaded++;
+        else results.images.eagerLoaded++;
+      });
+      results.responsiveness.hasHorizontalScroll = document.documentElement.scrollWidth > document.documentElement.clientWidth;
+      const textElements = document.querySelectorAll('p, span, a, li, h1, h2, h3, h4, h5, h6, label, button');
+      const checked = Math.min(textElements.length, 100);
+      for (let i = 0; i < checked; i++) {
+        const el = textElements[i];
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0 || !el.textContent || el.textContent.trim().length === 0) continue;
+        try {
+          const computed = getComputedStyle(el);
+          const fgColor = parseColor(computed.color);
+          const bgColor = parseColor(computed.backgroundColor);
+          if (!fgColor || !bgColor) continue;
+          const fgLum = luminance(fgColor[0], fgColor[1], fgColor[2]);
+          const bgLum = luminance(bgColor[0], bgColor[1], bgColor[2]);
+          const ratio = (Math.max(fgLum, bgLum) + 0.05) / (Math.min(fgLum, bgLum) + 0.05);
+          const fontSize = parseFloat(computed.fontSize);
+          const isBold = parseInt(computed.fontWeight) >= 700;
+          const requiredAA = fontSize >= 18.66 || (fontSize >= 14 && isBold) ? 3 : 4.5;
+          if (ratio < requiredAA) {
+            results.colorContrast.violations.push({ selector: getSelector(el), ratio: Math.round(ratio * 100) / 100, required: requiredAA });
+          } else {
+            results.colorContrast.passes++;
+          }
+        } catch {
+          // ignore audit calculation failures
+        }
+      }
+      const typographyElements = document.querySelectorAll('p, span, a, li, h1, h2, h3, h4, h5, h6');
+      const fontMap = new Map();
+      const typeChecked = Math.min(typographyElements.length, 100);
+      for (let i = 0; i < typeChecked; i++) {
+        const el = typographyElements[i];
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0 || !el.textContent || el.textContent.trim().length === 0) continue;
+        const computed = getComputedStyle(el);
+        const fontSize = parseFloat(computed.fontSize);
+        const lineHeight = parseFloat(computed.lineHeight) || fontSize * 1.2;
+        const fontFamily = computed.fontFamily;
+        const key = fontSize + '|' + lineHeight + '|' + fontFamily;
+        if (!fontMap.has(key)) {
+          fontMap.set(key, { fontSize, lineHeight, fontFamily, count: 0 });
+        }
+        fontMap.get(key).count++;
+        if (fontSize < 12) results.typography.issues.push('Font size below 12px: ' + getSelector(el));
+      }
+      results.typography.fonts = Array.from(fontMap.values()).slice(0, 10);
+      const forms = document.querySelectorAll('form');
+      results.forms.total = forms.length;
+      const inputs = document.querySelectorAll('input, select, textarea');
+      inputs.forEach((input) => {
+        const hasLabel = input.id && document.querySelector('label[for="' + input.id + '"]');
+        const hasAriaLabel = input.getAttribute('aria-label') || input.getAttribute('aria-labelledby');
+        if (hasLabel || hasAriaLabel) {
+          results.forms.withLabels++;
+        } else {
+          results.forms.withoutLabels++;
+          if (results.forms.violations.length < 10) {
+            results.forms.violations.push({ selector: getSelector(input), type: input.type || 'text' });
+          }
+        }
+      });
+      const deductions = (results.touchTargets.violations.length * 2)
+        + (results.images.missingAlt.length * 3)
+        + (results.colorContrast.violations.length * 5)
+        + (results.responsiveness.hasHorizontalScroll ? 10 : 0)
+        + (results.forms.withoutLabels * 2);
+      results.score = Math.max(0, 100 - deductions);
+      return results;
+    })()
+  `;
+
+  return cdp.executeScript(script, { returnByValue: true });
+}
+
+async function simulateUserScrollViaCdp(
+  cdp: CDPClient,
+  speed: 'slow' | 'medium' | 'fast' = 'medium'
+): Promise<unknown> {
+  const speedPresets = {
+    slow: { scrollStep: 100, betweenScroll: 180 },
+    medium: { scrollStep: 150, betweenScroll: 100 },
+    fast: { scrollStep: 200, betweenScroll: 50 },
+  };
+  const preset = speedPresets[speed];
+  const script = `
+    (async function() {
+      const stats = {
+        totalScrollDistance: 0,
+        duration: 0,
+        pageHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+        reachedBottom: false
+      };
+      const startTime = Date.now();
+      const pageHeight = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight
+      );
+      const viewportHeight = window.innerHeight;
+      let scrolled = 0;
+      let lastScrollY = window.scrollY;
+      let stuckCount = 0;
+      while (scrolled < pageHeight - viewportHeight) {
+        window.scrollBy({ top: ${preset.scrollStep}, behavior: 'instant' });
+        scrolled += ${preset.scrollStep};
+        stats.totalScrollDistance = scrolled;
+        if (window.scrollY === lastScrollY) {
+          stuckCount++;
+          if (stuckCount > 5) break;
+        } else {
+          stuckCount = 0;
+        }
+        lastScrollY = window.scrollY;
+        await new Promise((resolve) => setTimeout(resolve, ${preset.betweenScroll}));
+      }
+      stats.reachedBottom = window.scrollY + viewportHeight >= pageHeight - 100;
+      stats.duration = Date.now() - startTime;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return stats;
+    })()
+  `;
+
+  return cdp.executeScript(script, { returnByValue: true, awaitPromise: true, timeout: 60000 });
 }
 
 // ============================================================================
@@ -376,6 +631,297 @@ export class BrowserManager {
       logger.error('Set viewport failed', error instanceof Error ? error : new Error(String(error)), { sessionId });
       throw new Error(`Set viewport failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  getSessionTransportInfo(sessionId: string): BrowserSessionTransportInfo {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const targetId = session.instance.cdpClient?.isConnected() === true
+      ? session.instance.cdpClient.getTargetId()
+      : undefined;
+
+    return {
+      browserType: session.browserType,
+      ...(session.extensionId !== undefined ? { extensionId: session.extensionId } : {}),
+      extensionConnected:
+        session.extensionId !== undefined &&
+        session.extensionId !== 'cdp-only' &&
+        session.extensionId !== 'edge-only' &&
+        session.extensionId !== 'firefox-only' &&
+        session.extensionId !== 'safari-only',
+      hasCdp: session.instance.cdpClient?.isConnected() === true,
+      remoteDebuggingPort: session.instance.remoteDebuggingPort,
+      ...(targetId !== undefined ? { targetId } : {}),
+    };
+  }
+
+  async listTabs(sessionId: string): Promise<Array<{ tabId: string; url: string; title: string; isActive: boolean }>> {
+    const transport = this.getSessionTransportInfo(sessionId);
+    if (!transport.hasCdp) {
+      throw new Error(`Tab management is not available for ${transport.browserType}`);
+    }
+
+    const targets = await getTargets(transport.remoteDebuggingPort);
+    return targets
+      .filter((target) => target.type === 'page')
+      .map((target) => ({
+        tabId: target.id,
+        url: target.url,
+        title: target.title,
+        isActive: target.id === transport.targetId,
+      }));
+  }
+
+  async createTab(sessionId: string, url?: string): Promise<{ tabId: string; url: string }> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive || !session.instance.cdpClient?.isConnected()) {
+      throw new Error(`Tab creation is not available for session '${sessionId}'`);
+    }
+
+    const result = await session.instance.cdpClient.send('Target.createTarget', {
+      url: url ?? 'about:blank',
+      background: false,
+    }) as { targetId: string };
+
+    return {
+      tabId: result.targetId,
+      url: url ?? 'about:blank',
+    };
+  }
+
+  async activateTab(sessionId: string, tabId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive || !session.instance.cdpClient?.isConnected()) {
+      throw new Error(`Tab activation is not available for session '${sessionId}'`);
+    }
+
+    await session.instance.cdpClient.send('Target.activateTarget', { targetId: tabId });
+  }
+
+  async closeTab(sessionId: string, tabId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive || !session.instance.cdpClient?.isConnected()) {
+      throw new Error(`Tab closing is not available for session '${sessionId}'`);
+    }
+
+    await session.instance.cdpClient.send('Target.closeTarget', { targetId: tabId });
+  }
+
+  async setNetworkPreset(sessionId: string, preset: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive || !session.instance.cdpClient?.isConnected()) {
+      throw new Error(`Network control is not available for session '${sessionId}'`);
+    }
+
+    const manager = createNetworkControlManager(session.instance.cdpClient);
+    await manager.applyNetworkPreset(preset);
+  }
+
+  async resetNetworkConditions(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive || !session.instance.cdpClient?.isConnected()) {
+      throw new Error(`Network control is not available for session '${sessionId}'`);
+    }
+
+    const manager = createNetworkControlManager(session.instance.cdpClient);
+    await manager.resetNetworkConditions();
+  }
+
+  async click(sessionId: string, selector: string): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const result = await session.instance.executeScript(`
+      (function() {
+        const element = document.querySelector(${JSON.stringify(selector)});
+        if (!element) {
+          throw new Error('Element not found: ' + ${JSON.stringify(selector)});
+        }
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden' || rect.width === 0 || rect.height === 0) {
+          throw new Error('Element is not interactable: ' + ${JSON.stringify(selector)});
+        }
+        element.click();
+        return {
+          selector: ${JSON.stringify(selector)},
+          tagName: element.tagName.toLowerCase(),
+          text: (element.textContent || '').trim().slice(0, 120),
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      })()
+    `) as Record<string, unknown>;
+
+    session.lastActivity = Date.now();
+    return result;
+  }
+
+  async type(
+    sessionId: string,
+    selector: string,
+    text: string,
+    options: { clearFirst?: boolean; pressEnter?: boolean } = {}
+  ): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const clearFirst = options.clearFirst ?? true;
+    const pressEnter = options.pressEnter ?? false;
+    const result = await session.instance.executeScript(`
+      (function() {
+        const element = document.querySelector(${JSON.stringify(selector)});
+        if (!element) {
+          throw new Error('Element not found: ' + ${JSON.stringify(selector)});
+        }
+        if (!('value' in element)) {
+          throw new Error('Element does not accept text input: ' + ${JSON.stringify(selector)});
+        }
+        element.focus();
+        if (${clearFirst}) {
+          element.value = '';
+        }
+        element.value = ${JSON.stringify(text)};
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        if (${pressEnter}) {
+          element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+          element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+        }
+        return {
+          selector: ${JSON.stringify(selector)},
+          textLength: ${text.length},
+          pressEnter: ${pressEnter}
+        };
+      })()
+    `) as Record<string, unknown>;
+
+    session.lastActivity = Date.now();
+    return result;
+  }
+
+  async fillForm(
+    sessionId: string,
+    fields: Array<{ selector: string; value: string; type: 'text' | 'select' | 'checkbox' | 'radio' | 'click' }>
+  ): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const result = await session.instance.executeScript(`
+      (async function() {
+        const fields = ${JSON.stringify(fields)};
+        const completed = [];
+        for (const field of fields) {
+          const element = document.querySelector(field.selector);
+          if (!element) {
+            throw new Error('Field not found: ' + field.selector);
+          }
+          switch (field.type) {
+            case 'text':
+            case 'select':
+              element.value = field.value;
+              element.dispatchEvent(new Event('input', { bubbles: true }));
+              element.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            case 'checkbox':
+            case 'radio':
+              element.checked = field.value === 'true';
+              element.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            case 'click':
+              element.click();
+              break;
+          }
+          completed.push({ selector: field.selector, type: field.type });
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        return { fieldCount: fields.length, completed };
+      })()
+    `, 10000) as Record<string, unknown>;
+
+    session.lastActivity = Date.now();
+    return result;
+  }
+
+  async hover(sessionId: string, selector: string): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const result = await session.instance.executeScript(`
+      (function() {
+        const element = document.querySelector(${JSON.stringify(selector)});
+        if (!element) {
+          throw new Error('Element not found: ' + ${JSON.stringify(selector)});
+        }
+        const rect = element.getBoundingClientRect();
+        const options = {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        };
+        element.dispatchEvent(new MouseEvent('mouseenter', options));
+        element.dispatchEvent(new MouseEvent('mouseover', options));
+        return {
+          selector: ${JSON.stringify(selector)},
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      })()
+    `) as Record<string, unknown>;
+
+    session.lastActivity = Date.now();
+    return result;
+  }
+
+  async waitFor(sessionId: string, selector: string, timeoutMs: number): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const result = await session.instance.executeScript(`
+        (function() {
+          const element = document.querySelector(${JSON.stringify(selector)});
+          if (!element) {
+            return { found: false };
+          }
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return {
+            found: true,
+            visible: style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0
+          };
+        })()
+      `) as Record<string, unknown>;
+
+      if (result['found'] === true) {
+        session.lastActivity = Date.now();
+        return {
+          selector,
+          found: true,
+          visible: result['visible'] === true,
+          waitedMs: Date.now() - start,
+        };
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error(`Timed out waiting for selector '${selector}' after ${timeoutMs}ms`);
   }
 
   /**
@@ -1378,21 +1924,19 @@ export class BrowserManager {
           return await firefoxDriver.executeScript(firefoxSessionId, code);
         },
         setViewport: async (width, height) => {
-          // Firefox viewport changes require Marionette - placeholder implementation
-          logger.warn('Firefox setViewport not fully implemented');
+          throw new Error('Viewport control is not available in Firefox mode');
         },
         getMetrics: async () => {
-          // Firefox metrics require Marionette - placeholder implementation
-          return { metrics: [] };
+          throw new Error('Metrics are not available in Firefox mode');
         },
         getWebVitals: async () => {
-          return { lcp: null, fid: null, cls: null, note: 'Web Vitals not available in Firefox mode' };
+          throw new Error('Web vitals are not available in Firefox mode');
         },
         runDesignAudit: async () => {
-          return { score: 0, note: 'Design audit not available in Firefox mode' };
+          throw new Error('Design audit is not available in Firefox mode');
         },
         simulateUserScroll: async (speed) => {
-          return { totalScrollDistance: 0, note: 'User scroll not available in Firefox mode' };
+          throw new Error('Scroll simulation is not available in Firefox mode');
         },
         startProfiling: async () => {
           throw new Error('Profiling not available in Firefox mode');
@@ -1453,19 +1997,19 @@ export class BrowserManager {
           return await safariDriver.executeScript(safariSessionId, code);
         },
         setViewport: async (width, height) => {
-          logger.warn('Safari setViewport not fully implemented');
+          throw new Error('Viewport control is not available in Safari mode');
         },
         getMetrics: async () => {
-          return { metrics: [] };
+          throw new Error('Metrics are not available in Safari mode');
         },
         getWebVitals: async () => {
-          return { lcp: null, fid: null, cls: null, note: 'Web Vitals not available in Safari mode' };
+          throw new Error('Web vitals are not available in Safari mode');
         },
         runDesignAudit: async () => {
-          return { score: 0, note: 'Design audit not available in Safari mode' };
+          throw new Error('Design audit is not available in Safari mode');
         },
         simulateUserScroll: async (speed) => {
-          return { totalScrollDistance: 0, note: 'User scroll not available in Safari mode' };
+          throw new Error('Scroll simulation is not available in Safari mode');
         },
         startProfiling: async () => {
           throw new Error('Profiling not available in Safari mode');
@@ -1550,20 +2094,28 @@ export class BrowserManager {
           return { metrics: await edgeDriver.getMetrics(edgeSessionId) };
         },
         getWebVitals: async () => {
-          // Edge Web Vitals via CDP - similar to Chrome
-          return { lcp: null, fid: null, cls: null, fcp: null, ttfb: null, note: 'Web Vitals via CDP' };
+          return await getWebVitalsViaCdp(edgeSession.cdpClient);
         },
         runDesignAudit: async () => {
-          return { score: 0, note: 'Design audit not available in Edge mode' };
+          return await runDesignAuditViaCdp(edgeSession.cdpClient);
         },
         simulateUserScroll: async (speed) => {
-          return { totalScrollDistance: 0, note: 'User scroll not available in Edge mode' };
+          return await simulateUserScrollViaCdp(edgeSession.cdpClient, speed);
         },
         startProfiling: async () => {
-          throw new Error('Profiling not available in Edge mode');
+          await edgeSession.cdpClient.startCPUProfile();
+          await edgeSession.cdpClient.send('Performance.enable', {});
+          return `edge-cdp-${Date.now()}`;
         },
         stopProfiling: async () => {
-          throw new Error('Profiling not available in Edge mode');
+          const cpuProfile = await edgeSession.cdpClient.stopCPUProfile();
+          const metrics = await edgeSession.cdpClient.getPerformanceMetrics();
+          await edgeSession.cdpClient.send('Performance.disable', {});
+          return {
+            cpuProfile,
+            metrics,
+            method: 'cdp',
+          };
         },
         close: async () => {
           await edgeDriver.close(edgeSessionId);

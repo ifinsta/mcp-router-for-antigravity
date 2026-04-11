@@ -1,0 +1,55 @@
+:root {
+  --page-bg: var(--vscode-editor-background);
+  --sidebar-bg: color-mix(in srgb, var(--vscode-sideBar-background) 90%, var(--vscode-editor-background) 10%);
+  --surface-bg: color-mix(in srgb, var(--vscode-editor-background) 96%, var(--vscode-sideBar-background) 4%);
+  --surface-subtle-bg: color-mix(in srgb, var(--vscode-sideBar-background) 72%, var(--vscode-editor-background) 28%);
+  --surface-muted-bg: color-mix(in srgb, var(--vscode-input-background) 90%, var(--vscode-editor-background) 10%);
+  --surface-hover-bg: color-mix(in srgb, var(--vscode-list-hoverBackground) 72%, transparent 28%);
+  --surface-active-bg: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 54%, transparent 46%);
+  --surface-border: color-mix(in srgb, var(--vscode-panel-border) 84%, transparent 16%);
+  --surface-border-strong: color-mix(in srgb, var(--vscode-focusBorder) 46%, var(--vscode-panel-border) 54%);
+  --text-primary: var(--vscode-foreground);
+  --text-secondary: var(--vscode-descriptionForeground);
+  --text-muted: color-mix(in srgb, var(--vscode-descriptionForeground) 78%, transparent 22%);
+  --accent: color-mix(in srgb, var(--vscode-textLink-foreground) 86%, white 14%);
+  --accent-strong: color-mix(in srgb, var(--vscode-textLink-activeForeground) 86%, white 14%);
+  --accent-subtle-bg: color-mix(in srgb, var(--accent) 12%, transparent 88%);
+  --success: color-mix(in srgb, var(--vscode-testing-iconPassed) 88%, white 12%);
+  --success-subtle-bg: color-mix(in srgb, var(--success) 12%, transparent 88%);
+  --warning: color-mix(in srgb, var(--vscode-testing-iconQueued) 82%, white 18%);
+  --warning-subtle-bg: color-mix(in srgb, var(--warning) 14%, transparent 86%);
+  --danger: color-mix(in srgb, var(--vscode-testing-iconFailed) 88%, white 12%);
+  --danger-subtle-bg: color-mix(in srgb, var(--danger) 12%, transparent 88%);
+  --neutral-subtle-bg: color-mix(in srgb, var(--text-secondary) 12%, transparent 88%);
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --radius-lg: 10px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+  --radius-xs: 3px;
+  --sidebar-width: 216px;
+  --content-max-width: 1040px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 36px;
+  --row-min-height: 44px;
+  --control-height: 30px;
+  --button-height: 28px;
+  --transition-fast: 120ms ease;
+  --font-sans: var(--vscode-font-family);
+
+  /* Compatibility aliases for legacy webviews that still use the older shell token set. */
+  --shell-bg: var(--page-bg);
+  --shell-panel: var(--surface-bg);
+  --shell-panel-muted: var(--surface-subtle-bg);
+  --shell-border: var(--surface-border);
+  --shell-border-strong: var(--surface-border-strong);
+  --accent-muted: var(--accent-subtle-bg);
+  --success-muted: var(--success-subtle-bg);
+  --warning-muted: var(--warning-subtle-bg);
+  --danger-muted: var(--danger-subtle-bg);
+}

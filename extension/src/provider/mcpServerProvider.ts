@@ -1,9 +1,64 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getExtensionConfig, getProviderConfig } from '../config/settings';
 import { ApiKeyManager } from '../client/apiKeyManager';
 import { getLogger } from '../infra/logger';
 
 const logger = getLogger('mcp-server-provider');
+
+interface RouterEntrypointResolutionContext {
+  configuredRouterPath: string | null;
+  workspaceFolders: readonly vscode.WorkspaceFolder[];
+  extensionDir: string;
+  cwd: string;
+}
+
+export function buildRouterEntrypointCandidates(
+  context: RouterEntrypointResolutionContext,
+): string[] {
+  const candidates: string[] = [];
+  const pushCandidate = (candidate: string) => {
+    const resolved = path.resolve(candidate);
+    if (!candidates.includes(resolved)) {
+      candidates.push(resolved);
+    }
+  };
+
+  const configuredPath = context.configuredRouterPath;
+  if (configuredPath !== null) {
+    pushCandidate(configuredPath);
+    pushCandidate(path.join(configuredPath, 'dist', 'src', 'index.js'));
+  }
+
+  for (const workspaceFolder of context.workspaceFolders) {
+    pushCandidate(path.join(workspaceFolder.uri.fsPath, 'dist', 'src', 'index.js'));
+  }
+
+  pushCandidate(path.join(context.cwd, 'dist', 'src', 'index.js'));
+
+  // When running from extension/dist/provider inside the repo checkout.
+  pushCandidate(path.join(context.extensionDir, '..', '..', '..', 'dist', 'src', 'index.js'));
+
+  // Fallback for layouts that bundle the router JS under the extension directory itself.
+  pushCandidate(path.join(context.extensionDir, '..', '..', 'dist', 'src', 'index.js'));
+  pushCandidate(path.join(context.extensionDir, '..', '..', 'dist', 'index.js'));
+
+  return candidates;
+}
+
+export function resolveRouterEntrypoint(
+  context: RouterEntrypointResolutionContext,
+  fileExists: (candidate: string) => boolean = fs.existsSync,
+): string | undefined {
+  for (const candidate of buildRouterEntrypointCandidates(context)) {
+    if (fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * MCP Server Definition Provider
@@ -28,7 +83,6 @@ export class McpRouterServerProvider implements vscode.McpServerDefinitionProvid
   provideMcpServerDefinitions(_token: vscode.CancellationToken): vscode.ProviderResult<vscode.McpServerDefinition[]> {
     logger.info('Providing MCP server definitions');
 
-    const config = getExtensionConfig();
     const extensionPath = this.getExtensionPath();
     
     if (!extensionPath) {
@@ -103,18 +157,57 @@ export class McpRouterServerProvider implements vscode.McpServerDefinitionProvid
 
   /**
    * Get the path to the router's dist/src/index.js entrypoint.
+   * Tries multiple candidate paths and validates existence.
    */
   private getExtensionPath(): string | undefined {
-    // The router is at the project root, not in extension/
-    // We need to go up one level from extension/ to find dist/src/index.js
-    const path = require('path');
+    const config = getExtensionConfig();
+    const candidates = buildRouterEntrypointCandidates({
+      configuredRouterPath: config.routerPath,
+      workspaceFolders: vscode.workspace.workspaceFolders ?? [],
+      extensionDir: __dirname,
+      cwd: process.cwd(),
+    });
+    const resolved = resolveRouterEntrypoint(
+      {
+        configuredRouterPath: config.routerPath,
+        workspaceFolders: vscode.workspace.workspaceFolders ?? [],
+        extensionDir: __dirname,
+        cwd: process.cwd(),
+      },
+      fs.existsSync,
+    );
 
-    // When running from extension/, go up to project root
-    const projectRoot = path.join(__dirname, '..', '..');
-    const routerPath = path.join(projectRoot, 'dist', 'src', 'index.js');
+    if (resolved) {
+      logger.info(`Router resolved at: ${resolved}`);
+      return resolved;
+    }
 
-    logger.debug(`Router path resolved to: ${routerPath}`);
-    return routerPath;
+    for (const candidate of candidates) {
+      logger.debug(`Candidate path does not exist: ${candidate}`);
+    }
+
+    // Show user-friendly error if no candidate exists
+    const errorMessage = [
+      'ifin Platform: Could not find router entrypoint.',
+      '',
+      'Searched paths:',
+      ...candidates.map((c) => `  - ${path.resolve(c)}`),
+      '',
+      'Open the router repo in the workspace, or set ifinPlatform.routerPath to the repo root or built entrypoint.',
+    ].join('\n');
+
+    logger.error(errorMessage);
+    
+    vscode.window.showErrorMessage(
+      'ifin Platform: Could not find the router entrypoint. Build the repo or set ifinPlatform.routerPath.',
+      'Show Docs'
+    ).then(selection => {
+      if (selection === 'Show Docs') {
+        vscode.env.openExternal(vscode.Uri.parse('https://github.com/ifinsta/ifin-platform/blob/main/docs/QUICKSTART.md'));
+      }
+    });
+
+    return undefined;
   }
 
   dispose(): void {

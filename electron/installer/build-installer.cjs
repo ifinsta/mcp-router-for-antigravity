@@ -53,6 +53,16 @@ class WindowsInstallerBuilder {
         console.log(`Created: ${dir}`);
       }
     }
+
+    // Copy icon.ico to buildResources so electron-builder finds it by convention
+    const sourceIcon = path.join(this.projectRoot, 'electron', 'icon.ico');
+    const destIcon = path.join(this.buildDir, 'resources', 'icon.ico');
+    if (fs.existsSync(sourceIcon)) {
+      fs.copyFileSync(sourceIcon, destIcon);
+      console.log(`Copied icon.ico to buildResources: ${destIcon}`);
+    } else {
+      console.warn('Warning: electron/icon.ico not found. Run `node scripts/generate-ifin-assets.cjs` first.');
+    }
   }
 
   async buildApplication() {
@@ -91,7 +101,7 @@ class WindowsInstallerBuilder {
             arch: ['x64']
           }
         ],
-        icon: path.join(this.projectRoot, 'electron', 'icon.png'),
+        icon: path.join(this.projectRoot, 'electron', 'icon.ico'),
         artifactName: '${productName}-${version}-setup.${ext}',
         sign: null,
         signDlls: null,
@@ -196,7 +206,10 @@ exit /b 0
         mcpServer: {
           name: 'ifin Platform Server',
           executable: '%ProgramFiles%\\ifin Platform\\ifin Platform.exe',
-          args: ['--mcp-stdio'],
+          args: ['%ProgramFiles%\\ifin Platform\\resources\\app.asar\\dist\\src\\index.js'],
+          env: {
+            ELECTRON_RUN_AS_NODE: '1'
+          },
           transport: 'stdio',
           timeout: 30000
         },

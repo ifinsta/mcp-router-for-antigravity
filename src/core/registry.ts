@@ -7,6 +7,8 @@
 import { getLogger } from '../infra/logger.js';
 import { ProviderAdapter, ProviderCapabilities, ModelInfo, ProviderHealthStatus } from './types.js';
 import { createProviderNotFoundError, createValidationError } from './errors.js';
+import { getConfig, AppConfig } from '../infra/config.js';
+import { createProviderFactory } from '../providers/providerFactory.js';
 
 const logger = getLogger('provider-registry');
 
@@ -56,6 +58,19 @@ class ProviderRegistry {
    */
   has(name: string): boolean {
     return this.providers.has(name);
+  }
+
+  /**
+   * Unregister a provider adapter by name.
+   * Returns true if the provider was found and removed.
+   */
+  unregister(name: string): boolean {
+    if (!this.providers.has(name)) {
+      return false;
+    }
+    this.providers.delete(name);
+    logger.info(`Provider '${name}' unregistered`);
+    return true;
   }
 
   /**
@@ -165,6 +180,88 @@ export function getProviderRegistry(): ProviderRegistry {
 }
 
 /**
+ * Register a single provider from the current loaded config.
+ *
+ * If the provider is already registered, the existing adapter is replaced
+ * so that runtime key updates are reflected immediately.
+ */
+export async function registerProviderFromConfig(providerName: string): Promise<void> {
+  const registry = getProviderRegistry();
+  const config = getConfig();
+  const factory = createProviderFactory(config);
+
+  if (!factory.isProviderSupported(providerName)) {
+    logger.warn(`Skipping unsupported provider: ${providerName}`);
+    return;
+  }
+
+  const providerConfig = config.providers[providerName as keyof AppConfig['providers']];
+  if (!providerConfig) {
+    logger.warn(`Skipping provider with no config: ${providerName}`);
+    return;
+  }
+
+  // Providers like ollama don't require an apiKey
+  if ('apiKey' in providerConfig && !providerConfig.apiKey) {
+    logger.warn(`Skipping provider with no API key: ${providerName}`);
+    return;
+  }
+
+  try {
+    const adapter = await factory.createAdapter(providerName);
+
+    // If already registered, replace silently (allows key rotation)
+    if (registry.has(providerName)) {
+      registry.unregister(providerName);
+    }
+
+    registry.register(adapter);
+    logger.info(`Registered provider adapter: ${providerName}`);
+  } catch (error) {
+    logger.warn(`Failed to register provider adapter: ${providerName}`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Synchronize the provider registry with the current loaded config.
+ *
+ * For every provider in the config that has valid credentials, this function
+ * ensures a live adapter is registered in the registry.
+ */
+export async function syncProvidersFromConfig(): Promise<void> {
+  const config = getConfig();
+  const providerKeys = Object.keys(config.providers) as Array<keyof AppConfig['providers']>;
+
+  const registered: string[] = [];
+  const skipped: string[] = [];
+
+  for (const providerName of providerKeys) {
+    const providerConfig = config.providers[providerName];
+    if (!providerConfig) {
+      skipped.push(providerName);
+      continue;
+    }
+
+    // Providers like ollama don't require an apiKey
+    if ('apiKey' in providerConfig && !providerConfig.apiKey) {
+      skipped.push(providerName);
+      continue;
+    }
+
+    await registerProviderFromConfig(providerName);
+    registered.push(providerName);
+  }
+
+  logger.info('Provider registry sync complete', {
+    registered,
+    skipped,
+    totalProviders: registryGetProviderNames().length,
+  });
+}
+
+/**
  * Initialize provider registry with adapters
  */
 export async function initializeProviderRegistry(): Promise<void> {
@@ -177,9 +274,8 @@ export async function initializeProviderRegistry(): Promise<void> {
 
   logger.info('Initializing provider registry...');
 
-  // TODO: Register provider adapters when implemented
-  // For now, we'll register placeholder providers
-  // const { register } = await import("../providers/index.js");
+  // Sync providers from loaded config
+  await syncProvidersFromConfig();
 
   registry.markInitialized();
 }
@@ -227,6 +323,21 @@ export function providerSupportsCapability(
  */
 export function getProvidersByCapability(capability: keyof ProviderCapabilities): string[] {
   return getProviderRegistry().getProvidersByCapability(capability);
+}
+
+/**
+ * Unregister a provider adapter by name.
+ * Used internally for key rotation / replacement.
+ */
+export function unregisterProvider(name: string): boolean {
+  return getProviderRegistry().unregister(name);
+}
+
+/**
+ * Expose getProviderNames for logging in syncProvidersFromConfig.
+ */
+function registryGetProviderNames(): string[] {
+  return getProviderRegistry().getProviderNames();
 }
 
 export async function getProviderHealth(name: string): Promise<ProviderHealthStatus> {
