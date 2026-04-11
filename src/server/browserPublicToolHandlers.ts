@@ -46,7 +46,8 @@ const BrowserCapabilitiesSchema = z.object({
 
 const BrowserSessionOpenSchema = z.object({
   browserType: BrowserTypeSchema,
-  headless: z.boolean().default(true),
+  headless: z.boolean().default(false),
+  requireExtension: z.boolean().optional(),
   url: z.string().optional(),
   viewport: z.object({
     width: z.number().int().positive(),
@@ -112,10 +113,23 @@ const BrowserHoverSchema = z.object({
   selector: z.string(),
 });
 
+const BrowserScrollSchema = z.object({
+  sessionId: z.string(),
+  direction: z.enum(['up', 'down']).default('down'),
+  amount: z.number().int().positive().default(600),
+  behavior: z.enum(['instant', 'smooth']).default('smooth'),
+  selector: z.string().optional(),
+  block: z.enum(['start', 'center', 'end', 'nearest']).default('center'),
+});
+
 const BrowserWaitForSchema = z.object({
   sessionId: z.string(),
   selector: z.string(),
   timeoutMs: z.number().int().positive().default(10000),
+});
+
+const BrowserConsoleSchema = z.object({
+  sessionId: z.string(),
 });
 
 const BrowserTabCreateSchema = z.object({
@@ -308,6 +322,17 @@ function requireTransport(sessionId: string): BrowserSessionTransportInfo {
   return browserManager.getSessionTransportInfo(sessionId);
 }
 
+function shouldRequireExtension(
+  browserType: BrowserType,
+  requireExtension?: boolean
+): boolean {
+  if (browserType !== BrowserType.CHROME) {
+    return false;
+  }
+
+  return requireExtension ?? true;
+}
+
 function requireFeature(
   action: string,
   transport: BrowserSessionTransportInfo,
@@ -436,6 +461,21 @@ export function registerBrowserPublicTools(server: McpServer): void {
 
         const sessionId = await browserManager.launchBrowser(config);
         const transport = requireTransport(sessionId);
+        const extensionRequired = shouldRequireExtension(browserType, args.requireExtension);
+
+        if (extensionRequired && browserType === BrowserType.CHROME && !transport.extensionConnected) {
+          await browserManager.closeSession(sessionId);
+          return encodeResponse(
+            failureResult(
+              'browser.session.open',
+              'transport_unavailable',
+              'Chrome automation requires the browser extension, but the launched session connected in CDP-only mode. Install/load the extension or set requireExtension=false to allow degraded execution.',
+              browserType
+            ),
+            true
+          );
+        }
+
         const warnings = transportWarnings('browser.session.open', transport);
         let navigation: JsonRecord | undefined;
 
@@ -750,6 +790,41 @@ export function registerBrowserPublicTools(server: McpServer): void {
   );
 
   server.registerTool(
+    'browser.scroll',
+    {
+      title: 'Scroll Page',
+      description: 'Scroll the current page by an amount or move a specific element into view.',
+      inputSchema: BrowserScrollSchema,
+    },
+    async (args) => {
+      try {
+        const transport = requireTransport(args.sessionId);
+        const unsupported = requireFeature('browser.scroll', transport, 'core_control');
+        if (unsupported) {
+          return encodeResponse(unsupported, true);
+        }
+        const result = await browserManager.scroll(args.sessionId, {
+          direction: args.direction,
+          amount: args.amount,
+          behavior: args.behavior,
+          ...(args.selector !== undefined ? { selector: args.selector } : {}),
+          block: args.block,
+        });
+        return encodeResponse({
+          ...baseResult('browser.scroll', transport.browserType, args.sessionId),
+          warnings: transportWarnings('browser.scroll', transport),
+          data: result,
+        });
+      } catch (error) {
+        return encodeResponse(
+          failureResult('browser.scroll', 'browser_action_failed', error instanceof Error ? error.message : String(error), undefined, args.sessionId),
+          true
+        );
+      }
+    }
+  );
+
+  server.registerTool(
     'browser.wait_for',
     {
       title: 'Wait For Element',
@@ -772,6 +847,52 @@ export function registerBrowserPublicTools(server: McpServer): void {
       } catch (error) {
         return encodeResponse(
           failureResult('browser.wait_for', 'browser_action_failed', error instanceof Error ? error.message : String(error), undefined, args.sessionId),
+          true
+        );
+      }
+    }
+  );
+
+  server.registerTool(
+    'browser.console',
+    {
+      title: 'Get Console Logs',
+      description: 'Return recent console entries captured from the active page.',
+      inputSchema: BrowserConsoleSchema,
+    },
+    async (args) => {
+      try {
+        const transport = requireTransport(args.sessionId);
+        if (!transport.hasCdp && !(transport.browserType === BrowserType.CHROME && transport.extensionConnected)) {
+          return encodeResponse(
+            failureResult(
+              'browser.console',
+              'transport_unavailable',
+              'Console capture requires a CDP-capable session or an extension-backed Chrome session.',
+              transport.browserType,
+              args.sessionId,
+              transportWarnings('browser.console', transport)
+            ),
+            true
+          );
+        }
+
+        const data = await browserManager.getConsoleLogs(args.sessionId);
+        return encodeResponse({
+          ...baseResult('browser.console', transport.browserType, args.sessionId),
+          warnings: transportWarnings('browser.console', transport),
+          artifacts: [
+            {
+              kind: 'console',
+              description: 'Console entries returned inline in the MCP response',
+              mimeType: 'application/json',
+            },
+          ],
+          data,
+        });
+      } catch (error) {
+        return encodeResponse(
+          failureResult('browser.console', 'browser_action_failed', error instanceof Error ? error.message : String(error), undefined, args.sessionId),
           true
         );
       }

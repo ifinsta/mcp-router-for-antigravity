@@ -1,118 +1,98 @@
 # ifin Platform on Windows
 
-This guide is the canonical Windows reference for the Electron desktop application
-and installer flow.
-
-Use it when you need to:
-
-- build the desktop app from source
-- create a Windows installer
-- run the packaged app locally
-- find the main configuration and log locations
-- verify that the MCP server and browser integration start correctly
+This is the canonical Windows reference for local desktop development, packaging,
+and installer verification.
 
 ## Requirements
 
 - Windows 10 or Windows 11, 64-bit
 - Node.js 20.10.0 or newer
-- `pnpm` available on the command line
-- Chrome, Edge, or Firefox installed if you want browser-backed features
+- npm
+- Chrome, Edge, or Firefox for browser-backed workflows
 
-## Build and Run From Source
-
-Install dependencies:
+## Local Development
 
 ```bash
-pnpm install
+npm install
+npm run doctor
+npm run dev:all
 ```
 
-Build the router and Electron renderer:
+To launch the desktop shell after building the router and renderer:
 
 ```bash
-pnpm run build:all
+npm run start:electron
 ```
-
-Start the desktop application directly:
-
-```bash
-pnpm run start:electron
-```
-
-This is the fastest path for local development and verification.
 
 ## Build an Installer
 
-Create the distributable package:
+For a local installer-only build:
 
 ```bash
-pnpm run build:installer
+npm run build:installer
 ```
 
-The installer is written to `installers/` with the product name and version in
-the filename, for example `ifin Platform-1.1.0-setup.exe`.
-
-If you want a clean end-to-end packaging run, use:
+For the full local release path:
 
 ```bash
-pnpm run package
+npm run release:local
 ```
 
-## First Launch Checklist
+Installer artifacts are written to `installers/`.
 
-On first launch, confirm the application can do the following:
+## Setup and Verification
 
-1. Open without missing dependency errors.
-2. Detect the browsers you expect to use.
-3. Start the MCP server successfully.
-4. Show logs without repeated startup failures.
+Use the setup helper instead of hand-editing client config files:
 
-If the app opens but browser features do not work, check executable paths and
-browser availability before changing router code.
+```bash
+npm run setup -- antigravity --mode repo
+npm run setup -- cursor --mode repo
+npm run setup -- qoder --mode repo
+npm run setup -- codex --mode repo
+npm run setup -- all --mode repo
+```
+
+Run `npm run doctor` after setup to verify:
+
+- router build artifacts exist
+- extension and desktop builds are present
+- client MCP configs contain `mcp-router`
+- Codex has an `mcp-router` registration
+- Windows packaging prerequisites are intact
 
 ## Main Paths
 
-Common Windows locations used by the application:
-
+- Router entrypoint: `dist/src/index.js`
 - Browser configuration: `%USERPROFILE%\\.mcp-router-browser.json`
 - Logs directory: `%USERPROFILE%\\.mcp-router-logs`
 - Cache directory: `%USERPROFILE%\\.mcp-router-cache`
 - Installer output: `installers\\`
 
-For MCP client launchers that target the installed Windows app, use the bundled
-router entrypoint inside `app.asar` and set `ELECTRON_RUN_AS_NODE=1`. The
-packaged Electron binary should not be launched with `--mcp-stdio`.
-
-## Useful Commands
-
-```bash
-pnpm run build:all
-pnpm run start:electron
-pnpm run build:installer
-pnpm run package
-pnpm run test:windows
-```
+For installed Windows app launchers, use the bundled `app.asar` router entrypoint
+with `ELECTRON_RUN_AS_NODE=1`. Do not launch the packaged Electron binary with
+`--mcp-stdio`.
 
 ## Troubleshooting
 
 ### Installer build fails
 
-- Confirm `pnpm install` completed successfully.
-- Check that Electron build dependencies are installed.
-- Re-run with a clean workspace using `pnpm run clean` if needed.
+- Run `npm run doctor`
+- Confirm `npm install` completed successfully
+- Re-run `npm run build:all` before packaging if the desktop bundle is stale
 
 ### Desktop app starts but browser automation is unavailable
 
-- Verify Chrome, Edge, or Firefox is installed locally.
-- Check the browser paths in `%USERPROFILE%\\.mcp-router-browser.json`.
-- Review application logs for startup or connection errors.
+- Verify Chrome, Edge, or Firefox is installed locally
+- Check `%USERPROFILE%\\.mcp-router-browser.json`
+- Review logs for startup or connection errors
 
-### The router starts in terminal mode but not in Electron
+### The router starts from terminal mode but not in Electron
 
-- Run `pnpm run build:all` again to refresh the renderer bundle.
-- Verify the Electron entry point exists at `electron/dist/main.js`.
+- Run `npm run build:all`
+- Confirm `electron/dist/main.js` and `electron/renderer/dist/index.html` exist
 
 ## Related Documents
 
-- [`BROWSER.md`](./BROWSER.md): browser-driven workflows
-- [`CLAUDE_CODE.md`](./CLAUDE_CODE.md): MCP client setup guidance
-- [`README.md`](./README.md): documentation index
+- [BROWSER.md](./BROWSER.md)
+- [CLAUDE_CODE.md](./CLAUDE_CODE.md)
+- [DEVELOPMENT.md](./DEVELOPMENT.md)

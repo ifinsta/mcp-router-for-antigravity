@@ -206,7 +206,8 @@ Health check endpoint.
 ```bash
 npm install
 npm run build
-npm start
+npm run doctor
+npm run start
 ```
 
 The router starts both:
@@ -216,16 +217,20 @@ The router starts both:
 ### Building the IDE Extension
 
 ```bash
-npm run build:ide-extension
+npm run dev:extension
 ```
+
+Use an Extension Development Host for normal iteration.
 
 ### Packaging the IDE Extension
 
 ```bash
-npm run rebuild:ide-extension
+npm run build:ide-extension
+npm run test:ide-extension
+npm run package:ide-extension
 ```
 
-This builds the IDE extension, runs its unit tests, and creates the installable `.vsix` file in `extension/`.
+This produces the installable `.vsix` file in `extension/`.
 
 ### Installing the IDE Extension
 
@@ -343,7 +348,9 @@ npm start
 ```bash
 git pull
 npm install
-npm run rebuild:ide-extension
+npm run build:ide-extension
+npm run test:ide-extension
+npm run package:ide-extension
 # Reinstall .vsix in ifin Platform
 ```
 

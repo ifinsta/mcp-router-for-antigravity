@@ -1,34 +1,28 @@
 # Quick Start Guide
 
-Get the MCP router running and connected to ifin Platform or Qoder in under 5 minutes.
-
-If your AI agent can launch `npx`-based MCP servers, you can run this router directly from GitHub without cloning the repository.
+Get the router built, validated, and connected to a supported MCP client quickly.
 
 ## Prerequisites
 
-- **Node.js >= 20.10.0** - [Check version](#verify-node-version)
-- **API key** for at least one provider:
-  - OpenAI API key, or
-  - GLM API key, or
-  - Ollama running locally
+- Node.js `>= 20.10.0`
+- npm
+- At least one provider credential, or Ollama running locally
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Create Environment File
-
-Copy the example and add your API key:
+### 2. Create `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add at minimum:
+Minimum example:
 
 ```env
 ROUTER_DEFAULT_PROVIDER=glm
@@ -36,9 +30,7 @@ ROUTER_DEFAULT_MODEL=glm-4.5
 GLM_API_KEY=your-api-key-here
 ```
 
-**Alternative providers:**
-
-For OpenAI:
+OpenAI example:
 
 ```env
 ROUTER_DEFAULT_PROVIDER=openai
@@ -46,7 +38,7 @@ ROUTER_DEFAULT_MODEL=gpt-4.1-mini
 OPENAI_API_KEY=your-openai-key-here
 ```
 
-For Ollama (no API key needed):
+Ollama example:
 
 ```env
 ROUTER_DEFAULT_PROVIDER=ollama
@@ -54,70 +46,61 @@ ROUTER_DEFAULT_MODEL=llama3.3:70b
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 ```
 
-### 3. Build the Project
+### 3. Build the router
 
 ```bash
 npm run build
 ```
 
-No output means success. The compiled files are in `dist/`.
+The canonical local router entrypoint is:
 
-### 4. Verify the Server Starts
+```text
+dist/src/index.js
+```
+
+### 4. Validate the local setup
+
+```bash
+npm run doctor
+```
+
+`doctor` is read-only. It checks toolchain state, build artifacts, `.env`, client
+config readiness, Codex registration, and Windows packaging prerequisites.
+
+### 5. Configure a client
+
+Use the setup helper instead of editing MCP config files by hand:
+
+```bash
+npm run setup -- qoder --mode repo
+npm run setup -- cursor --mode repo
+npm run setup -- codex --mode repo
+```
+
+To configure every detected target in one pass:
+
+```bash
+npm run setup -- all --mode repo
+```
+
+### 6. Start the router
 
 ```bash
 npm run start
 ```
 
-You should see logs like:
+You should see startup logs showing the MCP server listening on stdio.
 
-```
-[INFO] MCP Router starting...
-[INFO] Provider initialized: glm
-[INFO] MCP server listening on stdio
-```
+## Manual Config Fallback
 
-Press `Ctrl+C` to stop the server.
-
-### 5. Configure ifin Platform or Qoder
-
-#### For Qoder
-
-1. Open **Qoder Settings** (Ctrl+Shift+, or click user icon in top-right)
-2. Click **MCP** in the left navigation
-3. Click **+ Add** on the My Servers tab
-4. Add the following configuration:
-
-```json
-{
-  "mcpServers": {
-    "mcp-router": {
-      "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
-      "env": {
-        "GLM_API_KEY": "your-glm-api-key",
-        "OPENAI_API_KEY": "your-openai-api-key",
-        "CHUTES_API_KEY": "your-chutes-api-key",
-        "ROUTER_DEFAULT_PROVIDER": "glm",
-        "ROUTER_DEFAULT_MODEL": "glm-4.5"
-      }
-    }
-  }
-}
-```
-
-5. Click **Save** when prompted
-6. The link icon should appear, indicating successful connection
-
-**Alternative: Local setup for Qoder**
-
-If you've cloned the repository:
+If a client only supports local command-based MCP setup, use:
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\index.js"],
+      "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\src\\index.js"],
       "env": {
         "GLM_API_KEY": "your-glm-api-key",
         "ROUTER_DEFAULT_PROVIDER": "glm",
@@ -128,54 +111,14 @@ If you've cloned the repository:
 }
 ```
 
-#### For ifin Platform
-
-Add the router to your ifin Platform MCP configuration file.
-
-Preferred setup when ifin Platform supports `npx`:
-
-**On macOS/Linux (~/.config/ifin-platform/mcp_servers.json):****
-
-```json
-{
-  "mcpServers": {
-    "mcp-router": {
-      "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
-      "env": {
-        "GLM_API_KEY": "${GLM_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-**On Windows (%APPDATA%\ifin-platform\mcp_servers.json):**
-
-```json
-{
-  "mcpServers": {
-    "mcp-router": {
-      "command": "npx",
-      "args": ["-y", "git+https://github.com/ifinsta/ifin-platform.git"],
-      "env": {
-        "GLM_API_KEY": "${GLM_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-Fallback setup if ifin Platform only supports local commands:
-
-**On macOS/Linux (~/.config/ifin-platform/mcp_servers.json):****
+On macOS/Linux, the equivalent path is:
 
 ```json
 {
   "mcpServers": {
     "mcp-router": {
       "command": "node",
-      "args": ["/home/yourusername/ifin-platform/dist/index.js"],
+      "args": ["/home/yourusername/ifin-platform/dist/src/index.js"],
       "env": {
         "GLM_API_KEY": "${GLM_API_KEY}"
       }
@@ -183,159 +126,62 @@ Fallback setup if ifin Platform only supports local commands:
   }
 }
 ```
-
-**On Windows (%APPDATA%\ifin-platform\mcp_servers.json):**
-
-```json
-{
-  "mcpServers": {
-    "mcp-router": {
-      "command": "node",
-      "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\index.js"],
-      "env": {
-        "GLM_API_KEY": "${GLM_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-**Important:** If you use the local `node` setup, replace `yourusername` with your actual username. The path should point to where you cloned the repository.
 
 ## Verify It Works
 
-### In Qoder (Agent mode)
+### Qoder or another MCP client
 
 ```text
-Use the llm.list_models tool to see all available models
-```
-
-Or check router health:
-
-```text
-Use the router_health tool to check the router status
-```
-
-### In ifin Platform
-
-Ask it to use the router:
-
-```
-Use the llm.chat tool to say "Hello, world!" with provider=openai
-```
-
-Or check router health:
-
-```
-Call router.health to check the router status
-```
-
-## Basic Usage Examples
-
-### Chat with an LLM
-
-**In Qoder:**
-
-```text
-Use llm.chat with:
-- provider: "chutes"
-- model: "Qwen/Qwen2.5-72B-Instruct"
-- messages: [{"role": "user", "content": "Hello!"}]
-```
-
-**In ifin Platform:**
-
-```
-Use llm.chat with:
-- provider: "openai"
-- model: "gpt-4.1-mini"
-- messages: [{"role": "user", "content": "Hello!"}]
-```
-
-### List Available Models
-
-```
 Use llm.list_models to see all available models
 ```
 
-### Check Router Health
-
+```text
+Use router.health to check the router status
 ```
-Use router.health to check configuration and provider status
+
+### ifin Platform
+
+```text
+Use llm.chat to say "Hello, world!" with provider=openai
 ```
 
 ## Common Issues
 
-### Missing API Key
+### Missing API key
 
-**Error:** `Configuration error: Missing required environment variable`
+Ensure your `.env` file contains the credential needed for your default provider.
 
-**Fix:** Ensure your `.env` file contains the API key for your default provider:
+### Wrong router path
 
-```env
-OPENAI_API_KEY=sk-...
-```
+Use an absolute path to `dist/src/index.js`, not `dist/index.js`.
 
-### Wrong File Path in ifin Platform Config
+### Client config drift
 
-**Error:** ifin Platform can't start the MCP server
-
-**Fix:** Use an absolute path to `dist/index.js`:
-
-- ✅ `"args": ["/home/user/projects/mcp-router/dist/index.js"]`
-- ❌ `"args": ["dist/index.js"]`
-
-### GitHub Launch Fails
-
-**Error:** ifin Platform fails when using `npx github:ifinsta/ifin-platform`
-
-**Fix:** Some MCP hosts only allow local commands or do not support `npx`. Use the local fallback config with `node` and a built `dist/index.js` path.
-
-### Node Version Mismatch
-
-**Error:** Syntax errors or module not found
-
-**Fix:** Check your Node version:
+Re-run:
 
 ```bash
-node --version
+npm run setup -- <target> --mode repo
 ```
 
-Must be >= 20.10.0. Upgrade at [nodejs.org](https://nodejs.org/).
+Then confirm with:
 
-### Server Won't Start
+```bash
+npm run doctor
+```
 
-**Check logs:**
+### Server will not start
+
+Run:
 
 ```bash
 npm run start
 ```
 
-Look for error messages about:
-
-- Missing environment variables
-- Invalid configuration
-- Provider initialization failures
-
-## Verify Node Version
-
-```bash
-node --version
-```
-
-Should output `v20.10.0` or higher.
+Look for missing environment variables, invalid configuration, or provider
+initialization failures.
 
 ## Next Steps
 
-- Read the [README.md](../README.md) for detailed documentation
-- Check [specs/architecture.md](../specs/architecture.md) for system design
-- See [specs/requirements.md](../specs/requirements.md) for capabilities
-
-## Need Help?
-
-- Check the [Common Issues](#common-issues) section above
-- Review logs with `npm run start`
-- Verify your `.env` configuration
-- Ensure all prerequisites are met
-- Browse the [GitHub repository](https://github.com/ifinsta/ifin-platform)
-- Report issues on [GitHub Issues](https://github.com/ifinsta/ifin-platform/issues)
+- Read [README.md](../README.md)
+- Review [DEVELOPMENT.md](./DEVELOPMENT.md)
+- Check [specs/architecture.md](../specs/architecture.md)

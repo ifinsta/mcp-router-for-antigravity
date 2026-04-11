@@ -1,128 +1,101 @@
 # Development Setup
 
-## Quick Start
+## Canonical Workflow
 
 ```bash
-# Install dependencies
 npm install
-
-# Copy environment file
 cp .env.example .env
-
-# Edit .env with your credentials
-# Add your OPENAI_API_KEY and GLM_API_KEY
-
-# Run in development mode
-npm run dev
-
-# Or build and run
-npm run build
-npm run start
+npm run doctor
+npm run dev:all
 ```
 
-## Development Commands
+Use `npm` as the single package manager for this repository. The default daily loop is:
+
+- `npm run dev:router` for router TypeScript watch
+- `npm run dev:extension` for the VS Code extension watch build
+- `npm run dev:desktop` for the Electron renderer watch build
+- `npm run dev:all` to run all three together
+
+When you want to open the desktop shell after building the router and renderer:
 
 ```bash
-# IDE extension
+npm run start:electron
+```
+
+## Setup and Validation
+
+Use the root setup and doctor commands instead of hand-editing client configs:
+
+```bash
+npm run setup -- qoder --mode repo
+npm run setup -- cursor --mode repo
+npm run setup -- codex --mode repo
+npm run setup -- all --mode repo
+npm run doctor
+```
+
+`npm run doctor` is read-only. It checks toolchain state, build artifacts, `.env`,
+client MCP config status, Codex registration, and Windows packaging prerequisites.
+
+## Build and Release Commands
+
+```bash
+# Router
+npm run build
+npm run start
+
+# IDE extension release artifact
 npm run build:ide-extension
 npm run test:ide-extension
 npm run package:ide-extension
-npm run rebuild:ide-extension
 
-# Type checking
-npm run typecheck
+# Desktop packaging
+npm run build:all
+npm run build:installer
 
-# Linting
-npm run lint
-npm run lint:fix
-
-# Formatting
-npm run format
-npm run format:check
-
-# Testing
-npm run test
-npm run test:coverage
-npm run test:contract
-npm run test:chaos
-npm run test:load
-
-# Build
-npm run build
-
-# Clean build artifacts
-npm run clean
-
-# CI pipeline (typecheck + lint + test)
-npm run ci
+# Full local release verification
+npm run release:local
 ```
 
-The IDE extension in `extension/` targets VS Code-compatible editors. `npm run rebuild:ide-extension` is the repeatable root-level path to rebuild the installable `.vsix` package.
+For normal extension iteration, use `npm run dev:extension` and launch an Extension
+Development Host from VS Code instead of packaging a VSIX on every change.
 
 ## Project Structure
 
-```
+```text
 ifin-platform/
-├── src/
-│   ├── index.ts           # Entry point
-│   ├── server/           # MCP server and tool handlers
-│   ├── core/             # Router core, types, errors
-│   ├── resilience/        # Retry, circuit breakers, budgets
-│   ├── providers/         # Provider adapters (OpenAI, GLM, Ollama)
-│   └── infra/            # Config, logging, metrics, HTTP
-├── test/
-│   ├── unit/             # Unit tests
-│   ├── contract/         # Adapter contract tests
-│   ├── chaos/            # Fault injection tests
-│   └── load/            # Load and concurrency tests
-├── specs/               # Design documents
-└── README.md            # Main documentation
+├── src/                  # Router server, core, providers, infra
+├── extension/            # VS Code-compatible extension
+├── electron/             # Desktop shell and renderer
+├── chrome-extension/     # Browser bridge extension
+├── test/                 # Unit, contract, chaos, load, windows
+├── docs/                 # User and developer documentation
+└── specs/                # Design authority
 ```
 
-## Development Requirements
+## Requirements
 
-- Node.js >= 20.10.0
-- npm or pnpm
-
-## Code Quality
-
-This project enforces strict code quality standards:
-
-- **Strict TypeScript**: All strict mode options enabled
-- **Type Safety**: No `any` allowed in critical paths
-- **Runtime Validation**: All external inputs validated
-- **Test Coverage**: Critical paths must have high coverage
-- **Linting**: ESLint with TypeScript rules
-- **Formatting**: Prettier with consistent style
-
-## Key Architecture Principles
-
-1. **Boundary Protection**: No provider-specific logic outside adapters
-2. **Resilience First**: Dedicated resilience layer for retries, breakers
-3. **Strong Typing**: Strict types at all boundaries
-4. **Observability**: Logs, metrics, health signals for debugging
-5. **Security**: Secrets redacted, sanitized errors only
-
-## Environment Variables
-
-See `.env.example` for all required configuration variables.
-
-Critical variables:
-- `ROUTER_DEFAULT_PROVIDER`: Default provider to use
-- `ROUTER_DEFAULT_MODEL`: Default model to use
-- `OPENAI_API_KEY`: OpenAI API key
-- `GLM_API_KEY`: GLM API key
+- Node.js `>= 20.10.0`
+- npm
 
 ## Troubleshooting
 
-### Type errors
-Run `npm run typecheck` to see detailed type errors.
+### Missing build artifacts
 
-### Linting errors
-Run `npm run lint:fix` to auto-fix linting issues.
+Run:
 
-### Build failures
-Ensure all dependencies are installed: `npm install`
+```bash
+npm run doctor
+```
 
-### Test failures
-Run tests with detailed output to see what's failing.
+Then follow the remediation shown for the failing surface.
+
+### Router entrypoint confusion
+
+The canonical local router entrypoint is:
+
+```text
+dist/src/index.js
+```
+
+Do not point client configs at `dist/index.js`.

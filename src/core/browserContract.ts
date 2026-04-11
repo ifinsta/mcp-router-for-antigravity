@@ -43,7 +43,7 @@ export interface BrowserWarning {
   message: string;
 }
 
-export type BrowserArtifactKind = 'screenshot' | 'profile' | 'audit' | 'metrics';
+export type BrowserArtifactKind = 'screenshot' | 'profile' | 'audit' | 'metrics' | 'console';
 
 export interface BrowserArtifactRef {
   kind: BrowserArtifactKind;

@@ -256,7 +256,7 @@ export class ApiKeySettingsPanel {
     this.panel.webview.postMessage({
       command: 'mcpConfigReady',
       configPath,
-      setupCommand: `setup-mcp ${currentIde} --mode auto`,
+      setupCommand: `npm run setup -- ${currentIde} --mode auto`,
       message: `ifin Platform can configure ${labelForIde(currentIde)} at ${configPath}.`,
     });
   }

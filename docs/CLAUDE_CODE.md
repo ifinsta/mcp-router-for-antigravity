@@ -24,11 +24,12 @@ surface and are not registered by default in the MCP bootstrap.
 cd C:\Users\user\CascadeProjects\mcp-router-for-antigravity
 npm install
 npm run build
+npm run doctor
 ```
 
 ### Configure Claude Code
 
-Use either the Claude Code MCP settings UI or `C:\Users\user\.claude\mcp-servers.json`.
+Use the Claude Code MCP settings UI or `C:\Users\user\.claude\mcp-servers.json`.
 
 Example config:
 
@@ -37,7 +38,7 @@ Example config:
   "mcpServers": {
     "ifin-platform": {
       "command": "node",
-      "args": ["C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\dist\\index.js"],
+      "args": ["C:\\Users\\user\\CascadeProjects\\mcp-router-for-antigravity\\dist\\src\\index.js"],
       "env": {
         "NODE_ENV": "production",
         "LOG_LEVEL": "info"
@@ -175,7 +176,7 @@ or audits should be attempted in a given browser.
 
 Check:
 
-- the `dist/index.js` path is correct
+- the `dist/src/index.js` path is correct
 - Node.js is installed and on `PATH`
 - the MCP server process starts locally without crashing
 

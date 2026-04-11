@@ -17,13 +17,21 @@ All routing, resilience, and provider logic remains in ifin Platform.
 npm install
 npm run build
 npm run test:unit
-npm run package
 ```
 
 From the repo root you can run:
 
 ```bash
-npm run rebuild:ide-extension
+npm run dev:extension
+```
+
+Use an Extension Development Host for day-to-day iteration. Package a VSIX only
+when you need an installable artifact:
+
+```bash
+npm run build:ide-extension
+npm run test:ide-extension
+npm run package:ide-extension
 ```
 
 ## Testing

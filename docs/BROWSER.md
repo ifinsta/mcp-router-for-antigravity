@@ -10,7 +10,8 @@ This is the public contract:
 - `browser.capabilities`
 - `browser.session.open`, `browser.session.close`, `browser.session.list`
 - `browser.navigate`, `browser.screenshot`, `browser.evaluate`
-- `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.wait_for`
+- `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.scroll`, `browser.wait_for`
+- `browser.console`
 - `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
 - `browser.network.set_conditions`, `browser.network.reset`
 - `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
@@ -71,7 +72,9 @@ Current capability matrix:
 Notes:
 
 - `core_control` covers session open/close, navigation, screenshot, evaluation, click, type, fill, hover, and wait flows.
-- Chrome can still work without the extension, but the router emits degraded warnings when extension-backed augmentation is unavailable.
+- `browser.scroll` gives agents a direct way to move the visible viewport without dropping into raw script execution.
+- `browser.console` returns recent page console entries for any CDP-capable Chromium session, with the Chrome extension path retained as a fallback.
+- Chrome `browser.session.open` now requires extension-backed augmentation by default. Callers must set `requireExtension: false` to allow degraded CDP-only execution.
 - Firefox and Safari remain first-class entries in the contract because they report capability truthfully instead of pretending to support unsupported flows.
 
 ## Transport Model
@@ -95,7 +98,21 @@ not on browser-specific transport assumptions.
   "tool": "browser.session.open",
   "arguments": {
     "browserType": "chrome",
-    "headless": true,
+    "headless": false,
+    "url": "https://example.com"
+  }
+}
+```
+
+To explicitly allow degraded Chrome launch without the extension:
+
+```json
+{
+  "tool": "browser.session.open",
+  "arguments": {
+    "browserType": "chrome",
+    "headless": false,
+    "requireExtension": false,
     "url": "https://example.com"
   }
 }
@@ -121,6 +138,27 @@ not on browser-specific transport assumptions.
   "arguments": {
     "sessionId": "session_123",
     "selector": "button[type='submit']"
+  }
+}
+```
+
+```json
+{
+  "tool": "browser.scroll",
+  "arguments": {
+    "sessionId": "session_123",
+    "direction": "down",
+    "amount": 700,
+    "behavior": "smooth"
+  }
+}
+```
+
+```json
+{
+  "tool": "browser.console",
+  "arguments": {
+    "sessionId": "session_123"
   }
 }
 ```
@@ -206,7 +244,9 @@ The router is expected to tell the truth about browser state.
 
 Examples:
 
-- Chrome without the extension may succeed with `warnings` that extension augmentation is unavailable.
+- Chrome session open fails with `transport_unavailable` when the extension is required but the launched browser connects in CDP-only mode.
+- Chrome without the extension only succeeds when `requireExtension: false`, and then the router emits degraded warnings.
+- `browser.console` remains available on Chromium sessions that still have CDP even when extension augmentation is absent.
 - Firefox tab or profiling requests fail structurally instead of returning placeholders.
 - Safari browser calls that are not implemented fail with explicit unsupported or action-failed results.
 
@@ -239,4 +279,5 @@ It improves Chrome sessions with:
 - local bridge connectivity for browser-side events
 
 If the extension is unavailable, the router continues through CDP where
-possible and emits warnings instead of hiding the reduced execution mode.
+possible only when the caller explicitly allows degraded execution through
+`requireExtension: false`. Otherwise Chrome session launch fails closed.

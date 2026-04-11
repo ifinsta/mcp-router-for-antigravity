@@ -421,6 +421,7 @@ const COMMANDS = {
   inspectElement: cmdInspectElement,
   getDomTree: cmdGetDomTree,
   getComputedStyles: cmdGetComputedStyles,
+  'get-console-logs': cmdGetConsoleLogs,
   startProfiling: cmdStartProfiling,
   stopProfiling: cmdStopProfiling,
   getMetrics: cmdGetMetrics,
@@ -663,6 +664,19 @@ async function cmdGetComputedStyles({ tabId, selector }) {
     id: crypto.randomUUID(),
     command: 'getComputedStyles',
     params: { selector },
+  });
+  return resp.data;
+}
+
+/**
+ * Get recent console entries captured from the page context.
+ * @param {{ tabId: number }} params
+ */
+async function cmdGetConsoleLogs({ tabId }) {
+  const resp = await sendToContentScript(tabId, {
+    id: crypto.randomUUID(),
+    command: 'getConsoleLogs',
+    params: {},
   });
   return resp.data;
 }

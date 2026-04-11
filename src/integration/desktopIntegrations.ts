@@ -119,7 +119,7 @@ export interface IntegrationContext {
   env: NodeJS.ProcessEnv;
 }
 
-interface McpClientDefinition {
+export interface McpClientDefinition {
   id: string;
   label: string;
   configPath: string;
@@ -144,7 +144,7 @@ interface JsonReadResult {
   error?: string | undefined;
 }
 
-const ROUTER_SERVER_NAME = 'mcp-router';
+export const ROUTER_SERVER_NAME = 'mcp-router';
 const DEFAULT_LOCAL_API_PORT = 3000;
 const BRIDGE_PORT = 9315;
 const KNOWN_PACKAGE_NAMES = new Set(['ifin-platform', 'mcp-router-for-antigravity', 'mcp-router']);
@@ -492,15 +492,20 @@ export function detectAllIntegrationRecords(
 ): IntegrationRecord[] {
   const records: IntegrationRecord[] = [];
 
-  for (const client of getMcpClientDefinitions(context)) {
-    records.push(detectMcpClientRecord(context, client, launcherMode));
-  }
+  records.push(...detectMcpClientRecords(context, launcherMode));
 
   records.push(detectIdeExtensionRecord(context));
   records.push(detectBrowserExtensionRecord(context, browserPaths));
   records.push(...detectRuntimeRecords(browserPaths, browserSettings));
 
   return records;
+}
+
+export function detectMcpClientRecords(
+  context: IntegrationContext,
+  launcherMode: LauncherMode
+): IntegrationRecord[] {
+  return getMcpClientDefinitions(context).map((client) => detectMcpClientRecord(context, client, launcherMode));
 }
 
 function detectMcpClientRecord(

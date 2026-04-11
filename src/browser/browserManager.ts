@@ -74,6 +74,7 @@ export interface BrowserSession {
   browserType: BrowserType;
   config: BrowserConfig;
   instance: ChromeDriverInstance;
+  consoleEntries: BrowserConsoleEntry[];
   pages: Map<string, unknown>;
   isActive: boolean;
   createdAt: number;
@@ -88,6 +89,26 @@ export interface BrowserSessionTransportInfo {
   hasCdp: boolean;
   remoteDebuggingPort: number;
   targetId?: string;
+}
+
+export interface BrowserConsoleEntry {
+  level: 'log' | 'info' | 'warning' | 'error' | 'debug';
+  message: string;
+  timestamp?: string;
+}
+
+interface CdpRuntimeConsoleEvent {
+  type?: string;
+  args?: Array<{ value?: unknown; description?: string; type?: string }>;
+  timestamp?: number;
+}
+
+interface CdpLogEntryEvent {
+  entry?: {
+    level?: string;
+    text?: string;
+    timestamp?: number | string;
+  };
 }
 
 /**
@@ -493,6 +514,7 @@ export class BrowserManager {
         browserType: config.type,
         config,
         instance,
+        consoleEntries: [],
         pages: new Map(),
         isActive: true,
         createdAt: Date.now(),
@@ -924,6 +946,122 @@ export class BrowserManager {
     throw new Error(`Timed out waiting for selector '${selector}' after ${timeoutMs}ms`);
   }
 
+  async scroll(
+    sessionId: string,
+    options: {
+      direction?: 'up' | 'down';
+      amount?: number;
+      behavior?: 'instant' | 'smooth';
+      selector?: string;
+      block?: 'start' | 'center' | 'end' | 'nearest';
+    } = {}
+  ): Promise<Record<string, unknown>> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    const direction = options.direction ?? 'down';
+    const amount = options.amount ?? 600;
+    const behavior = options.behavior ?? 'smooth';
+    const block = options.block ?? 'center';
+    const selector = options.selector;
+    const selectorLiteral = selector !== undefined ? JSON.stringify(selector) : 'null';
+
+    const result = await session.instance.executeScript(`
+      (async () => {
+        const selector = ${selectorLiteral};
+        const beforeY = window.scrollY;
+        const waitForScroll = async () => {
+          if ('${behavior}' !== 'smooth') {
+            return;
+          }
+
+          let stableFrames = 0;
+          let lastY = window.scrollY;
+
+          for (let i = 0; i < 30; i++) {
+            await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+            const currentY = window.scrollY;
+            if (Math.abs(currentY - lastY) < 1) {
+              stableFrames += 1;
+              if (stableFrames >= 3) {
+                return;
+              }
+            } else {
+              stableFrames = 0;
+              lastY = currentY;
+            }
+          }
+        };
+
+        if (selector) {
+          const element = document.querySelector(selector);
+          if (!element) {
+            throw new Error('Element not found: ' + selector);
+          }
+          element.scrollIntoView({ behavior: '${behavior}', block: '${block}', inline: 'nearest' });
+          await waitForScroll();
+          const rect = element.getBoundingClientRect();
+          return {
+            selector,
+            scrolled: true,
+            beforeY,
+            afterY: window.scrollY,
+            elementTop: rect.top,
+            elementBottom: rect.bottom,
+            viewportHeight: window.innerHeight,
+          };
+        }
+
+        const delta = ${direction === 'up' ? '-' : ''}${amount};
+        window.scrollBy({ top: delta, behavior: '${behavior}' });
+        await waitForScroll();
+        return {
+          direction: '${direction}',
+          amount: ${amount},
+          scrolled: true,
+          beforeY,
+          afterY: window.scrollY,
+          viewportHeight: window.innerHeight,
+          pageHeight: document.documentElement.scrollHeight,
+        };
+      })()
+    `) as Record<string, unknown>;
+
+    session.lastActivity = Date.now();
+    return result;
+  }
+
+  async getConsoleLogs(sessionId: string): Promise<{ entries: BrowserConsoleEntry[] }> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isActive) {
+      throw new Error(`Session not found or inactive: ${sessionId}`);
+    }
+
+    if (session.consoleEntries.length > 0) {
+      session.lastActivity = Date.now();
+      return { entries: [...session.consoleEntries] };
+    }
+
+    if (session.browserType === BrowserType.CHROME && session.extensionId && session.extensionId !== 'cdp-only') {
+      const bridge = getExtensionBridge();
+      const result = await bridge.sendCommand(session.extensionId, 'get-console-logs', {}) as Record<string, unknown>;
+      const rawEntries = Array.isArray(result['entries']) ? result['entries'] as Array<Record<string, unknown>> : [];
+
+      const entries: BrowserConsoleEntry[] = rawEntries.map((entry) => ({
+        level: normalizeConsoleLevel(entry['level']),
+        message: String(entry['message'] ?? ''),
+        ...(typeof entry['timestamp'] === 'string' ? { timestamp: entry['timestamp'] } : {}),
+      }));
+
+      session.lastActivity = Date.now();
+      return { entries };
+    }
+
+    throw new Error('Console capture requires a CDP-capable or extension-backed session');
+  }
+
   /**
    * Get performance metrics for a session
    */
@@ -1108,6 +1246,7 @@ export class BrowserManager {
 
     const args: string[] = [
       `--user-data-dir=${userDataDir}`,
+      `--disable-extensions-except=${extensionDir}`,
       `--load-extension=${extensionDir}`,
       '--no-first-run',
       '--no-default-browser-check',
@@ -1156,6 +1295,7 @@ export class BrowserManager {
     let cdpClient: CDPClient | null = null;
     try {
       cdpClient = await createCDPClient(remoteDebuggingPort);
+      this.attachCdpConsoleCapture(cdpClient, 'chrome');
       logger.info('CDP client connected', { remoteDebuggingPort });
     } catch (err) {
       logger.warn('Failed to create CDP client, will rely on extension', { error: err instanceof Error ? err.message : String(err) });
@@ -1625,7 +1765,7 @@ export class BrowserManager {
         // Prefer CDP for script execution
         if (cdpClient?.isConnected()) {
           try {
-            const result = await cdpClient.executeScript(code, { returnByValue: true });
+            const result = await cdpClient.executeScript(code, { returnByValue: true, awaitPromise: true });
             logger.debug('Script execution via CDP successful');
             return result;
           } catch (err) {
@@ -1948,6 +2088,7 @@ export class BrowserManager {
           await firefoxDriver.close(firefoxSessionId);
         },
       },
+      consoleEntries: [],
       pages: new Map(),
       isActive: true,
       createdAt: Date.now(),
@@ -2021,6 +2162,7 @@ export class BrowserManager {
           await safariDriver.close(safariSessionId);
         },
       },
+      consoleEntries: [],
       pages: new Map(),
       isActive: true,
       createdAt: Date.now(),
@@ -2058,6 +2200,8 @@ export class BrowserManager {
     if (!edgeSession) {
       throw new Error('Failed to get Edge session');
     }
+
+    this.attachCdpConsoleCapture(edgeSession.cdpClient, 'edge');
 
     const session: BrowserSession = {
       sessionId,
@@ -2121,6 +2265,7 @@ export class BrowserManager {
           await edgeDriver.close(edgeSessionId);
         },
       },
+      consoleEntries: [],
       pages: new Map(),
       isActive: true,
       createdAt: Date.now(),
@@ -2176,6 +2321,129 @@ export class BrowserManager {
 
     throw new Error(`Timed out waiting for Chrome extension to connect (${timeoutMs}ms)`);
   }
+
+  private attachCdpConsoleCapture(cdpClient: CDPClient, browserType: 'chrome' | 'edge'): void {
+    void cdpClient.send('Runtime.enable').catch((error: unknown) => {
+      logger.warn('Failed to enable CDP runtime domain for console capture', {
+        browserType,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    void cdpClient.send('Log.enable').catch((error: unknown) => {
+      logger.warn('Failed to enable CDP log domain for console capture', {
+        browserType,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+    cdpClient.on('Runtime.consoleAPICalled', (params: unknown) => {
+      const event = params as CdpRuntimeConsoleEvent;
+      const timestamp = normalizeConsoleTimestamp(event.timestamp);
+      this.appendConsoleEntry(cdpClient.getTargetId(), {
+        level: normalizeConsoleLevel(event.type),
+        message: formatConsoleMessage(event.args),
+        ...(timestamp !== undefined ? { timestamp } : {}),
+      });
+    });
+
+    cdpClient.on('Log.entryAdded', (params: unknown) => {
+      const event = params as CdpLogEntryEvent;
+      const entry = event.entry;
+      if (!entry) {
+        return;
+      }
+      const timestamp = normalizeConsoleTimestamp(entry.timestamp);
+      this.appendConsoleEntry(cdpClient.getTargetId(), {
+        level: normalizeConsoleLevel(entry.level),
+        message: String(entry.text ?? ''),
+        ...(timestamp !== undefined ? { timestamp } : {}),
+      });
+    });
+  }
+
+  private appendConsoleEntry(targetId: string, entry: BrowserConsoleEntry): void {
+    const message = entry.message.trim();
+    if (message.length === 0) {
+      return;
+    }
+
+    for (const session of this.sessions.values()) {
+      if (!session.isActive || session.instance.cdpClient?.getTargetId() !== targetId) {
+        continue;
+      }
+
+      session.consoleEntries.push(entry);
+      if (session.consoleEntries.length > 200) {
+        session.consoleEntries.splice(0, session.consoleEntries.length - 200);
+      }
+      session.lastActivity = Date.now();
+      break;
+    }
+  }
+}
+
+function normalizeConsoleLevel(level: unknown): BrowserConsoleEntry['level'] {
+  switch (level) {
+    case 'error':
+    case 'warning':
+    case 'info':
+    case 'debug':
+      return level;
+    default:
+      return 'log';
+  }
+}
+
+function normalizeConsoleTimestamp(timestamp: unknown): string | undefined {
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+    const milliseconds = timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000;
+    return new Date(milliseconds).toISOString();
+  }
+
+  if (typeof timestamp === 'string' && timestamp.length > 0) {
+    const numeric = Number(timestamp);
+    if (!Number.isNaN(numeric)) {
+      return normalizeConsoleTimestamp(numeric);
+    }
+    const parsed = new Date(timestamp);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+
+  return undefined;
+}
+
+function formatConsoleMessage(
+  args: Array<{ value?: unknown; description?: string; type?: string }> | undefined
+): string {
+  if (!Array.isArray(args) || args.length === 0) {
+    return '';
+  }
+
+  return args
+    .map((arg) => {
+      if (typeof arg.value === 'string') {
+        return arg.value;
+      }
+      if (arg.value !== undefined) {
+        try {
+          return JSON.stringify(arg.value);
+        } catch {
+          return String(arg.value);
+        }
+      }
+      if (typeof arg.description === 'string' && arg.description.length > 0) {
+        return arg.description;
+      }
+      if (typeof arg.type === 'string' && arg.type.length > 0) {
+        return `[${arg.type}]`;
+      }
+      return '';
+    })
+    .filter((segment) => segment.length > 0)
+    .join(' ');
 }
 
 // ============================================================================

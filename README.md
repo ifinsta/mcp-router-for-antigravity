@@ -109,7 +109,8 @@ general automation and performance-oriented workflows:
 * `browser.capabilities`
 * `browser.session.open`, `browser.session.close`, `browser.session.list`
 * `browser.navigate`, `browser.screenshot`, `browser.evaluate`
-* `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.wait_for`
+* `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.scroll`, `browser.wait_for`
+* `browser.console`
 * `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
 * `browser.network.set_conditions`, `browser.network.reset`
 * `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
@@ -138,10 +139,11 @@ These tools support:
 
 Browser execution stays transport-neutral at the MCP boundary:
 
-* Chrome uses CDP first and augments with the browser extension when available
+* Chrome browser sessions require extension-backed augmentation by default, with explicit opt-in for degraded CDP-only execution
 * Edge uses Chromium CDP without extension augmentation
 * Firefox uses Marionette/WebDriver-style control for core actions
 * Safari is surfaced through the same contract, but with limited capabilities called out explicitly
+* Console capture is available on CDP-capable Chromium sessions, so visual debugging does not depend entirely on the extension path
 
 ### Multi-provider support
 

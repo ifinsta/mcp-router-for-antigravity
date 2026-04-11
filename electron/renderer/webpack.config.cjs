@@ -2,6 +2,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
+  context: __dirname,
   entry: './index.tsx',
   target: 'electron-renderer',
   mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',

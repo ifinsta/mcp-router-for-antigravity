@@ -78,19 +78,19 @@ class WindowsAppBuilder {
   }
 
   async installDependencies() {
-    await this.exec('pnpm install --frozen-lockfile');
+    await this.exec('npm install');
   }
 
   async buildTypeScript() {
-    await this.exec('pnpm run build');
+    await this.exec('npm run build');
   }
 
   async buildReact() {
-    await this.exec('pnpm run build:renderer');
+    await this.exec('npm run build:renderer');
   }
 
   async buildElectron() {
-    await this.exec('pnpm run build:electron');
+    await this.exec('npm run build:electron');
   }
 
   async copyFiles() {
@@ -141,12 +141,12 @@ class WindowsAppBuilder {
   }
 
   async createInstaller() {
-    await this.exec('pnpm run build:installer');
+    await this.exec('npm run build:installer');
   }
 
   async runTests() {
     try {
-      await this.exec('pnpm run test:windows');
+      await this.exec('npm run test:windows');
     } catch (error) {
       console.warn('⚠️  Some tests failed, but continuing with build');
     }

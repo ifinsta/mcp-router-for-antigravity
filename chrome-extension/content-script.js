@@ -31,6 +31,70 @@ let clsSessionEntries = [];
 const inpEntries = [];
 
 // ---------------------------------------------------------------------------
+// Page Console Capture
+// ---------------------------------------------------------------------------
+
+/**
+ * Install a console/error capture shim in the page context so the router can
+ * retrieve recent console activity for active debugging sessions.
+ */
+function initPageConsoleCapture() {
+  const script = document.createElement('script');
+  script.textContent = `
+    (function() {
+      if (window.__IFIN_MCP_CONSOLE_CAPTURE__) {
+        return;
+      }
+      window.__IFIN_MCP_CONSOLE_CAPTURE__ = true;
+      const maxEntries = 200;
+      const store = [];
+      const pushEntry = function(level, args) {
+        try {
+          const message = Array.from(args || []).map(function(arg) {
+            if (typeof arg === 'string') return arg;
+            try {
+              return JSON.stringify(arg);
+            } catch {
+              return String(arg);
+            }
+          }).join(' ');
+          store.push({
+            level: level,
+            message: message,
+            timestamp: new Date().toISOString(),
+          });
+          if (store.length > maxEntries) {
+            store.splice(0, store.length - maxEntries);
+          }
+          window.__IFIN_MCP_CONSOLE_LOGS__ = store;
+        } catch {}
+      };
+
+      window.__IFIN_MCP_CONSOLE_LOGS__ = store;
+
+      ['log', 'info', 'warn', 'error', 'debug'].forEach(function(level) {
+        const original = console[level];
+        console[level] = function() {
+          pushEntry(level === 'warn' ? 'warning' : level, arguments);
+          return original.apply(console, arguments);
+        };
+      });
+
+      window.addEventListener('error', function(event) {
+        pushEntry('error', [event.message || 'Unhandled error']);
+      });
+
+      window.addEventListener('unhandledrejection', function(event) {
+        const reason = event.reason;
+        pushEntry('error', ['Unhandled promise rejection', reason && reason.message ? reason.message : String(reason)]);
+      });
+    })();
+  `;
+  (document.documentElement || document.head || document.body).appendChild(script);
+  script.remove();
+}
+
+// ---------------------------------------------------------------------------
 // Service Worker Keepalive Port
 // ---------------------------------------------------------------------------
 
@@ -69,6 +133,7 @@ function initKeepalivePort() {
 
 // Initialize keepalive port immediately
 initKeepalivePort();
+initPageConsoleCapture();
 
 // ---------------------------------------------------------------------------
 // Web Vitals Observers
@@ -2272,6 +2337,15 @@ async function handleCommand(message) {
 
     case 'executeInPageContext':
       return { result: await executeInPageContext(params.code) };
+
+    case 'getConsoleLogs': {
+      const result = await executeInPageContext(`
+        return Array.isArray(window.__IFIN_MCP_CONSOLE_LOGS__)
+          ? window.__IFIN_MCP_CONSOLE_LOGS__.slice(-100)
+          : [];
+      `);
+      return { entries: Array.isArray(result) ? result : [] };
+    }
 
     case 'getResourceTiming':
       return getResourceTiming();

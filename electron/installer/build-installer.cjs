@@ -68,9 +68,9 @@ class WindowsInstallerBuilder {
   async buildApplication() {
     console.log('\nBuilding application...');
     console.log('  -> Compiling TypeScript...');
-    await this.exec('pnpm run build');
+    await this.exec('npm run build');
     console.log('  -> Building React frontend...');
-    await this.exec('pnpm run build:renderer');
+    await this.exec('npm run build:renderer');
     console.log('Application built successfully');
   }
 
