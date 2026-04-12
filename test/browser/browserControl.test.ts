@@ -11,7 +11,7 @@ import { getDeviceProfileManager } from '../../src/browser/deviceProfiles.js';
 import { createNetworkControlManager, NETWORK_PRESETS } from '../../src/browser/networkControl.js';
 import { createWaitConditionsManager } from '../../src/browser/waitConditions.js';
 import { createAdvancedInteractionsManager } from '../../src/browser/advancedInteractions.js';
-import { createMultiTabManager } from '../../src/browser/multiTab.js';
+import { createMultiTabManager } from '../../src/browser/multiTabManager.js';
 
 // ============================================================================
 // Test Configuration
@@ -27,73 +27,93 @@ const LONG_TIMEOUT = 60000;
 
 describe('Browser Drivers', () => {
   describe('Chrome Driver', () => {
-    it('should launch Chrome browser', async () => {
-      const manager = getBrowserManager();
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+    it(
+      'should launch Chrome browser',
+      async () => {
+        const manager = getBrowserManager();
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      expect(sessionId).toBeDefined();
-      expect(sessionId).toMatch(/^session_/);
+        expect(sessionId).toBeDefined();
+        expect(sessionId).toMatch(/^session_/);
 
-      const session = manager.getSession(sessionId);
-      expect(session).toBeDefined();
-      expect(session?.browserType).toBe(BrowserType.CHROME);
-      expect(session?.isActive).toBe(true);
-    }, TEST_TIMEOUT);
+        const session = manager.getSession(sessionId);
+        expect(session).toBeDefined();
+        expect(session?.browserType).toBe(BrowserType.CHROME);
+        expect(session?.isActive).toBe(true);
+      },
+      TEST_TIMEOUT
+    );
 
-    it('should navigate to URL in Chrome', async () => {
-      const manager = getBrowserManager();
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+    it(
+      'should navigate to URL in Chrome',
+      async () => {
+        const manager = getBrowserManager();
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      const result = await manager.navigate(sessionId, 'https://example.com');
-      expect(result.success).toBe(true);
-      expect(result.url).toBe('https://example.com');
-      expect(result.loadTime).toBeGreaterThan(0);
-    }, TEST_TIMEOUT);
+        const result = await manager.navigate(sessionId, 'https://example.com');
+        expect(result.success).toBe(true);
+        expect(result.url).toBe('https://example.com');
+        expect(result.loadTime).toBeGreaterThan(0);
+      },
+      TEST_TIMEOUT
+    );
 
-    it('should take screenshot in Chrome', async () => {
-      const manager = getBrowserManager();
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+    it(
+      'should take screenshot in Chrome',
+      async () => {
+        const manager = getBrowserManager();
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      await manager.navigate(sessionId, 'https://example.com');
+        await manager.navigate(sessionId, 'https://example.com');
 
-      const screenshot = await manager.takeScreenshot(sessionId, { fullPage: false });
-      expect(screenshot).toBeDefined();
-      expect(screenshot.length).toBeGreaterThan(0);
-    }, TEST_TIMEOUT);
+        const screenshot = await manager.takeScreenshot(sessionId, { fullPage: false });
+        expect(screenshot).toBeDefined();
+        expect(screenshot.length).toBeGreaterThan(0);
+      },
+      TEST_TIMEOUT
+    );
 
-    it('should execute script in Chrome', async () => {
-      const manager = getBrowserManager();
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+    it(
+      'should execute script in Chrome',
+      async () => {
+        const manager = getBrowserManager();
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      const result = await manager.executeScript(sessionId, 'return document.title');
-      expect(result).toBeDefined();
-      expect(typeof result).toBe('string');
-    }, TEST_TIMEOUT);
+        const result = await manager.executeScript(sessionId, 'return document.title');
+        expect(result).toBeDefined();
+        expect(typeof result).toBe('string');
+      },
+      TEST_TIMEOUT
+    );
 
-    it('should close Chrome session', async () => {
-      const manager = getBrowserManager();
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+    it(
+      'should close Chrome session',
+      async () => {
+        const manager = getBrowserManager();
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      await manager.closeSession(sessionId);
+        await manager.closeSession(sessionId);
 
-      const session = manager.getSession(sessionId);
-      expect(session?.isActive).toBe(false);
-    }, TEST_TIMEOUT);
+        const session = manager.getSession(sessionId);
+        expect(session?.isActive).toBe(false);
+      },
+      TEST_TIMEOUT
+    );
   });
 
   describe('Firefox Driver', () => {
@@ -183,42 +203,50 @@ describe('Browser Drivers', () => {
   });
 
   describe('Browser Manager', () => {
-    it('should manage multiple sessions', async () => {
-      const manager = getBrowserManager();
+    it(
+      'should manage multiple sessions',
+      async () => {
+        const manager = getBrowserManager();
 
-      const session1 = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+        const session1 = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      const session2 = await manager.launchBrowser({
-        type: BrowserType.EDGE,
-        headless: true,
-      });
+        const session2 = await manager.launchBrowser({
+          type: BrowserType.EDGE,
+          headless: true,
+        });
 
-      expect(manager.getActiveSessions()).toHaveLength(2);
-      expect(manager.getActiveSessionCount()).toBe(2);
+        expect(manager.getActiveSessions()).toHaveLength(2);
+        expect(manager.getActiveSessionCount()).toBe(2);
 
-      await manager.closeSession(session1);
-      await manager.closeSession(session2);
+        await manager.closeSession(session1);
+        await manager.closeSession(session2);
 
-      expect(manager.getActiveSessions()).toHaveLength(0);
-    }, LONG_TIMEOUT);
+        expect(manager.getActiveSessions()).toHaveLength(0);
+      },
+      LONG_TIMEOUT
+    );
 
-    it('should cleanup inactive sessions', async () => {
-      const manager = getBrowserManager();
+    it(
+      'should cleanup inactive sessions',
+      async () => {
+        const manager = getBrowserManager();
 
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      // Wait to simulate age
-      await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait to simulate age
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const cleaned = await manager.cleanupInactiveSessions(0);
-      expect(cleaned).toBeGreaterThan(0);
-    }, TEST_TIMEOUT);
+        const cleaned = await manager.cleanupInactiveSessions(0);
+        expect(cleaned).toBeGreaterThan(0);
+      },
+      TEST_TIMEOUT
+    );
   });
 });
 
@@ -253,7 +281,7 @@ describe('Device Profiles', () => {
       const mobileProfiles = manager.getProfilesByCategory('mobile');
 
       expect(mobileProfiles.length).toBeGreaterThan(0);
-      expect(mobileProfiles.every(profile => profile.category === 'mobile')).toBe(true);
+      expect(mobileProfiles.every((profile) => profile.category === 'mobile')).toBe(true);
     });
 
     it('should create custom profile', () => {
@@ -294,7 +322,7 @@ describe('Device Profiles', () => {
       const popular = manager.getPopularProfiles();
 
       expect(popular).toHaveLength(4);
-      expect(popular.every(profile => profile.name.length > 0)).toBe(true);
+      expect(popular.every((profile) => profile.name.length > 0)).toBe(true);
     });
 
     it('should search profiles', () => {
@@ -302,10 +330,13 @@ describe('Device Profiles', () => {
       const results = manager.searchProfiles('iPhone');
 
       expect(results.length).toBeGreaterThan(0);
-      expect(results.every(profile =>
-        profile.name.toLowerCase().includes('iphone') ||
-        profile.category.toLowerCase().includes('iphone')
-      )).toBe(true);
+      expect(
+        results.every(
+          (profile) =>
+            profile.name.toLowerCase().includes('iphone') ||
+            profile.category.toLowerCase().includes('iphone')
+        )
+      ).toBe(true);
     });
 
     it('should suggest profiles based on viewport', () => {
@@ -380,24 +411,21 @@ describe('Network Control', () => {
       const manager = createNetworkControlManager();
 
       // This would need actual CDP client in integration test
-      expect(() => manager.applyNetworkConditions(NETWORK_PRESETS['3g'].conditions))
-        .not.toThrow();
+      expect(() => manager.applyNetworkConditions(NETWORK_PRESETS['3g'].conditions)).not.toThrow();
     });
 
     it('should apply network preset', async () => {
       const manager = createNetworkControlManager();
 
       // This would need actual CDP client in integration test
-      expect(() => manager.applyNetworkPreset('wifi'))
-        .not.toThrow();
+      expect(() => manager.applyNetworkPreset('wifi')).not.toThrow();
     });
 
     it('should reset network conditions', async () => {
       const manager = createNetworkControlManager();
 
       // This would need actual CDP client in integration test
-      expect(() => manager.resetNetworkConditions())
-        .not.toThrow();
+      expect(() => manager.resetNetworkConditions()).not.toThrow();
     });
 
     it('should manage network mocks', () => {
@@ -450,28 +478,30 @@ describe('Wait Conditions', () => {
         retries: 5,
       });
 
-      expect(() => manager.waitFor({ type: 'url_contains', value: 'example' }))
-        .not.toThrow();
+      expect(() => manager.waitFor({ type: 'url_contains', value: 'example' })).not.toThrow();
     });
 
-    it('should wait for element visible', async () => {
-      const manager = createWaitConditionsManager();
+    it(
+      'should wait for element visible',
+      async () => {
+        const manager = createWaitConditionsManager();
 
-      // This would need actual DOM in integration test
-      const result = await manager.waitForElementVisible('body', {
-        timeout: SHORT_TIMEOUT,
-      });
+        // This would need actual DOM in integration test
+        const result = await manager.waitForElementVisible('body', {
+          timeout: SHORT_TIMEOUT,
+        });
 
-      expect(result.success).toBe(true);
-      expect(result.matched).toBe(true);
-    }, SHORT_TIMEOUT);
+        expect(result.success).toBe(true);
+        expect(result.matched).toBe(true);
+      },
+      SHORT_TIMEOUT
+    );
 
     it('should wait for URL contains', async () => {
       const manager = createWaitConditionsManager();
 
       // This would need actual browser context in integration test
-      expect(() => manager.waitForUrlContains('example'))
-        .not.toThrow();
+      expect(() => manager.waitForUrlContains('example')).not.toThrow();
     });
 
     it('should retry with backoff', async () => {
@@ -501,22 +531,21 @@ describe('Wait Conditions', () => {
     it('should support element_visible condition', () => {
       const manager = createWaitConditionsManager();
 
-      expect(() => manager.waitFor({ type: 'element_visible', selector: 'body' }))
-        .not.toThrow();
+      expect(() => manager.waitFor({ type: 'element_visible', selector: 'body' })).not.toThrow();
     });
 
     it('should support element_clickable condition', () => {
       const manager = createWaitConditionsManager();
 
-      expect(() => manager.waitFor({ type: 'element_clickable', selector: 'button' }))
-        .not.toThrow();
+      expect(() =>
+        manager.waitFor({ type: 'element_clickable', selector: 'button' })
+      ).not.toThrow();
     });
 
     it('should support url_contains condition', () => {
       const manager = createWaitConditionsManager();
 
-      expect(() => manager.waitFor({ type: 'url_contains', value: 'example' }))
-        .not.toThrow();
+      expect(() => manager.waitFor({ type: 'url_contains', value: 'example' })).not.toThrow();
     });
 
     it('should support custom condition', async () => {
@@ -559,101 +588,121 @@ describe('Advanced Interactions', () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.dragDrop({
-        sourceSelector: '#source',
-        targetSelector: '#target',
-      })).not.toThrow();
+      expect(() =>
+        manager.dragDrop({
+          sourceSelector: '#source',
+          targetSelector: '#target',
+        })
+      ).not.toThrow();
     });
 
     it('should support file upload', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.fileUpload({
-        selector: 'input[type="file"]',
-        files: [{
-          name: 'test.txt',
-          content: 'Test content',
-          mimeType: 'text/plain',
-          size: 12,
-        }],
-      })).not.toThrow();
+      expect(() =>
+        manager.fileUpload({
+          selector: 'input[type="file"]',
+          files: [
+            {
+              name: 'test.txt',
+              content: 'Test content',
+              mimeType: 'text/plain',
+              size: 12,
+            },
+          ],
+        })
+      ).not.toThrow();
     });
 
     it('should support right-click', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.rightClick({
-        selector: 'button',
-      })).not.toThrow();
+      expect(() =>
+        manager.rightClick({
+          selector: 'button',
+        })
+      ).not.toThrow();
     });
 
     it('should support double-click', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.doubleClick({
-        selector: 'button',
-      })).not.toThrow();
+      expect(() =>
+        manager.doubleClick({
+          selector: 'button',
+        })
+      ).not.toThrow();
     });
 
     it('should support keyboard shortcuts', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.keyboardShortcut({
-        keys: 'Enter',
-      })).not.toThrow();
+      expect(() =>
+        manager.keyboardShortcut({
+          keys: 'Enter',
+        })
+      ).not.toThrow();
     });
 
     it('should support hover', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.hover({
-        selector: 'a',
-        duration: 1000,
-      })).not.toThrow();
+      expect(() =>
+        manager.hover({
+          selector: 'a',
+          duration: 1000,
+        })
+      ).not.toThrow();
     });
 
     it('should support scroll to element', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.scrollToElement({
-        selector: '#footer',
-        behavior: 'smooth',
-      })).not.toThrow();
+      expect(() =>
+        manager.scrollToElement({
+          selector: '#footer',
+          behavior: 'smooth',
+        })
+      ).not.toThrow();
     });
 
     it('should support multi-select', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.multiSelect({
-        selector: 'input[type="checkbox"]',
-        items: ['#checkbox1', '#checkbox2', '#checkbox3'],
-        selectionMethod: 'click',
-      })).not.toThrow();
+      expect(() =>
+        manager.multiSelect({
+          selector: 'input[type="checkbox"]',
+          items: ['#checkbox1', '#checkbox2', '#checkbox3'],
+          selectionMethod: 'click',
+        })
+      ).not.toThrow();
     });
 
     it('should support form fill', async () => {
       const manager = createAdvancedInteractionsManager();
 
       // This would need actual DOM elements in integration test
-      expect(() => manager.formFill({
-        fields: {
-          username: {
-            value: 'testuser',
-            type: 'text',
+      expect(() =>
+        manager.formFill({
+          fields: {
+            username: {
+              value: 'testuser',
+              type: 'text',
+            },
+            password: {
+              value: 'testpass',
+              type: 'password',
+            },
           },
-          password: {
-            value: 'testpass',
-            type: 'password',
-          },
-        },
-      })).not.toThrow();
+        })
+      ).not.toThrow();
     });
   });
 
@@ -755,9 +804,11 @@ describe('Multi-Tab Management', () => {
       const manager = createMultiTabManager();
 
       // This would need actual CDP client in integration test
-      expect(() => manager.createTab({
-        url: 'https://example.com',
-      })).not.toThrow();
+      expect(() =>
+        manager.createTab({
+          url: 'https://example.com',
+        })
+      ).not.toThrow();
     });
 
     it('should support activating tabs', async () => {
@@ -785,9 +836,11 @@ describe('Multi-Tab Management', () => {
       const manager = createMultiTabManager();
 
       // This would need actual CDP client in integration test
-      expect(() => manager.reloadTab('test-tab-id', {
-        ignoreCache: true,
-      })).not.toThrow();
+      expect(() =>
+        manager.reloadTab('test-tab-id', {
+          ignoreCache: true,
+        })
+      ).not.toThrow();
     });
 
     it('should support duplicating tabs', async () => {
@@ -819,100 +872,112 @@ describe('Multi-Tab Management', () => {
 
 describe('Integration Tests', () => {
   describe('End-to-End Browser Workflows', () => {
-    it('should complete full browser automation workflow', async () => {
-      const manager = getBrowserManager();
+    it(
+      'should complete full browser automation workflow',
+      async () => {
+        const manager = getBrowserManager();
 
-      // Launch browser
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
-
-      // Navigate
-      await manager.navigate(sessionId, 'https://example.com');
-
-      // Execute script
-      const title = await manager.executeScript(sessionId, 'return document.title');
-      expect(title).toBeDefined();
-
-      // Take screenshot
-      const screenshot = await manager.takeScreenshot(sessionId);
-      expect(screenshot).toBeDefined();
-
-      // Close session
-      await manager.closeSession(sessionId);
-
-      const session = manager.getSession(sessionId);
-      expect(session?.isActive).toBe(false);
-    }, LONG_TIMEOUT);
-  });
-
-  describe('Cross-Browser Testing', () => {
-    it('should test same workflow across multiple browsers', async () => {
-      const manager = getBrowserManager();
-
-      const browsers = [BrowserType.CHROME, BrowserType.EDGE];
-      const results = [];
-
-      for (const browserType of browsers) {
-        const sessionId = await manager.launchBrowser({
-          type: browserType,
-          headless: true,
-        });
-
-        await manager.navigate(sessionId, 'https://example.com');
-
-        const screenshot = await manager.takeScreenshot(sessionId);
-
-        results.push({
-          browserType,
-          sessionId,
-          screenshotLength: screenshot.length,
-        });
-
-        await manager.closeSession(sessionId);
-      }
-
-      expect(results).toHaveLength(2);
-      expect(results.every(r => r.sessionId)).toBeDefined();
-      expect(results.every(r => r.screenshotLength > 0)).toBe(true);
-    }, LONG_TIMEOUT * 2);
-  });
-
-  describe('Device Emulation Integration', () => {
-    it('should test responsive design across devices', async () => {
-      const manager = getBrowserManager();
-      const deviceManager = getDeviceProfileManager();
-
-      const devices = ['iphone_14_pro_max', 'ipad_pro_129', 'desktop_1920x1080'];
-      const results = [];
-
-      for (const deviceId of devices) {
-        const profile = deviceManager.getProfile(deviceId);
-        if (!profile) continue;
-
+        // Launch browser
         const sessionId = await manager.launchBrowser({
           type: BrowserType.CHROME,
           headless: true,
-          viewport: deviceManager.toViewportConfig(profile),
         });
 
+        // Navigate
         await manager.navigate(sessionId, 'https://example.com');
 
+        // Execute script
+        const title = await manager.executeScript(sessionId, 'return document.title');
+        expect(title).toBeDefined();
+
+        // Take screenshot
         const screenshot = await manager.takeScreenshot(sessionId);
+        expect(screenshot).toBeDefined();
 
-        results.push({
-          device: profile.name,
-          viewport: profile.viewport,
-          screenshotLength: screenshot.length,
-        });
-
+        // Close session
         await manager.closeSession(sessionId);
-      }
 
-      expect(results).toHaveLength(3);
-      expect(results.every(r => r.screenshotLength > 0)).toBe(true);
-    }, LONG_TIMEOUT * 3);
+        const session = manager.getSession(sessionId);
+        expect(session?.isActive).toBe(false);
+      },
+      LONG_TIMEOUT
+    );
+  });
+
+  describe('Cross-Browser Testing', () => {
+    it(
+      'should test same workflow across multiple browsers',
+      async () => {
+        const manager = getBrowserManager();
+
+        const browsers = [BrowserType.CHROME, BrowserType.EDGE];
+        const results = [];
+
+        for (const browserType of browsers) {
+          const sessionId = await manager.launchBrowser({
+            type: browserType,
+            headless: true,
+          });
+
+          await manager.navigate(sessionId, 'https://example.com');
+
+          const screenshot = await manager.takeScreenshot(sessionId);
+
+          results.push({
+            browserType,
+            sessionId,
+            screenshotLength: screenshot.length,
+          });
+
+          await manager.closeSession(sessionId);
+        }
+
+        expect(results).toHaveLength(2);
+        expect(results.every((r) => r.sessionId)).toBeDefined();
+        expect(results.every((r) => r.screenshotLength > 0)).toBe(true);
+      },
+      LONG_TIMEOUT * 2
+    );
+  });
+
+  describe('Device Emulation Integration', () => {
+    it(
+      'should test responsive design across devices',
+      async () => {
+        const manager = getBrowserManager();
+        const deviceManager = getDeviceProfileManager();
+
+        const devices = ['iphone_14_pro_max', 'ipad_pro_129', 'desktop_1920x1080'];
+        const results = [];
+
+        for (const deviceId of devices) {
+          const profile = deviceManager.getProfile(deviceId);
+          if (!profile) continue;
+
+          const sessionId = await manager.launchBrowser({
+            type: BrowserType.CHROME,
+            headless: true,
+            viewport: deviceManager.toViewportConfig(profile),
+          });
+
+          await manager.navigate(sessionId, 'https://example.com');
+
+          const screenshot = await manager.takeScreenshot(sessionId);
+
+          results.push({
+            device: profile.name,
+            viewport: profile.viewport,
+            screenshotLength: screenshot.length,
+          });
+
+          await manager.closeSession(sessionId);
+        }
+
+        expect(results).toHaveLength(3);
+        expect(results.every((r) => r.screenshotLength > 0)).toBe(true);
+      },
+      LONG_TIMEOUT * 3
+    );
   });
 });
 
@@ -922,70 +987,82 @@ describe('Integration Tests', () => {
 
 describe('Performance Tests', () => {
   describe('Browser Launch Performance', () => {
-    it('should launch Chrome within reasonable time', async () => {
-      const startTime = Date.now();
-      const manager = getBrowserManager();
+    it(
+      'should launch Chrome within reasonable time',
+      async () => {
+        const startTime = Date.now();
+        const manager = getBrowserManager();
 
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
-
-      const launchTime = Date.now() - startTime;
-
-      expect(sessionId).toBeDefined();
-      expect(launchTime).toBeLessThan(10000); // 10 seconds max
-
-      await manager.closeSession(sessionId);
-    }, TEST_TIMEOUT * 2);
-
-    it('should handle concurrent launches efficiently', async () => {
-      const manager = getBrowserManager();
-      const startTime = Date.now();
-
-      const promises = [
-        manager.launchBrowser({ type: BrowserType.CHROME, headless: true }),
-        manager.launchBrowser({ type: BrowserType.EDGE, headless: true }),
-      ];
-
-      const sessionIds = await Promise.all(promises);
-
-      const totalTime = Date.now() - startTime;
-
-      expect(sessionIds).toHaveLength(2);
-      expect(totalTime).toBeLessThan(20000); // 20 seconds for 2 browsers
-
-      for (const sessionId of sessionIds) {
-        await manager.closeSession(sessionId);
-      }
-    }, LONG_TIMEOUT * 2);
-  });
-
-  describe('Memory Management', () => {
-    it('should cleanup sessions properly', async () => {
-      const manager = getBrowserManager();
-
-      const sessions = [];
-      for (let i = 0; i < 5; i++) {
         const sessionId = await manager.launchBrowser({
           type: BrowserType.CHROME,
           headless: true,
         });
-        sessions.push(sessionId);
-      }
 
-      expect(manager.getActiveSessionCount()).toBe(5);
+        const launchTime = Date.now() - startTime;
 
-      // Close all sessions
-      for (const sessionId of sessions) {
+        expect(sessionId).toBeDefined();
+        expect(launchTime).toBeLessThan(10000); // 10 seconds max
+
         await manager.closeSession(sessionId);
-      }
+      },
+      TEST_TIMEOUT * 2
+    );
 
-      // Cleanup inactive sessions
-      await manager.cleanupInactiveSessions(0);
+    it(
+      'should handle concurrent launches efficiently',
+      async () => {
+        const manager = getBrowserManager();
+        const startTime = Date.now();
 
-      expect(manager.getActiveSessionCount()).toBe(0);
-    }, LONG_TIMEOUT * 5);
+        const promises = [
+          manager.launchBrowser({ type: BrowserType.CHROME, headless: true }),
+          manager.launchBrowser({ type: BrowserType.EDGE, headless: true }),
+        ];
+
+        const sessionIds = await Promise.all(promises);
+
+        const totalTime = Date.now() - startTime;
+
+        expect(sessionIds).toHaveLength(2);
+        expect(totalTime).toBeLessThan(20000); // 20 seconds for 2 browsers
+
+        for (const sessionId of sessionIds) {
+          await manager.closeSession(sessionId);
+        }
+      },
+      LONG_TIMEOUT * 2
+    );
+  });
+
+  describe('Memory Management', () => {
+    it(
+      'should cleanup sessions properly',
+      async () => {
+        const manager = getBrowserManager();
+
+        const sessions = [];
+        for (let i = 0; i < 5; i++) {
+          const sessionId = await manager.launchBrowser({
+            type: BrowserType.CHROME,
+            headless: true,
+          });
+          sessions.push(sessionId);
+        }
+
+        expect(manager.getActiveSessionCount()).toBe(5);
+
+        // Close all sessions
+        for (const sessionId of sessions) {
+          await manager.closeSession(sessionId);
+        }
+
+        // Cleanup inactive sessions
+        await manager.cleanupInactiveSessions(0);
+
+        expect(manager.getActiveSessionCount()).toBe(0);
+      },
+      LONG_TIMEOUT * 5
+    );
   });
 });
 
@@ -1005,13 +1082,9 @@ describe('Error Handling', () => {
   it('should handle invalid session operations', async () => {
     const manager = getBrowserManager();
 
-    await expect(
-      manager.navigate('invalid-session', 'https://example.com')
-    ).rejects.toThrow();
+    await expect(manager.navigate('invalid-session', 'https://example.com')).rejects.toThrow();
 
-    await expect(
-      manager.takeScreenshot('invalid-session')
-    ).rejects.toThrow();
+    await expect(manager.takeScreenshot('invalid-session')).rejects.toThrow();
   });
 
   it('should handle invalid device profiles', () => {
@@ -1024,8 +1097,6 @@ describe('Error Handling', () => {
   it('should handle invalid network conditions', async () => {
     const manager = createNetworkControlManager();
 
-    await expect(
-      manager.applyNetworkPreset('invalid_preset' as any)
-    ).rejects.toThrow();
+    await expect(manager.applyNetworkPreset('invalid_preset' as any)).rejects.toThrow();
   });
 });

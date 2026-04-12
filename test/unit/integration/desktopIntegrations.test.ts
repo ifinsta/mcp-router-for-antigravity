@@ -21,7 +21,7 @@ function createTempRepo(): string {
 
   fs.writeFileSync(
     path.join(repoRoot, 'package.json'),
-    JSON.stringify({ name: 'mcp-router-for-antigravity' }, null, 2),
+    JSON.stringify({ name: 'ifin-platform' }, null, 2),
     'utf-8'
   );
   fs.mkdirSync(path.join(repoRoot, 'dist', 'src'), { recursive: true });
@@ -135,9 +135,9 @@ describe('desktopIntegrations', () => {
     };
 
     assert.ok(updatedConfig.mcpServers.existing);
-    assert.ok(updatedConfig.mcpServers['mcp-router']);
-    assert.strictEqual(updatedConfig.mcpServers['mcp-router'].command, 'node');
-    assert.deepStrictEqual(updatedConfig.mcpServers['mcp-router'].args, [
+    assert.ok(updatedConfig.mcpServers['ifin-platform']);
+    assert.strictEqual(updatedConfig.mcpServers['ifin-platform'].command, 'node');
+    assert.deepStrictEqual(updatedConfig.mcpServers['ifin-platform'].args, [
       path.join(repoRoot, 'dist', 'src', 'index.js'),
     ]);
   });

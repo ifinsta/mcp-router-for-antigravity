@@ -9,7 +9,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getBrowserManager, BrowserType } from '../../src/browser/browserManager.js';
 import { createNetworkControlManager } from '../../src/browser/networkControl.js';
 import { createAdvancedInteractionsManager } from '../../src/browser/advancedInteractions.js';
-import { createMultiTabManager } from '../../src/browser/multiTab.js';
+import { createMultiTabManager } from '../../src/browser/multiTabManager.js';
 import { createCDPClient } from '../../src/browser/cdpClient.js';
 
 // ============================================================================
@@ -40,23 +40,27 @@ describe('Browser Integration Tests', () => {
   });
 
   describe('Chrome Browser Integration', () => {
-    it('should launch and navigate Chrome successfully', { timeout: INTEGRATION_TIMEOUT }, async () => {
-      sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-        viewport: { width: 1280, height: 720 },
-      });
+    it(
+      'should launch and navigate Chrome successfully',
+      { timeout: INTEGRATION_TIMEOUT },
+      async () => {
+        sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+          viewport: { width: 1280, height: 720 },
+        });
 
-      const session = manager.getSession(sessionId);
-      expect(session).toBeDefined();
-      expect(session?.browserType).toBe(BrowserType.CHROME);
-      expect(session?.isActive).toBe(true);
+        const session = manager.getSession(sessionId);
+        expect(session).toBeDefined();
+        expect(session?.browserType).toBe(BrowserType.CHROME);
+        expect(session?.isActive).toBe(true);
 
-      const result = await manager.navigate(sessionId, TEST_URL);
-      expect(result.success).toBe(true);
-      expect(result.url).toBe(TEST_URL);
-      expect(result.loadTime).toBeGreaterThan(0);
-    });
+        const result = await manager.navigate(sessionId, TEST_URL);
+        expect(result.success).toBe(true);
+        expect(result.url).toBe(TEST_URL);
+        expect(result.loadTime).toBeGreaterThan(0);
+      }
+    );
 
     it('should execute complex scripts in Chrome', { timeout: INTEGRATION_TIMEOUT }, async () => {
       if (!sessionId) {
@@ -89,61 +93,69 @@ describe('Browser Integration Tests', () => {
       expect(result).toHaveProperty('viewport');
     });
 
-    it('should handle multiple rapid navigations in Chrome', { timeout: INTEGRATION_TIMEOUT * 2 }, async () => {
-      if (!sessionId) {
-        throw new Error('No active session');
+    it(
+      'should handle multiple rapid navigations in Chrome',
+      { timeout: INTEGRATION_TIMEOUT * 2 },
+      async () => {
+        if (!sessionId) {
+          throw new Error('No active session');
+        }
+
+        const urls = [
+          'https://example.com',
+          'https://example.org',
+          'https://example.net',
+          'https://example.edu',
+        ];
+
+        const results = [];
+        for (const url of urls) {
+          const result = await manager.navigate(sessionId, url);
+          results.push(result);
+          expect(result.success).toBe(true);
+          expect(result.url).toBe(url);
+        }
+
+        expect(results).toHaveLength(urls.length);
       }
+    );
 
-      const urls = [
-        'https://example.com',
-        'https://example.org',
-        'https://example.net',
-        'https://example.edu',
-      ];
+    it(
+      'should take screenshots at different resolutions in Chrome',
+      { timeout: INTEGRATION_TIMEOUT * 2 },
+      async () => {
+        if (!sessionId) {
+          throw new Error('No active session');
+        }
 
-      const results = [];
-      for (const url of urls) {
-        const result = await manager.navigate(sessionId, url);
-        results.push(result);
-        expect(result.success).toBe(true);
-        expect(result.url).toBe(url);
+        const viewports = [
+          { width: 1920, height: 1080 },
+          { width: 1366, height: 768 },
+          { width: 768, height: 1024 },
+          { width: 375, height: 667 },
+        ];
+
+        const screenshots = [];
+        for (const viewport of viewports) {
+          await manager.setViewport(sessionId, viewport.width, viewport.height);
+          await manager.navigate(sessionId, TEST_URL);
+
+          // Wait for page load
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          const screenshot = await manager.takeScreenshot(sessionId);
+          screenshots.push({
+            viewport,
+            screenshotLength: screenshot.length,
+          });
+
+          expect(screenshot).toBeDefined();
+          expect(screenshot.length).toBeGreaterThan(0);
+        }
+
+        expect(screenshots).toHaveLength(viewports.length);
       }
-
-      expect(results).toHaveLength(urls.length);
-    });
-
-    it('should take screenshots at different resolutions in Chrome', { timeout: INTEGRATION_TIMEOUT * 2 }, async () => {
-      if (!sessionId) {
-        throw new Error('No active session');
-      }
-
-      const viewports = [
-        { width: 1920, height: 1080 },
-        { width: 1366, height: 768 },
-        { width: 768, height: 1024 },
-        { width: 375, height: 667 },
-      ];
-
-      const screenshots = [];
-      for (const viewport of viewports) {
-        await manager.setViewport(sessionId, viewport.width, viewport.height);
-        await manager.navigate(sessionId, TEST_URL);
-
-        // Wait for page load
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const screenshot = await manager.takeScreenshot(sessionId);
-        screenshots.push({
-          viewport,
-          screenshotLength: screenshot.length,
-        });
-
-        expect(screenshot).toBeDefined();
-        expect(screenshot.length).toBeGreaterThan(0);
-      }
-
-      expect(screenshots).toHaveLength(viewports.length);
-    });
+    );
   });
 
   describe('Edge Browser Integration', () => {
@@ -155,19 +167,23 @@ describe('Browser Integration Tests', () => {
       }
     });
 
-    it('should launch and navigate Edge successfully', { timeout: INTEGRATION_TIMEOUT }, async () => {
-      edgeSessionId = await manager.launchBrowser({
-        type: BrowserType.EDGE,
-        headless: true,
-      });
+    it(
+      'should launch and navigate Edge successfully',
+      { timeout: INTEGRATION_TIMEOUT },
+      async () => {
+        edgeSessionId = await manager.launchBrowser({
+          type: BrowserType.EDGE,
+          headless: true,
+        });
 
-      const session = manager.getSession(edgeSessionId);
-      expect(session).toBeDefined();
-      expect(session?.browserType).toBe(BrowserType.EDGE);
+        const session = manager.getSession(edgeSessionId);
+        expect(session).toBeDefined();
+        expect(session?.browserType).toBe(BrowserType.EDGE);
 
-      const result = await manager.navigate(edgeSessionId!, TEST_URL);
-      expect(result.success).toBe(true);
-    });
+        const result = await manager.navigate(edgeSessionId!, TEST_URL);
+        expect(result.success).toBe(true);
+      }
+    );
 
     it('should handle script execution in Edge', { timeout: INTEGRATION_TIMEOUT }, async () => {
       if (!edgeSessionId) {
@@ -182,21 +198,25 @@ describe('Browser Integration Tests', () => {
   });
 
   describe('Performance Metrics Integration', () => {
-    it('should collect performance metrics from Chrome', { timeout: INTEGRATION_TIMEOUT }, async () => {
-      if (!sessionId) {
-        throw new Error('No active session');
+    it(
+      'should collect performance metrics from Chrome',
+      { timeout: INTEGRATION_TIMEOUT },
+      async () => {
+        if (!sessionId) {
+          throw new Error('No active session');
+        }
+
+        await manager.navigate(sessionId, TEST_URL);
+
+        // Wait for page to fully load
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const metrics = await manager.getMetrics(sessionId);
+
+        expect(metrics).toBeDefined();
+        expect(typeof metrics).toBe('object');
       }
-
-      await manager.navigate(sessionId, TEST_URL);
-
-      // Wait for page to fully load
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const metrics = await manager.getMetrics(sessionId);
-
-      expect(metrics).toBeDefined();
-      expect(typeof metrics).toBe('object');
-    });
+    );
 
     it('should collect Web Vitals from Chrome', { timeout: INTEGRATION_TIMEOUT }, async () => {
       if (!sessionId) {
@@ -206,7 +226,7 @@ describe('Browser Integration Tests', () => {
       await manager.navigate(sessionId, TEST_URL);
 
       // Wait for Core Web Vitals to be collected
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const webVitals = await manager.getWebVitals(sessionId);
 
@@ -256,7 +276,7 @@ describe('Network Control Integration Tests', () => {
       await networkManager.applyNetworkPreset('3g');
 
       // Test navigation with slow network
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Reset to normal network
       await networkManager.resetNetworkConditions();
@@ -276,7 +296,7 @@ describe('Network Control Integration Tests', () => {
       await networkManager.applyNetworkPreset('offline');
 
       // Test offline behavior
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Restore network
       await networkManager.resetNetworkConditions();
@@ -325,7 +345,7 @@ describe('Advanced Interactions Integration Tests', () => {
       await manager.navigate(sessionId!, TEST_FORM_URL);
 
       // Wait for form to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Fill form
       const formFillResult = await interactionsManager.formFill({
@@ -498,7 +518,7 @@ describe('Multi-Tab Integration Tests', () => {
           tabIds.push(result.tabId);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       expect(tabManager.getTabCount()).toBeGreaterThan(0);
@@ -535,7 +555,7 @@ describe('Multi-Tab Integration Tests', () => {
 
       // Create tabs for statistics
       await tabManager.createTab({ url: TEST_URL });
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const stats = tabManager.getTabStats();
 
@@ -558,7 +578,7 @@ describe('Multi-Tab Integration Tests', () => {
       // Create tabs with different URLs
       await tabManager.createTab({ url: 'https://example.com' });
       await tabManager.createTab({ url: 'https://example.org' });
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Filter tabs by URL pattern
       const exampleComTabs = tabManager.findTabs({
@@ -593,7 +613,7 @@ describe('Multi-Tab Integration Tests', () => {
         throw new Error('Failed to create original tab');
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Duplicate tab
       const duplicateResult = await tabManager.duplicateTab(originalResult.tabId);
@@ -626,7 +646,7 @@ describe('Multi-Tab Integration Tests', () => {
         throw new Error('Failed to create tab');
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Reload tab
       const reloadResult = await tabManager.reloadTab(result.tabId, {
@@ -659,7 +679,7 @@ describe('Multi-Tab Integration Tests', () => {
           tabIds.push(result.tabId);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       expect(tabManager.getTabCount()).toBeGreaterThanOrEqual(5);
@@ -685,39 +705,43 @@ describe('Multi-Tab Integration Tests', () => {
 
 describe('Cross-Browser Integration Tests', () => {
   describe('Browser Comparison Tests', () => {
-    it('should compare behavior across Chrome and Edge', { timeout: LONG_INTEGRATION_TIMEOUT * 2 }, async () => {
-      const manager = getBrowserManager();
+    it(
+      'should compare behavior across Chrome and Edge',
+      { timeout: LONG_INTEGRATION_TIMEOUT * 2 },
+      async () => {
+        const manager = getBrowserManager();
 
-      const browsers = [BrowserType.CHROME, BrowserType.EDGE];
-      const results = [];
+        const browsers = [BrowserType.CHROME, BrowserType.EDGE];
+        const results = [];
 
-      for (const browserType of browsers) {
-        const sessionId = await manager.launchBrowser({
-          type: browserType,
-          headless: true,
-        });
+        for (const browserType of browsers) {
+          const sessionId = await manager.launchBrowser({
+            type: browserType,
+            headless: true,
+          });
 
-        await manager.navigate(sessionId, TEST_URL);
+          await manager.navigate(sessionId, TEST_URL);
 
-        // Collect metrics
-        const metrics = await manager.getMetrics(sessionId);
+          // Collect metrics
+          const metrics = await manager.getMetrics(sessionId);
 
-        const screenshot = await manager.takeScreenshot(sessionId);
+          const screenshot = await manager.takeScreenshot(sessionId);
 
-        results.push({
-          browserType,
-          sessionId,
-          metrics,
-          screenshotLength: screenshot.length,
-        });
+          results.push({
+            browserType,
+            sessionId,
+            metrics,
+            screenshotLength: screenshot.length,
+          });
 
-        await manager.closeSession(sessionId);
+          await manager.closeSession(sessionId);
+        }
+
+        expect(results).toHaveLength(2);
+        expect(results.every((r) => r.sessionId)).toBeDefined();
+        expect(results.every((r) => r.screenshotLength > 0)).toBe(true);
       }
-
-      expect(results).toHaveLength(2);
-      expect(results.every(r => r.sessionId)).toBeDefined();
-      expect(results.every(r => r.screenshotLength > 0)).toBe(true);
-    });
+    );
   });
 });
 
@@ -727,34 +751,38 @@ describe('Cross-Browser Integration Tests', () => {
 
 describe('Error Recovery Integration Tests', () => {
   describe('Browser Crash Recovery', () => {
-    it('should handle browser process crashes gracefully', { timeout: INTEGRATION_TIMEOUT }, async () => {
-      const manager = getBrowserManager();
+    it(
+      'should handle browser process crashes gracefully',
+      { timeout: INTEGRATION_TIMEOUT },
+      async () => {
+        const manager = getBrowserManager();
 
-      const sessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
+        const sessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
 
-      // Simulate abrupt closure
-      const session = manager.getSession(sessionId);
-      if (session && session.instance.process) {
-        session.instance.process.kill();
+        // Simulate abrupt closure
+        const session = manager.getSession(sessionId);
+        if (session && session.instance.process) {
+          session.instance.process.kill();
+        }
+
+        // Wait for cleanup
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // Try to launch new browser after crash
+        const newSessionId = await manager.launchBrowser({
+          type: BrowserType.CHROME,
+          headless: true,
+        });
+
+        expect(newSessionId).toBeDefined();
+        expect(newSessionId).not.toBe(sessionId);
+
+        await manager.closeSession(newSessionId);
       }
-
-      // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Try to launch new browser after crash
-      const newSessionId = await manager.launchBrowser({
-        type: BrowserType.CHROME,
-        headless: true,
-      });
-
-      expect(newSessionId).toBeDefined();
-      expect(newSessionId).not.toBe(sessionId);
-
-      await manager.closeSession(newSessionId);
-    });
+    );
   });
 
   describe('Network Error Recovery', () => {
@@ -767,7 +795,10 @@ describe('Error Recovery Integration Tests', () => {
       });
 
       // Try to navigate to invalid URL
-      const result = await manager.navigate(sessionId, 'https://invalid-domain-that-does-not-exist-12345.com');
+      const result = await manager.navigate(
+        sessionId,
+        'https://invalid-domain-that-does-not-exist-12345.com'
+      );
 
       // Should handle error gracefully
       expect(result).toBeDefined();

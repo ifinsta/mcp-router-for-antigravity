@@ -16,7 +16,10 @@ describe('resolveElectronAssetPaths', () => {
     const paths = resolveElectronAssetPaths(mainDir);
 
     assert.equal(paths.preloadScript, path.join('C:', 'app', 'electron', 'preload.js'));
-    assert.equal(paths.rendererIndexHtml, path.join('C:', 'app', 'electron', 'renderer', 'dist', 'index.html'));
-    assert.equal(paths.appIcon, path.join('C:', 'app', 'electron', 'assets', 'icon.png'));
+    assert.equal(
+      paths.rendererIndexHtml,
+      path.join('C:', 'app', 'electron', 'renderer', 'dist', 'index.html')
+    );
+    assert.equal(paths.appIcon, path.join('C:', 'app', 'electron', 'icon.png'));
   });
 });
