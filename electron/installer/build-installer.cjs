@@ -44,7 +44,7 @@ class WindowsInstallerBuilder {
       this.buildDir,
       this.installerOutput,
       path.join(this.buildDir, 'win-unpacked'),
-      path.join(this.buildDir, 'resources')
+      path.join(this.buildDir, 'resources'),
     ];
 
     for (const dir of directories) {
@@ -61,7 +61,9 @@ class WindowsInstallerBuilder {
       fs.copyFileSync(sourceIcon, destIcon);
       console.log(`Copied icon.ico to buildResources: ${destIcon}`);
     } else {
-      console.warn('Warning: electron/icon.ico not found. Run `node scripts/generate-ifin-assets.cjs` first.');
+      console.warn(
+        'Warning: electron/icon.ico not found. Run `node scripts/generate-ifin-assets.cjs` first.'
+      );
     }
   }
 
@@ -82,30 +84,25 @@ class WindowsInstallerBuilder {
       productName: 'ifin Platform',
       copyright: 'Copyright (c) 2024',
       extraMetadata: {
-        main: 'electron/main.cjs'
+        main: 'electron/main.cjs',
       },
       directories: {
         buildResources: path.join(this.buildDir, 'resources'),
-        output: this.installerOutput
+        output: this.installerOutput,
       },
-      files: [
-        'dist/**/*',
-        'node_modules/**/*',
-        'package.json',
-        'electron/**/*'
-      ],
+      files: ['dist/**/*', 'node_modules/**/*', 'package.json', 'electron/**/*'],
       win: {
         target: [
           {
             target: 'nsis',
-            arch: ['x64']
-          }
+            arch: ['x64'],
+          },
         ],
         icon: path.join(this.projectRoot, 'electron', 'icon.ico'),
         artifactName: '${productName}-${version}-setup.${ext}',
         sign: null,
         signDlls: null,
-        signAndEditExecutable: null
+        signAndEditExecutable: null,
       },
       nsis: {
         oneClick: false,
@@ -116,9 +113,9 @@ class WindowsInstallerBuilder {
         shortcutName: 'ifin Platform',
         perMachine: true,
         runAfterFinish: false,
-        deleteAppDataOnUninstall: false
+        deleteAppDataOnUninstall: false,
       },
-      publish: null
+      publish: null,
     };
 
     const configPath = path.join(this.projectRoot, 'electron-builder.json');
@@ -201,23 +198,23 @@ exit /b 0
           name: 'ifin Platform',
           executable: 'ifin Platform.exe',
           installPath: '%ProgramFiles%\\ifin Platform',
-          uninstallPath: '%ProgramFiles%\\ifin Platform\\Uninstall ifin Platform.exe'
+          uninstallPath: '%ProgramFiles%\\ifin Platform\\Uninstall ifin Platform.exe',
         },
         mcpServer: {
           name: 'ifin Platform Server',
           executable: '%ProgramFiles%\\ifin Platform\\ifin Platform.exe',
           args: ['%ProgramFiles%\\ifin Platform\\resources\\app.asar\\dist\\src\\index.js'],
           env: {
-            ELECTRON_RUN_AS_NODE: '1'
+            ELECTRON_RUN_AS_NODE: '1',
           },
           transport: 'stdio',
-          timeout: 30000
+          timeout: 30000,
         },
         browsers: {
           supported: ['chrome', 'edge', 'firefox'],
           autoDetect: true,
-          configPath: '%USERPROFILE%\\.mcp-router-browser.json'
-        }
+          configPath: '%USERPROFILE%\\.ifin-platform-browser.json',
+        },
       },
       features: {
         headlessMode: true,
@@ -225,15 +222,15 @@ exit /b 0
         networkSimulation: true,
         deviceEmulation: true,
         crossBrowser: true,
-        multiTab: true
+        multiTab: true,
       },
       compatibility: {
         windows: ['10', '11'],
         node: '>=20.10.0',
         chrome: '>=90',
         edge: '>=90',
-        firefox: '>=88'
-      }
+        firefox: '>=88',
+      },
     };
 
     const manifestPath = path.join(this.installerOutput, 'manifest.json');
@@ -249,7 +246,7 @@ exit /b 0
       path.join(this.installerOutput, `ifin Platform-${version}-setup.exe`),
       path.join(this.installerOutput, 'manifest.json'),
       path.join(this.installerOutput, 'quick-launch.bat'),
-      path.join(this.installerOutput, 'cleanup-legacy-install.bat')
+      path.join(this.installerOutput, 'cleanup-legacy-install.bat'),
     ];
 
     for (const file of expectedFiles) {

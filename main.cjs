@@ -87,8 +87,12 @@ function buildBootstrapErrorPage(error) {
 
 async function bootstrap() {
   logRuntime('Bootstrapping Electron main process');
-  const { AssignmentManager } = await import(pathToFileURL(path.join(__dirname, '../dist/src/core/assignmentModes.js')).href);
-  const { resolveElectronAssetPaths } = await import(pathToFileURL(path.join(__dirname, '../dist/src/infra/electronPaths.js')).href);
+  const { AssignmentManager } = await import(
+    pathToFileURL(path.join(__dirname, '../dist/src/core/assignmentModes.js')).href
+  );
+  const { resolveElectronAssetPaths } = await import(
+    pathToFileURL(path.join(__dirname, '../dist/src/infra/electronPaths.js')).href
+  );
 
   const assetPaths = resolveElectronAssetPaths(path.resolve(__dirname, '../dist/electron'));
   const assignmentManager = new AssignmentManager();
@@ -125,15 +129,20 @@ async function bootstrap() {
       logRuntime('Renderer finished loading');
     });
 
-    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      logRuntime(
-        `Renderer failed to load (code=${errorCode}, mainFrame=${isMainFrame}, url=${validatedURL || 'unknown'})`,
-        errorDescription
-      );
-    });
+    mainWindow.webContents.on(
+      'did-fail-load',
+      (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        logRuntime(
+          `Renderer failed to load (code=${errorCode}, mainFrame=${isMainFrame}, url=${validatedURL || 'unknown'})`,
+          errorDescription
+        );
+      }
+    );
 
     mainWindow.webContents.on('render-process-gone', (_event, details) => {
-      logRuntime(`Renderer process exited (reason=${details.reason}, exitCode=${details.exitCode})`);
+      logRuntime(
+        `Renderer process exited (reason=${details.reason}, exitCode=${details.exitCode})`
+      );
     });
 
     mainWindow.on('unresponsive', () => {
@@ -148,7 +157,9 @@ async function bootstrap() {
     } else {
       mainWindow.loadFile(assetPaths.rendererIndexHtml).catch((error) => {
         logRuntime('Failed to load packaged renderer', error);
-        mainWindow?.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildBootstrapErrorPage(error))}`);
+        mainWindow?.loadURL(
+          `data:text/html;charset=utf-8,${encodeURIComponent(buildBootstrapErrorPage(error))}`
+        );
       });
     }
 
@@ -226,7 +237,7 @@ async function bootstrap() {
 
   ipcMain.handle('configure-browsers', async (_event, config) => {
     try {
-      const configPath = path.join(os.homedir(), '.mcp-router-browser.json');
+      const configPath = path.join(os.homedir(), '.ifin-platform-browser.json');
       await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2));
       return { success: true, path: configPath };
     } catch (error) {
@@ -237,7 +248,7 @@ async function bootstrap() {
 
   ipcMain.handle('get-browser-config', async () => {
     try {
-      const configPath = path.join(os.homedir(), '.mcp-router-browser.json');
+      const configPath = path.join(os.homedir(), '.ifin-platform-browser.json');
       const config = await fs.promises.readFile(configPath, 'utf-8');
       return JSON.parse(config);
     } catch {
@@ -352,32 +363,45 @@ async function bootstrap() {
     }
   });
 
-  ipcMain.handle('assignment:complete-objective', async (_event, assignmentId, objectiveId, evidence) => {
-    try {
-      const current = assignmentManager.getCurrentAssignment();
-      if (!current || current.id !== assignmentId) {
-        return { success: false, error: 'Can only complete objectives on the current active assignment' };
+  ipcMain.handle(
+    'assignment:complete-objective',
+    async (_event, assignmentId, objectiveId, evidence) => {
+      try {
+        const current = assignmentManager.getCurrentAssignment();
+        if (!current || current.id !== assignmentId) {
+          return {
+            success: false,
+            error: 'Can only complete objectives on the current active assignment',
+          };
+        }
+
+        const assignment = await assignmentManager.completeObjective(objectiveId, evidence);
+        allAssignments.set(assignment.id, assignment);
+        return { success: true, assignment };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { success: false, error: message };
       }
-
-      const assignment = await assignmentManager.completeObjective(objectiveId, evidence);
-      allAssignments.set(assignment.id, assignment);
-      return { success: true, assignment };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { success: false, error: message };
     }
-  });
+  );
 
-  ipcMain.handle('assignment:add-checkpoint', async (_event, objectiveId, description, evidence) => {
-    try {
-      const assignment = await assignmentManager.addCheckpoint(objectiveId, description, evidence);
-      allAssignments.set(assignment.id, assignment);
-      return { success: true, assignment };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { success: false, error: message };
+  ipcMain.handle(
+    'assignment:add-checkpoint',
+    async (_event, objectiveId, description, evidence) => {
+      try {
+        const assignment = await assignmentManager.addCheckpoint(
+          objectiveId,
+          description,
+          evidence
+        );
+        allAssignments.set(assignment.id, assignment);
+        return { success: true, assignment };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { success: false, error: message };
+      }
     }
-  });
+  );
 
   ipcMain.handle('assignment:get-report', async (_event, assignmentId) => {
     try {
@@ -484,7 +508,7 @@ async function bootstrap() {
       logging: {
         level: 'info',
         fileLogging: true,
-        logPath: path.join(os.homedir(), '.mcp-router-logs'),
+        logPath: path.join(os.homedir(), '.ifin-platform-logs'),
       },
     };
   }
@@ -536,7 +560,8 @@ process.on('unhandledRejection', (reason) => {
 bootstrap().catch((error) => {
   logRuntime('Failed to bootstrap Electron app', error);
   console.error('Failed to bootstrap Electron app:', error);
-  app.whenReady()
+  app
+    .whenReady()
     .then(() => {
       const errorWindow = new BrowserWindow({
         width: 960,
@@ -546,7 +571,9 @@ bootstrap().catch((error) => {
         backgroundColor: '#1e1e1e',
         title: 'MCP Router Startup Error',
       });
-      return errorWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildBootstrapErrorPage(error))}`);
+      return errorWindow.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(buildBootstrapErrorPage(error))}`
+      );
     })
     .catch(() => {
       app.quit();

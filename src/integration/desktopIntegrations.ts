@@ -144,10 +144,10 @@ interface JsonReadResult {
   error?: string | undefined;
 }
 
-export const ROUTER_SERVER_NAME = 'mcp-router';
+export const ROUTER_SERVER_NAME = 'ifin-platform';
 const DEFAULT_LOCAL_API_PORT = 3000;
 const BRIDGE_PORT = 9315;
-const KNOWN_PACKAGE_NAMES = new Set(['ifin-platform', 'mcp-router-for-antigravity', 'mcp-router']);
+const KNOWN_PACKAGE_NAMES = new Set(['ifin-platform']);
 const CONFIG_ENV_KEYS = [
   'ROUTER_DEFAULT_PROVIDER',
   'ROUTER_DEFAULT_MODEL',
@@ -185,15 +185,15 @@ const CONFIG_ENV_KEYS = [
   'AZURE_OPENAI_BASE_URL',
 ];
 
-export function createIntegrationContext(overrides: Partial<IntegrationContext> = {}): IntegrationContext {
+export function createIntegrationContext(
+  overrides: Partial<IntegrationContext> = {}
+): IntegrationContext {
   const homedir = overrides.homedir ?? os.homedir();
   return {
     platform: overrides.platform ?? process.platform,
     homedir,
     appDataDir:
-      overrides.appDataDir ??
-      process.env['APPDATA'] ??
-      path.join(homedir, 'AppData', 'Roaming'),
+      overrides.appDataDir ?? process.env['APPDATA'] ?? path.join(homedir, 'AppData', 'Roaming'),
     localAppDataDir:
       overrides.localAppDataDir ??
       process.env['LOCALAPPDATA'] ??
@@ -213,7 +213,9 @@ export function detectRepoRoot(startDir: string): string | null {
     const packageJsonPath = path.join(currentDir, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
       try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as { name?: string };
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
+          name?: string;
+        };
         if (packageJson.name && KNOWN_PACKAGE_NAMES.has(packageJson.name)) {
           return currentDir;
         }
@@ -254,10 +256,15 @@ export function getMcpClientDefinitions(context: IntegrationContext): McpClientD
   if (context.platform === 'win32') {
     return [
       {
-        id: 'antigravity',
-        label: 'Antigravity',
-        configPath: path.join(context.appDataDir, 'antigravity', 'mcp_servers.json'),
-        appPath: path.join(context.localAppDataDir, 'Programs', 'Antigravity', 'Antigravity.exe'),
+        id: 'ifin-platform',
+        label: 'ifin-platform',
+        configPath: path.join(context.appDataDir, 'ifin-platform', 'mcp_servers.json'),
+        appPath: path.join(
+          context.localAppDataDir,
+          'Programs',
+          'ifin-platform',
+          'ifin-platform.exe'
+        ),
       },
       {
         id: 'cursor',
@@ -288,9 +295,9 @@ export function getMcpClientDefinitions(context: IntegrationContext): McpClientD
 
   return [
     {
-      id: 'antigravity',
-      label: 'Antigravity',
-      configPath: path.join(context.homedir, '.config', 'antigravity', 'mcp_servers.json'),
+      id: 'ifin-platform',
+      label: 'ifin-platform',
+      configPath: path.join(context.homedir, '.config', 'ifin-platform', 'mcp_servers.json'),
       appPath: null,
     },
     {
@@ -326,16 +333,28 @@ export function getMcpClientDefinitions(context: IntegrationContext): McpClientD
   ];
 }
 
-export function resolveLauncher(context: IntegrationContext, launcherMode: LauncherMode): LauncherResolution {
+export function resolveLauncher(
+  context: IntegrationContext,
+  launcherMode: LauncherMode
+): LauncherResolution {
   const installedAvailable =
     typeof context.installedExecutablePath === 'string' &&
     context.installedExecutablePath.length > 0 &&
     fs.existsSync(context.installedExecutablePath);
 
-  const installedEntryPath = installedAvailable && context.installedExecutablePath
-    ? path.join(path.dirname(context.installedExecutablePath), 'resources', 'app.asar', 'dist', 'src', 'index.js')
-    : null;
-  const installedEntryAvailable = typeof installedEntryPath === 'string' && installedEntryPath.length > 0;
+  const installedEntryPath =
+    installedAvailable && context.installedExecutablePath
+      ? path.join(
+          path.dirname(context.installedExecutablePath),
+          'resources',
+          'app.asar',
+          'dist',
+          'src',
+          'index.js'
+        )
+      : null;
+  const installedEntryAvailable =
+    typeof installedEntryPath === 'string' && installedEntryPath.length > 0;
 
   const repoEntryPath = context.repoRoot
     ? path.join(context.repoRoot, 'dist', 'src', 'index.js')
@@ -362,7 +381,12 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
   });
 
   if (launcherMode === 'installed') {
-    if (!installedAvailable || !installedEntryAvailable || !installedEntryPath || !context.installedExecutablePath) {
+    if (
+      !installedAvailable ||
+      !installedEntryAvailable ||
+      !installedEntryPath ||
+      !context.installedExecutablePath
+    ) {
       return buildResolution(
         null,
         false,
@@ -370,7 +394,7 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
         [],
         {},
         null,
-        'Installed launcher is not available on this machine.',
+        'Installed launcher is not available on this machine.'
       );
     }
 
@@ -380,26 +404,39 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
       context.installedExecutablePath,
       [installedEntryPath],
       { ELECTRON_RUN_AS_NODE: '1' },
-      context.installedExecutablePath,
+      context.installedExecutablePath
     );
   }
 
   if (launcherMode === 'repo') {
     if (!repoAvailable || !repoEntryPath) {
-      return buildResolution(null, false, null, [], {}, null, 'Repo launcher is not available from this app context.');
+      return buildResolution(
+        null,
+        false,
+        null,
+        [],
+        {},
+        null,
+        'Repo launcher is not available from this app context.'
+      );
     }
 
     return buildResolution('repo', true, 'node', [repoEntryPath], {}, repoEntryPath);
   }
 
-  if (installedAvailable && installedEntryAvailable && installedEntryPath && context.installedExecutablePath) {
+  if (
+    installedAvailable &&
+    installedEntryAvailable &&
+    installedEntryPath &&
+    context.installedExecutablePath
+  ) {
     return buildResolution(
       'installed',
       true,
       context.installedExecutablePath,
       [installedEntryPath],
       { ELECTRON_RUN_AS_NODE: '1' },
-      context.installedExecutablePath,
+      context.installedExecutablePath
     );
   }
 
@@ -407,7 +444,15 @@ export function resolveLauncher(context: IntegrationContext, launcherMode: Launc
     return buildResolution('repo', true, 'node', [repoEntryPath], {}, repoEntryPath);
   }
 
-  return buildResolution(null, false, null, [], {}, null, 'No launcher target is currently available.');
+  return buildResolution(
+    null,
+    false,
+    null,
+    [],
+    {},
+    null,
+    'No launcher target is currently available.'
+  );
 }
 
 export function previewMcpClientConfig(
@@ -505,7 +550,9 @@ export function detectMcpClientRecords(
   context: IntegrationContext,
   launcherMode: LauncherMode
 ): IntegrationRecord[] {
-  return getMcpClientDefinitions(context).map((client) => detectMcpClientRecord(context, client, launcherMode));
+  return getMcpClientDefinitions(context).map((client) =>
+    detectMcpClientRecord(context, client, launcherMode)
+  );
 }
 
 function detectMcpClientRecord(
@@ -539,9 +586,10 @@ function detectMcpClientRecord(
     };
   }
 
-  const serverConfig = existing.valid && existing.value
-    ? readMcpServerDefinition(existing.value, ROUTER_SERVER_NAME)
-    : null;
+  const serverConfig =
+    existing.valid && existing.value
+      ? readMcpServerDefinition(existing.value, ROUTER_SERVER_NAME)
+      : null;
 
   if (serverConfig) {
     const matches = launcher.available && matchesServerDefinition(serverConfig, launcher);
@@ -556,10 +604,10 @@ function detectMcpClientRecord(
         : 'ifin Platform is configured, but the launch target differs from the current mode.',
       detail: matches
         ? `Launcher mode resolves to ${preview.resolvedMode}.`
-        : 'Preview and Apply will update only the mcp-router server entry.',
+        : 'Preview and Apply will update only the ifin-platform server entry.',
       remediation: matches
         ? 'Run Test to validate the configured launcher from this client.'
-        : 'Apply the selected launcher mode to update only the mcp-router entry.',
+        : 'Apply the selected launcher mode to update only the ifin-platform entry.',
       launcherMode,
       metadata: {
         appDetected,
@@ -579,8 +627,8 @@ function detectMcpClientRecord(
       path: client.configPath,
       summary: 'Client target detected and ready for ifin Platform setup.',
       detail: launcher.available
-        ? 'Apply will upsert the mcp-router entry without touching other servers.'
-        : launcher.reason ?? 'No launcher is currently available for this client.',
+        ? 'Apply will upsert the ifin-platform entry without touching other servers.'
+        : (launcher.reason ?? 'No launcher is currently available for this client.'),
       remediation: launcher.available
         ? 'Apply the selected launcher mode to generate the client config.'
         : 'Fix the launcher target first, then return here to apply client config.',
@@ -631,7 +679,8 @@ function detectIdeExtensionRecord(context: IntegrationContext): IntegrationRecor
       path: extensionDir,
       summary: 'IDE extension sources are not available in this app context.',
       detail: 'Repo mode is required to inspect or package the local VSIX artifact.',
-      remediation: 'Use the packaged app for client setup, or open the repo checkout to build the IDE extension.',
+      remediation:
+        'Use the packaged app for client setup, or open the repo checkout to build the IDE extension.',
       metadata: {
         extensionBuilt: false,
         vsixDetected: false,
@@ -640,11 +689,7 @@ function detectIdeExtensionRecord(context: IntegrationContext): IntegrationRecor
   }
 
   const status: IntegrationStatus =
-    buildPath && vsixPath
-      ? 'ready'
-      : buildPath || vsixPath
-        ? 'available'
-        : 'degraded';
+    buildPath && vsixPath ? 'ready' : buildPath || vsixPath ? 'available' : 'degraded';
 
   return {
     id: 'ide-extension',
@@ -656,12 +701,14 @@ function detectIdeExtensionRecord(context: IntegrationContext): IntegrationRecor
       status === 'ready'
         ? 'The IDE extension build and VSIX package are available.'
         : 'IDE extension assets are only partially available. Build and packaging need attention.',
-    detail: buildPath && vsixPath
-      ? 'Use Test API while the router is running to validate the extension backend path.'
-      : 'The repo contains the extension, but either the compiled build or packaged VSIX is missing.',
-    remediation: buildPath && vsixPath
-      ? 'Use Test API to validate the local extension backend path.'
-      : 'Build the extension and create a VSIX package before installation.',
+    detail:
+      buildPath && vsixPath
+        ? 'Use Test API while the router is running to validate the extension backend path.'
+        : 'The repo contains the extension, but either the compiled build or packaged VSIX is missing.',
+    remediation:
+      buildPath && vsixPath
+        ? 'Use Test API to validate the local extension backend path.'
+        : 'Build the extension and create a VSIX package before installation.',
     metadata: {
       extensionBuilt: !!buildPath,
       vsixDetected: !!vsixPath,
@@ -698,7 +745,8 @@ function detectBrowserExtensionRecord(
       path: extensionDir,
       summary: 'Chrome extension assets are not available in this app context.',
       detail: 'Repo mode is required to inspect the browser extension source and manifest.',
-      remediation: 'Open the repo checkout if you need to build or reload the browser extension locally.',
+      remediation:
+        'Open the repo checkout if you need to build or reload the browser extension locally.',
       metadata: {
         manifestDetected: false,
         serviceWorkerDetected: false,
@@ -719,7 +767,8 @@ function detectBrowserExtensionRecord(
     summary: ready
       ? 'Chrome extension assets and a supported Chromium browser are available.'
       : 'Browser extension assets exist, but runtime or browser prerequisites are incomplete.',
-    detail: 'Use Test Bridge to validate the live extension connection on the default WebSocket port.',
+    detail:
+      'Use Test Bridge to validate the live extension connection on the default WebSocket port.',
     remediation: ready
       ? 'Load the extension in Chrome or Edge, then run Test Bridge.'
       : 'Confirm Chrome or Edge is installed and complete the browser extension setup.',
@@ -824,11 +873,14 @@ export function buildSystemReadiness(
     {
       id: 'browser-bridge',
       label: 'Browser bridge',
-      status: mergeStatuses(browserExtension?.status ?? 'not_configured', browserBridgePlane.status),
+      status: mergeStatuses(
+        browserExtension?.status ?? 'not_configured',
+        browserBridgePlane.status
+      ),
       summary:
         browserExtension?.status === 'ready' && browserBridgePlane.status === 'connected'
           ? 'Browser extension assets are present and the bridge is reachable.'
-          : browserExtension?.summary ?? browserBridgePlane.summary,
+          : (browserExtension?.summary ?? browserBridgePlane.summary),
       remediation:
         browserExtension?.remediation ??
         'Load the browser extension and reconnect the bridge before testing.',
@@ -838,17 +890,13 @@ export function buildSystemReadiness(
       label: 'Client configs',
       status: summarizeClientConfigStatus(mcpClients),
       summary: summarizeClientConfigMessage(mcpClients),
-      remediation:
-        mcpClients.some((record) => record.status === 'invalid_config')
-          ? 'Repair malformed client configs, then re-apply the selected launcher mode.'
-          : 'Use Apply or Repair in Integrations to align client configs with the current launcher mode.',
+      remediation: mcpClients.some((record) => record.status === 'invalid_config')
+        ? 'Repair malformed client configs, then re-apply the selected launcher mode.'
+        : 'Use Apply or Repair in Integrations to align client configs with the current launcher mode.',
     },
   ];
 
-  const warnings = [
-    ...collectWarnings(planes),
-    ...collectWarnings(records),
-  ];
+  const warnings = [...collectWarnings(planes), ...collectWarnings(records)];
 
   return {
     status: summarizeOverallStatus(checklist),
@@ -886,7 +934,8 @@ function buildLauncherPlane(launcher: LauncherResolution): RuntimePlaneStatus {
     status: 'ready',
     summary: `The launcher resolves to ${launcher.resolvedMode} mode.`,
     detail: launcher.displayPath ?? launcher.command,
-    remediation: 'Apply the current launcher target to detected clients and run Test to validate it.',
+    remediation:
+      'Apply the current launcher target to detected clients and run Test to validate it.',
     path: launcher.displayPath,
     port: null,
     metadata: {
@@ -907,9 +956,7 @@ function buildLocalApiPlane(port: number, probe?: RuntimeProbeStatus): RuntimePl
       status === 'connected'
         ? `The local API is reachable on port ${port}.`
         : `The local API is not currently reachable on port ${port}.`,
-    detail:
-      probe?.detail ??
-      'Start the local router process to expose the IDE extension API.',
+    detail: probe?.detail ?? 'Start the local router process to expose the IDE extension API.',
     remediation: 'Start the local server from Overview, then run Test API again.',
     path: null,
     port,
@@ -930,9 +977,7 @@ function buildBrowserBridgePlane(port: number, probe?: RuntimeProbeStatus): Runt
       status === 'connected'
         ? `The browser bridge is reachable on port ${port}.`
         : `The browser bridge is not currently reachable on port ${port}.`,
-    detail:
-      probe?.detail ??
-      'Load the browser extension and keep its bridge connection running.',
+    detail: probe?.detail ?? 'Load the browser extension and keep its bridge connection running.',
     remediation: 'Load the extension in Chrome or Edge, then run Test Bridge again.',
     path: null,
     port,
@@ -1005,8 +1050,9 @@ function summarizeOverallStatus(checklist: ChecklistItem[]): IntegrationStatus {
 }
 
 function buildReadinessSummary(checklist: ChecklistItem[], launcher: LauncherResolution): string {
-  const blockingItems = checklist.filter((item) =>
-    item.status === 'error' || item.status === 'invalid_config' || item.status === 'degraded'
+  const blockingItems = checklist.filter(
+    (item) =>
+      item.status === 'error' || item.status === 'invalid_config' || item.status === 'degraded'
   );
 
   if (blockingItems.length === 0) {
@@ -1018,7 +1064,10 @@ function buildReadinessSummary(checklist: ChecklistItem[], launcher: LauncherRes
     .join(', ')}.`;
 }
 
-function mergeStatuses(primary: IntegrationStatus, secondary: IntegrationStatus): IntegrationStatus {
+function mergeStatuses(
+  primary: IntegrationStatus,
+  secondary: IntegrationStatus
+): IntegrationStatus {
   const severity: Record<IntegrationStatus, number> = {
     error: 7,
     invalid_config: 6,
@@ -1033,13 +1082,16 @@ function mergeStatuses(primary: IntegrationStatus, secondary: IntegrationStatus)
   return severity[primary] >= severity[secondary] ? primary : secondary;
 }
 
-function collectWarnings(items: Array<{ label: string; status: IntegrationStatus; summary: string }>): string[] {
+function collectWarnings(
+  items: Array<{ label: string; status: IntegrationStatus; summary: string }>
+): string[] {
   return items
-    .filter((item) =>
-      item.status === 'error' ||
-      item.status === 'invalid_config' ||
-      item.status === 'degraded' ||
-      item.status === 'not_configured'
+    .filter(
+      (item) =>
+        item.status === 'error' ||
+        item.status === 'invalid_config' ||
+        item.status === 'degraded' ||
+        item.status === 'not_configured'
     )
     .map((item) => `${item.label}: ${item.summary}`);
 }
@@ -1141,7 +1193,10 @@ function readMcpServerDefinition(
   return isRecord(server) ? server : null;
 }
 
-function matchesServerDefinition(serverConfig: Record<string, unknown>, launcher: LauncherResolution): boolean {
+function matchesServerDefinition(
+  serverConfig: Record<string, unknown>,
+  launcher: LauncherResolution
+): boolean {
   if (!launcher.command) {
     return false;
   }
@@ -1158,7 +1213,10 @@ function matchesServerDefinition(serverConfig: Record<string, unknown>, launcher
   return JSON.stringify(args) === JSON.stringify(launcher.args);
 }
 
-function requireMcpClientDefinition(context: IntegrationContext, targetId: string): McpClientDefinition {
+function requireMcpClientDefinition(
+  context: IntegrationContext,
+  targetId: string
+): McpClientDefinition {
   const target = getMcpClientDefinitions(context).find((entry) => entry.id === targetId);
   if (!target) {
     throw new Error(`Unknown MCP client target: ${targetId}`);
@@ -1176,9 +1234,7 @@ function findLatestVsix(extensionDir: string): string | null {
     .filter((entry) => entry.endsWith('.vsix'))
     .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }));
 
-  return candidates.length > 0 && candidates[0]
-    ? path.join(extensionDir, candidates[0])
-    : null;
+  return candidates.length > 0 && candidates[0] ? path.join(extensionDir, candidates[0]) : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

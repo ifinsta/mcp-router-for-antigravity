@@ -28,7 +28,9 @@ class AsyncMutex {
 
   async acquire(): Promise<() => void> {
     let release: () => void;
-    const newLock = new Promise<void>(resolve => { release = resolve; });
+    const newLock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const previousLock = this._lock;
     this._lock = newLock;
     await previousLock;
@@ -55,12 +57,12 @@ function getStorageDirectory(): string {
 
   if (platform === 'win32') {
     const appData = process.env['APPDATA'] || homeDir;
-    return path.join(appData, 'mcp-router', 'assignments');
+    return path.join(appData, 'ifin-platform', 'assignments');
   }
 
   // Linux/Mac
   const configDir = process.env['XDG_CONFIG_HOME'] || path.join(homeDir, '.config');
-  return path.join(configDir, 'mcp-router', 'assignments');
+  return path.join(configDir, 'ifin-platform', 'assignments');
 }
 
 /**
@@ -130,21 +132,21 @@ function reviveDates<T>(obj: T): T {
 // ============================================================================
 
 export enum AssignmentMode {
-  EXPLORER = 'explorer',           // Discover and map codebase
-  TESTER = 'tester',                 // Comprehensive testing
-  AUDITOR = 'auditor',               // Security and compliance audit
-  BENCHMARKER = 'benchmarker',       // Performance benchmarking
-  MIGRATOR = 'migrator',           // Code migration tasks
-  OPTIMIZER = 'optimizer',           // Performance optimization
-  DOCUMENTER = 'documenter',         // Documentation generation
-  CUSTOM = 'custom'                  // User-defined custom workflow
+  EXPLORER = 'explorer', // Discover and map codebase
+  TESTER = 'tester', // Comprehensive testing
+  AUDITOR = 'auditor', // Security and compliance audit
+  BENCHMARKER = 'benchmarker', // Performance benchmarking
+  MIGRATOR = 'migrator', // Code migration tasks
+  OPTIMIZER = 'optimizer', // Performance optimization
+  DOCUMENTER = 'documenter', // Documentation generation
+  CUSTOM = 'custom', // User-defined custom workflow
 }
 
 export enum AssignmentPriority {
   CRITICAL = 'critical',
   HIGH = 'high',
   MEDIUM = 'medium',
-  LOW = 'low'
+  LOW = 'low',
 }
 
 export enum AssignmentStatus {
@@ -153,7 +155,7 @@ export enum AssignmentStatus {
   PAUSED = 'paused',
   COMPLETED = 'completed',
   FAILED = 'failed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
 
 // ============================================================================
@@ -276,36 +278,36 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: true,
       allowParallelObjectives: false,
-      artifactRetention: 'full'
+      artifactRetention: 'full',
     },
     defaultObjectives: [
       {
         title: 'Discover project structure',
         description: 'Analyze directory structure and identify main components',
         priority: AssignmentPriority.HIGH,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Extract all URLs and endpoints',
         description: 'Find HTTP endpoints, API routes, and external URLs',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['discover-project-structure']
+        dependencies: ['discover-project-structure'],
       },
       {
         title: 'Map code relationships',
         description: 'Identify dependencies and code relationships',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['extract-all-urls-and-endpoints']
+        dependencies: ['extract-all-urls-and-endpoints'],
       },
       {
         title: 'Generate documentation',
         description: 'Create comprehensive codebase documentation',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['map-code-relationships']
-      }
+        dependencies: ['map-code-relationships'],
+      },
     ],
     toolsRequired: ['file-read', 'grep', 'analyze-code'],
-    prerequisites: ['codebase-access']
+    prerequisites: ['codebase-access'],
   },
 
   [AssignmentMode.TESTER]: {
@@ -318,42 +320,42 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 5,
       checkpointsRequired: true,
       allowParallelObjectives: true,
-      artifactRetention: 'summary'
+      artifactRetention: 'summary',
     },
     defaultObjectives: [
       {
         title: 'Create test plan',
         description: 'Design comprehensive test strategy based on discovered URLs',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Execute functional tests',
         description: 'Test each URL for basic functionality',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['create-test-plan']
+        dependencies: ['create-test-plan'],
       },
       {
         title: 'Run performance tests',
         description: 'Measure response times and identify bottlenecks',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['execute-functional-tests']
+        dependencies: ['execute-functional-tests'],
       },
       {
         title: 'Test edge cases',
         description: 'Test boundary conditions and error handling',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['execute-functional-tests']
+        dependencies: ['execute-functional-tests'],
       },
       {
         title: 'Generate test report',
         description: 'Compile comprehensive test results and recommendations',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['run-performance-tests', 'test-edge-cases']
-      }
+        dependencies: ['run-performance-tests', 'test-edge-cases'],
+      },
     ],
     toolsRequired: ['browser-launch', 'navigate', 'screenshot', 'click', 'type'],
-    prerequisites: ['explorer-completed']
+    prerequisites: ['explorer-completed'],
   },
 
   [AssignmentMode.AUDITOR]: {
@@ -366,42 +368,42 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: true,
       allowParallelObjectives: false,
-      artifactRetention: 'full'
+      artifactRetention: 'full',
     },
     defaultObjectives: [
       {
         title: 'Analyze security vulnerabilities',
         description: 'Identify OWASP Top 10 vulnerabilities',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Check authentication flows',
         description: 'Verify authentication and authorization mechanisms',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['analyze-security-vulnerabilities']
+        dependencies: ['analyze-security-vulnerabilities'],
       },
       {
         title: 'Review API security',
         description: 'Audit API endpoints for security issues',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['analyze-security-vulnerabilities']
+        dependencies: ['analyze-security-vulnerabilities'],
       },
       {
         title: 'Verify compliance requirements',
         description: 'Check against compliance standards (GDPR, PCI-DSS, etc.)',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['check-authentication-flows']
+        dependencies: ['check-authentication-flows'],
       },
       {
         title: 'Generate security report',
         description: 'Create detailed security audit report',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['verify-compliance-requirements', 'review-api-security']
-      }
+        dependencies: ['verify-compliance-requirements', 'review-api-security'],
+      },
     ],
     toolsRequired: ['analyze-security', 'check-dependencies', 'scan-vulnerabilities'],
-    prerequisites: ['codebase-access']
+    prerequisites: ['codebase-access'],
   },
 
   [AssignmentMode.BENCHMARKER]: {
@@ -414,42 +416,42 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: true,
       allowParallelObjectives: true,
-      artifactRetention: 'summary'
+      artifactRetention: 'summary',
     },
     defaultObjectives: [
       {
         title: 'Establish baseline metrics',
         description: 'Measure initial performance of all endpoints',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Run load tests',
         description: 'Test performance under various load conditions',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['establish-baseline-metrics']
+        dependencies: ['establish-baseline-metrics'],
       },
       {
         title: 'Identify bottlenecks',
         description: 'Analyze performance bottlenecks and hotspots',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['run-load-tests']
+        dependencies: ['run-load-tests'],
       },
       {
         title: 'Compare with standards',
         description: 'Compare performance against industry standards',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['identify-bottlenecks']
+        dependencies: ['identify-bottlenecks'],
       },
       {
         title: 'Generate benchmark report',
         description: 'Create comprehensive performance benchmark report',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['compare-with-standards']
-      }
+        dependencies: ['compare-with-standards'],
+      },
     ],
     toolsRequired: ['perf-measure', 'perf-profile', 'perf-analyze'],
-    prerequisites: ['endpoints-discovered']
+    prerequisites: ['endpoints-discovered'],
   },
 
   [AssignmentMode.MIGRATOR]: {
@@ -462,42 +464,42 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 5,
       checkpointsRequired: true,
       allowParallelObjectives: false,
-      artifactRetention: 'full'
+      artifactRetention: 'full',
     },
     defaultObjectives: [
       {
         title: 'Analyze current code',
         description: 'Understand code structure and dependencies',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Create migration plan',
         description: 'Design step-by-step migration strategy',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['analyze-current-code']
+        dependencies: ['analyze-current-code'],
       },
       {
         title: 'Execute migration steps',
         description: 'Perform code changes according to plan',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['create-migration-plan']
+        dependencies: ['create-migration-plan'],
       },
       {
         title: 'Verify functionality',
         description: 'Test that migrated code works correctly',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['execute-migration-steps']
+        dependencies: ['execute-migration-steps'],
       },
       {
         title: 'Update documentation',
         description: 'Update all relevant documentation',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['verify-functionality']
-      }
+        dependencies: ['verify-functionality'],
+      },
     ],
     toolsRequired: ['analyze-code', 'edit-code', 'test-code', 'generate-docs'],
-    prerequisites: ['codebase-access']
+    prerequisites: ['codebase-access'],
   },
 
   [AssignmentMode.OPTIMIZER]: {
@@ -510,36 +512,36 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: true,
       allowParallelObjectives: true,
-      artifactRetention: 'summary'
+      artifactRetention: 'summary',
     },
     defaultObjectives: [
       {
         title: 'Profile performance',
         description: 'Identify performance bottlenecks and hotspots',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Optimize identified bottlenecks',
         description: 'Implement performance improvements',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['profile-performance']
+        dependencies: ['profile-performance'],
       },
       {
         title: 'Test optimizations',
         description: 'Verify that optimizations improve performance',
         priority: AssignmentPriority.CRITICAL,
-        dependencies: ['optimize-identified-bottlenecks']
+        dependencies: ['optimize-identified-bottlenecks'],
       },
       {
         title: 'Document changes',
         description: 'Document all performance optimizations',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['test-optimizations']
-      }
+        dependencies: ['test-optimizations'],
+      },
     ],
     toolsRequired: ['perf-profile', 'analyze-code', 'edit-code', 'test-code'],
-    prerequisites: ['codebase-access']
+    prerequisites: ['codebase-access'],
   },
 
   [AssignmentMode.DOCUMENTER]: {
@@ -552,42 +554,42 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: false,
       allowParallelObjectives: true,
-      artifactRetention: 'full'
+      artifactRetention: 'full',
     },
     defaultObjectives: [
       {
         title: 'Analyze code structure',
         description: 'Understand codebase organization',
         priority: AssignmentPriority.HIGH,
-        dependencies: []
+        dependencies: [],
       },
       {
         title: 'Generate API documentation',
         description: 'Create comprehensive API reference',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['analyze-code-structure']
+        dependencies: ['analyze-code-structure'],
       },
       {
         title: 'Create user guides',
         description: 'Generate user-facing documentation',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['analyze-code-structure']
+        dependencies: ['analyze-code-structure'],
       },
       {
         title: 'Write technical docs',
         description: 'Create technical documentation for developers',
         priority: AssignmentPriority.HIGH,
-        dependencies: ['generate-api-documentation']
+        dependencies: ['generate-api-documentation'],
       },
       {
         title: 'Review and refine',
         description: 'Ensure documentation quality and completeness',
         priority: AssignmentPriority.MEDIUM,
-        dependencies: ['create-user-guides', 'write-technical-docs']
-      }
+        dependencies: ['create-user-guides', 'write-technical-docs'],
+      },
     ],
     toolsRequired: ['analyze-code', 'generate-docs', 'format-docs'],
-    prerequisites: ['codebase-access']
+    prerequisites: ['codebase-access'],
   },
 
   [AssignmentMode.CUSTOM]: {
@@ -600,12 +602,12 @@ export const ASSIGNMENT_TEMPLATES: Record<AssignmentMode, AssignmentTemplate> = 
       maxRetries: 3,
       checkpointsRequired: true,
       allowParallelObjectives: false,
-      artifactRetention: 'summary'
+      artifactRetention: 'summary',
     },
     defaultObjectives: [],
     toolsRequired: [],
-    prerequisites: ['user-defined-objectives']
-  }
+    prerequisites: ['user-defined-objectives'],
+  },
 };
 
 // ============================================================================
@@ -636,7 +638,9 @@ export class AssignmentManager {
     // Validate mode is a valid enum value
     const validModes = Object.values(AssignmentMode);
     if (!validModes.includes(config.mode)) {
-      throw new Error(`Invalid assignment mode: ${config.mode}. Valid modes: ${validModes.join(', ')}`);
+      throw new Error(
+        `Invalid assignment mode: ${config.mode}. Valid modes: ${validModes.join(', ')}`
+      );
     }
     // Validate duration if provided
     if (config.estimatedDuration !== undefined && config.estimatedDuration < 0) {
@@ -647,28 +651,30 @@ export class AssignmentManager {
     const now = new Date();
 
     // First pass: create objectives with generated IDs
-    const objectives: AssignmentObjective[] = (config.objectives || template.defaultObjectives).map((obj, index) => {
-      const objective: AssignmentObjective = {
-        id: this.generateObjectiveId(obj.title || '', index),
-        title: obj.title || '',
-        description: obj.description || '',
-        completed: false,
-        priority: obj.priority || AssignmentPriority.MEDIUM,
-        dependencies: obj.dependencies || [],
-        checkpoints: obj.checkpoints || [],
-        artifacts: obj.artifacts || [],
-        timestamp: {
-          created: now
+    const objectives: AssignmentObjective[] = (config.objectives || template.defaultObjectives).map(
+      (obj, index) => {
+        const objective: AssignmentObjective = {
+          id: this.generateObjectiveId(obj.title || '', index),
+          title: obj.title || '',
+          description: obj.description || '',
+          completed: false,
+          priority: obj.priority || AssignmentPriority.MEDIUM,
+          dependencies: obj.dependencies || [],
+          checkpoints: obj.checkpoints || [],
+          artifacts: obj.artifacts || [],
+          timestamp: {
+            created: now,
+          },
+        };
+        if (obj.estimatedDuration !== undefined) {
+          objective.estimatedDuration = obj.estimatedDuration;
         }
-      };
-      if (obj.estimatedDuration !== undefined) {
-        objective.estimatedDuration = obj.estimatedDuration;
+        if (obj.notes !== undefined) {
+          objective.notes = obj.notes;
+        }
+        return objective;
       }
-      if (obj.notes !== undefined) {
-        objective.notes = obj.notes;
-      }
-      return objective;
-    });
+    );
 
     // Build slug -> generated ID mapping for dependency remapping
     const slugToIdMap = new Map<string, string>();
@@ -683,7 +689,7 @@ export class AssignmentManager {
         const remappedDeps: string[] = [];
         for (const dep of objective.dependencies) {
           // Check if dep is already a valid objective ID
-          const existingObjective = objectives.find(obj => obj.id === dep);
+          const existingObjective = objectives.find((obj) => obj.id === dep);
           if (existingObjective) {
             remappedDeps.push(dep);
           } else {
@@ -695,7 +701,7 @@ export class AssignmentManager {
               // Validate: dependency references an ID that doesn't exist
               throw new Error(
                 `Invalid dependency '${dep}' in objective '${objective.title}': ` +
-                `no objective with ID or slug '${dep}' exists`
+                  `no objective with ID or slug '${dep}' exists`
               );
             }
           }
@@ -723,7 +729,7 @@ export class AssignmentManager {
       createdAt: now,
       updatedAt: now,
       createdBy: config.createdBy || 'user',
-      retries: 0
+      retries: 0,
     };
     if (config.assignedTo !== undefined) {
       metadata.assignedTo = config.assignedTo;
@@ -740,7 +746,9 @@ export class AssignmentManager {
       status: AssignmentStatus.NOT_STARTED,
       priority: config.priority || AssignmentPriority.MEDIUM,
       objectives,
-      settings: config.settings ? { ...template.defaultSettings, ...config.settings } : template.defaultSettings,
+      settings: config.settings
+        ? { ...template.defaultSettings, ...config.settings }
+        : template.defaultSettings,
       metadata,
       state: {
         currentObjectiveIndex: 0,
@@ -749,8 +757,8 @@ export class AssignmentManager {
         retryCount: {},
         lastAction: 'created',
         progress: 0,
-        sessionHistory: []
-      }
+        sessionHistory: [],
+      },
     };
 
     this.assignments.set(assignment.id, assignment);
@@ -773,9 +781,13 @@ export class AssignmentManager {
         throw new Error(`Assignment ${assignmentId} not found`);
       }
 
-      if (assignment.status !== AssignmentStatus.NOT_STARTED &&
-          assignment.status !== AssignmentStatus.PAUSED) {
-        throw new Error(`Assignment ${assignmentId} cannot be started (status: ${assignment.status})`);
+      if (
+        assignment.status !== AssignmentStatus.NOT_STARTED &&
+        assignment.status !== AssignmentStatus.PAUSED
+      ) {
+        throw new Error(
+          `Assignment ${assignmentId} cannot be started (status: ${assignment.status})`
+        );
       }
 
       const wasPaused = assignment.status === AssignmentStatus.PAUSED;
@@ -856,7 +868,11 @@ export class AssignmentManager {
   /**
    * Complete current objective
    */
-  async completeObjective(objectiveId: string, evidence?: string, notes?: string): Promise<Assignment> {
+  async completeObjective(
+    objectiveId: string,
+    evidence?: string,
+    notes?: string
+  ): Promise<Assignment> {
     const release = await this.mutex.acquire();
     let released = false;
     try {
@@ -869,9 +885,11 @@ export class AssignmentManager {
         throw new Error(`Assignment ${this.currentAssignmentId} not found`);
       }
 
-      const objective = assignment.objectives.find(obj => obj.id === objectiveId);
+      const objective = assignment.objectives.find((obj) => obj.id === objectiveId);
       if (!objective) {
-        throw new Error(`Objective ${objectiveId} not found in assignment ${this.currentAssignmentId}`);
+        throw new Error(
+          `Objective ${objectiveId} not found in assignment ${this.currentAssignmentId}`
+        );
       }
 
       objective.completed = true;
@@ -882,7 +900,7 @@ export class AssignmentManager {
           description: 'Objective completion evidence',
           completed: true,
           evidence,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
         if (notes !== undefined) {
           checkpoint.notes = notes;
@@ -919,7 +937,11 @@ export class AssignmentManager {
   /**
    * Add checkpoint to current objective
    */
-  async addCheckpoint(objectiveId: string, description: string, evidence?: string): Promise<Assignment> {
+  async addCheckpoint(
+    objectiveId: string,
+    description: string,
+    evidence?: string
+  ): Promise<Assignment> {
     const release = await this.mutex.acquire();
     try {
       if (!this.currentAssignmentId) {
@@ -931,7 +953,7 @@ export class AssignmentManager {
         throw new Error(`Assignment ${this.currentAssignmentId} not found`);
       }
 
-      const objective = assignment.objectives.find(obj => obj.id === objectiveId);
+      const objective = assignment.objectives.find((obj) => obj.id === objectiveId);
       if (!objective) {
         throw new Error(`Objective ${objectiveId} not found`);
       }
@@ -940,7 +962,7 @@ export class AssignmentManager {
         id: this.generateCheckpointId(),
         description,
         completed: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
       if (evidence !== undefined) {
         checkpoint.evidence = evidence;
@@ -974,7 +996,7 @@ export class AssignmentManager {
       }
 
       for (const objective of assignment.objectives) {
-        const checkpoint = objective.checkpoints.find(cp => cp.id === checkpointId);
+        const checkpoint = objective.checkpoints.find((cp) => cp.id === checkpointId);
         if (checkpoint) {
           checkpoint.completed = true;
           if (evidence !== undefined) {
@@ -1013,9 +1035,11 @@ export class AssignmentManager {
       }
 
       // Validate that the objective exists in the assignment
-      const objective = assignment.objectives.find(obj => obj.id === objectiveId);
+      const objective = assignment.objectives.find((obj) => obj.id === objectiveId);
       if (!objective) {
-        throw new Error(`Objective ${objectiveId} not found in assignment ${this.currentAssignmentId}`);
+        throw new Error(
+          `Objective ${objectiveId} not found in assignment ${this.currentAssignmentId}`
+        );
       }
 
       // Track per-objective retry count
@@ -1028,12 +1052,13 @@ export class AssignmentManager {
       assignment.state.lastAction = `failed_objective:${objectiveId}`;
       assignment.metadata.updatedAt = new Date();
 
-      const currentSession = assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
+      const currentSession =
+        assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
       if (currentSession) {
         currentSession.errors.push({
           timestamp: new Date(),
           error,
-          context: `Objective: ${objectiveId}`
+          context: `Objective: ${objectiveId}`,
         });
       }
 
@@ -1045,7 +1070,10 @@ export class AssignmentManager {
         // Release mutex before calling failAssignment to avoid deadlock
         release();
         released = true;
-        await this.failAssignment(assignment.id, `Max retries exceeded for objective: ${objectiveId}`);
+        await this.failAssignment(
+          assignment.id,
+          `Max retries exceeded for objective: ${objectiveId}`
+        );
       }
 
       logger.error(`Failed objective ${objectiveId}: ${error}`);
@@ -1169,15 +1197,17 @@ export class AssignmentManager {
     }
 
     // Bounds check on currentObjectiveIndex
-    if (assignment.state.currentObjectiveIndex < 0 ||
-        assignment.state.currentObjectiveIndex >= assignment.objectives.length) {
+    if (
+      assignment.state.currentObjectiveIndex < 0 ||
+      assignment.state.currentObjectiveIndex >= assignment.objectives.length
+    ) {
       // Index is out of bounds, fall through to iterate from start
     }
 
     for (const objective of assignment.objectives) {
       if (!objective.completed) {
         // Check dependencies
-        const dependenciesMet = objective.dependencies.every(depId =>
+        const dependenciesMet = objective.dependencies.every((depId) =>
           assignment.state.completedObjectives.includes(depId)
         );
         if (dependenciesMet) {
@@ -1209,16 +1239,16 @@ export class AssignmentManager {
       createdAt: assignment.metadata.createdAt,
       updatedAt: assignment.metadata.updatedAt,
       retries: assignment.metadata.retries,
-      objectives: assignment.objectives.map(obj => {
+      objectives: assignment.objectives.map((obj) => {
         const reportObj: AssignmentReport['objectives'][number] = {
           id: obj.id,
           title: obj.title,
           description: obj.description,
           completed: obj.completed,
           priority: obj.priority,
-          checkpointsCompleted: obj.checkpoints.filter(cp => cp.completed).length,
+          checkpointsCompleted: obj.checkpoints.filter((cp) => cp.completed).length,
           totalCheckpoints: obj.checkpoints.length,
-          artifacts: obj.artifacts || []
+          artifacts: obj.artifacts || [],
         };
         if (obj.estimatedDuration !== undefined) {
           reportObj.estimatedDuration = obj.estimatedDuration;
@@ -1229,8 +1259,8 @@ export class AssignmentManager {
         return reportObj;
       }),
       sessions: assignment.state.sessionHistory,
-      errors: assignment.state.sessionHistory.flatMap(session => session.errors),
-      artifacts: assignment.objectives.flatMap(obj => obj.artifacts || [])
+      errors: assignment.state.sessionHistory.flatMap((session) => session.errors),
+      artifacts: assignment.objectives.flatMap((obj) => obj.artifacts || []),
     };
     if (assignment.metadata.estimatedDuration !== undefined) {
       report.estimatedDuration = assignment.metadata.estimatedDuration;
@@ -1253,7 +1283,7 @@ export class AssignmentManager {
 
       // Read all files in the directory
       const files = await fs.readdir(this.storageDir);
-      const jsonFiles = files.filter(f => f.endsWith('.json') && !f.endsWith('.tmp.json'));
+      const jsonFiles = files.filter((f) => f.endsWith('.json') && !f.endsWith('.tmp.json'));
 
       let loadedCount = 0;
       let errorCount = 0;
@@ -1272,7 +1302,7 @@ export class AssignmentManager {
             loadedCount++;
           } else {
             logger.warn(`Skipping invalid assignment file: ${file}`, {
-              missingFields: this.getMissingFields(assignment)
+              missingFields: this.getMissingFields(assignment),
             });
             errorCount++;
           }
@@ -1285,7 +1315,7 @@ export class AssignmentManager {
 
       logger.info(`Loaded ${loadedCount} assignments, ${errorCount} errors`, {
         loadedCount,
-        errorCount
+        errorCount,
       });
 
       // Clean up stale assignments on load
@@ -1361,9 +1391,20 @@ export class AssignmentManager {
     }
 
     const assignment = obj as Record<string, unknown>;
-    const requiredFields = ['id', 'mode', 'title', 'description', 'status', 'priority', 'objectives', 'settings', 'metadata', 'state'];
+    const requiredFields = [
+      'id',
+      'mode',
+      'title',
+      'description',
+      'status',
+      'priority',
+      'objectives',
+      'settings',
+      'metadata',
+      'state',
+    ];
 
-    return requiredFields.every(field => field in assignment);
+    return requiredFields.every((field) => field in assignment);
   }
 
   /**
@@ -1375,9 +1416,20 @@ export class AssignmentManager {
     }
 
     const assignment = obj as Record<string, unknown>;
-    const requiredFields = ['id', 'mode', 'title', 'description', 'status', 'priority', 'objectives', 'settings', 'metadata', 'state'];
+    const requiredFields = [
+      'id',
+      'mode',
+      'title',
+      'description',
+      'status',
+      'priority',
+      'objectives',
+      'settings',
+      'metadata',
+      'state',
+    ];
 
-    return requiredFields.filter(field => !(field in assignment));
+    return requiredFields.filter((field) => !(field in assignment));
   }
 
   // ============================================================================
@@ -1395,7 +1447,8 @@ export class AssignmentManager {
     }
 
     // Trim errors in the current session to MAX_ERRORS_PER_SESSION
-    const currentSession = assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
+    const currentSession =
+      assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
     if (currentSession && currentSession.errors.length > MAX_ERRORS_PER_SESSION) {
       currentSession.errors = currentSession.errors.slice(-MAX_ERRORS_PER_SESSION);
     }
@@ -1411,17 +1464,20 @@ export class AssignmentManager {
 
     const assignmentsToDelete: string[] = [];
     this.assignments.forEach((assignment, id) => {
-      if ((assignment.status === AssignmentStatus.COMPLETED ||
-           assignment.status === AssignmentStatus.CANCELLED ||
-           assignment.status === AssignmentStatus.FAILED) &&
-          assignment.metadata.updatedAt && assignment.metadata.updatedAt < cutoff) {
+      if (
+        (assignment.status === AssignmentStatus.COMPLETED ||
+          assignment.status === AssignmentStatus.CANCELLED ||
+          assignment.status === AssignmentStatus.FAILED) &&
+        assignment.metadata.updatedAt &&
+        assignment.metadata.updatedAt < cutoff
+      ) {
         assignmentsToDelete.push(id);
       }
     });
 
     for (const id of assignmentsToDelete) {
       this.assignments.delete(id);
-      await this.deleteAssignment(id);  // Remove persisted file too
+      await this.deleteAssignment(id); // Remove persisted file too
       cleaned++;
     }
 
@@ -1429,9 +1485,11 @@ export class AssignmentManager {
     const completedAssignments = Array.from(this.assignments.entries())
       .filter((entry): entry is [string, Assignment] => {
         const a = entry[1];
-        return a.status === AssignmentStatus.COMPLETED ||
-               a.status === AssignmentStatus.CANCELLED ||
-               a.status === AssignmentStatus.FAILED;
+        return (
+          a.status === AssignmentStatus.COMPLETED ||
+          a.status === AssignmentStatus.CANCELLED ||
+          a.status === AssignmentStatus.FAILED
+        );
       })
       .sort((a, b) => {
         const aTime = a[1].metadata.updatedAt?.getTime() ?? 0;
@@ -1500,9 +1558,7 @@ export class AssignmentManager {
             // Found a cycle
             const cycleStart = path.indexOf(depId);
             const cycle = [...path.slice(cycleStart), depId];
-            throw new Error(
-              `Circular dependency detected: ${cycle.join(' -> ')}`
-            );
+            throw new Error(`Circular dependency detected: ${cycle.join(' -> ')}`);
           }
         }
       }
@@ -1541,16 +1597,18 @@ export class AssignmentManager {
       duration: 0,
       objectivesAttempted: [],
       objectivesCompleted: [],
-      errors: []
+      errors: [],
     };
     assignment.state.sessionHistory.push(session);
   }
 
   private endCurrentSession(assignment: Assignment): void {
-    const currentSession = assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
+    const currentSession =
+      assignment.state.sessionHistory[assignment.state.sessionHistory.length - 1];
     if (currentSession) {
       currentSession.endedAt = new Date();
-      currentSession.duration = currentSession.endedAt.getTime() - currentSession.startedAt.getTime();
+      currentSession.duration =
+        currentSession.endedAt.getTime() - currentSession.startedAt.getTime();
     }
   }
 

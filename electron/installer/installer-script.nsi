@@ -6,11 +6,11 @@
 
 !macro customInstall
   ; Create configuration directory
-  CreateDirectory "$PROFILE\.mcp-router-logs"
-  CreateDirectory "$PROFILE\.mcp-router-cache"
+  CreateDirectory "$PROFILE\.ifin-platform-logs"
+  CreateDirectory "$PROFILE\.ifin-platform-cache"
 
   ; Write default configuration
-  FileOpen $0 "$PROFILE\.mcp-router-browser.json" w
+  FileOpen $0 "$PROFILE\.ifin-platform-browser.json" w
   FileWrite $0 "$\r$\n"
   FileWrite $0 "{$\r$\n"
   FileWrite $0 "  \"browsers\": {$\r$\n"
@@ -41,14 +41,14 @@
   ExecWait 'netsh advfirewall firewall delete rule name="ifin Platform"'
 
   ; Ask user if they want to keep configuration files
-  MessageBox MB_YESNO "Do you want to keep configuration files?$\r$\n($PROFILE\.mcp-router-*)" IDNO keep_config
+  MessageBox MB_YESNO "Do you want to keep configuration files?$\r$\n($PROFILE\.ifin-platform-*)" IDNO keep_config
   Abort ; Skip cleanup if user wants to keep config
 
   keep_config:
   ; Remove configuration directories
-  RMDir /r "$PROFILE\.mcp-router-logs"
-  RMDir /r "$PROFILE\.mcp-router-cache"
-  Delete "$PROFILE\.mcp-router-browser.json"
+  RMDir /r "$PROFILE\.ifin-platform-logs"
+  RMDir /r "$PROFILE\.ifin-platform-cache"
+  Delete "$PROFILE\.ifin-platform-browser.json"
 !macroend
 
 ; Modern UI 2.0

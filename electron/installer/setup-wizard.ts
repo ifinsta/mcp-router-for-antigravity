@@ -45,7 +45,7 @@ class SetupWizard {
 
   constructor() {
     this.homedir = os.homedir();
-    this.configPath = path.join(this.homedir, '.mcp-router-browser.json');
+    this.configPath = path.join(this.homedir, '.ifin-platform-browser.json');
     this.config = this.getDefaultConfig();
   }
 
@@ -54,25 +54,25 @@ class SetupWizard {
       browsers: {
         chrome: { path: null, version: '', enabled: true },
         edge: { path: null, version: '', enabled: true },
-        firefox: { path: null, version: '', enabled: true }
+        firefox: { path: null, version: '', enabled: true },
       },
       installation: {
         appPath: path.join(this.homedir, 'AppData', 'Local', 'MCPRouter'),
         configPath: this.configPath,
-        logPath: path.join(this.homedir, 'AppData', 'Local', 'MCPRouter', 'logs')
+        logPath: path.join(this.homedir, 'AppData', 'Local', 'MCPRouter', 'logs'),
       },
       features: {
         headless: true,
         performanceMonitoring: true,
         networkSimulation: true,
-        deviceEmulation: true
-      }
+        deviceEmulation: true,
+      },
     };
   }
 
   async run(): Promise<void> {
     console.log('ifin Platform - Automated Setup Wizard');
-    console.log('=' .repeat(50));
+    console.log('='.repeat(50));
 
     try {
       await this.checkPrerequisites();
@@ -125,8 +125,8 @@ class SetupWizard {
     const directories = [
       this.config.installation.appPath,
       this.config.installation.logPath,
-      path.join(this.homedir, '.mcp-router-logs'),
-      path.join(this.homedir, '.mcp-router-cache')
+      path.join(this.homedir, '.ifin-platform-logs'),
+      path.join(this.homedir, '.ifin-platform-cache'),
     ];
 
     for (const dir of directories) {
@@ -197,7 +197,7 @@ class SetupWizard {
     const programFiles = [
       'C:\\Program Files',
       'C:\\Program Files (x86)',
-      path.join(this.homedir, 'AppData', 'Local')
+      path.join(this.homedir, 'AppData', 'Local'),
     ];
 
     switch (browserType) {
@@ -205,19 +205,19 @@ class SetupWizard {
         return [
           'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
           'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-          path.join(this.homedir, 'AppData\\Local\\Google\\Chrome\\Application\\chrome.exe')
+          path.join(this.homedir, 'AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'),
         ];
       case 'edge':
         return [
           'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
           'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-          path.join(this.homedir, 'AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe')
+          path.join(this.homedir, 'AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe'),
         ];
       case 'firefox':
         return [
           'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
           'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe',
-          path.join(this.homedir, 'AppData', 'Local\\Mozilla Firefox\\firefox.exe')
+          path.join(this.homedir, 'AppData', 'Local\\Mozilla Firefox\\firefox.exe'),
         ];
       default:
         return [];
@@ -226,7 +226,9 @@ class SetupWizard {
 
   private async getBrowserVersion(browserPath: string): Promise<string> {
     try {
-      const { stdout } = await execAsync(`wmic datafile where name="${browserPath.replace(/\\/g, '\\\\')}" get Version /value`);
+      const { stdout } = await execAsync(
+        `wmic datafile where name="${browserPath.replace(/\\/g, '\\\\')}" get Version /value`
+      );
       const match = stdout.match(/Version=([^\r\n]+)/);
       return match ? match[1] : 'Unknown';
     } catch (error) {
@@ -238,18 +240,15 @@ class SetupWizard {
     console.log('\n⚙️  Configuring browsers...');
 
     // Save configuration
-    await fs.promises.writeFile(
-      this.configPath,
-      JSON.stringify(this.config, null, 2)
-    );
+    await fs.promises.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
     console.log(`✅ Configuration saved to: ${this.configPath}`);
 
     // Set environment variables
     const envPath = path.join(this.homedir, '.env');
     const envContent = `
-MCP_ROUTER_CONFIG=${this.configPath}
-MCP_ROUTER_LOGS=${this.config.installation.logPath}
-MCP_ROUTER_CACHE=${path.join(this.homedir, '.mcp-router-cache')}
+IFIN_PLATFORM_CONFIG=${this.configPath}
+IFIN_PLATFORM_LOGS=${this.config.installation.logPath}
+IFIN_PLATFORM_CACHE=${path.join(this.homedir, '.ifin-platform-cache')}
 NODE_ENV=production
 `;
 
@@ -298,7 +297,15 @@ NODE_ENV=production
     console.log('\n🔗 Creating shortcuts...');
 
     const desktopPath = path.join(this.homedir, 'Desktop');
-    const startMenuPath = path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+    const startMenuPath = path.join(
+      os.homedir(),
+      'AppData',
+      'Roaming',
+      'Microsoft',
+      'Windows',
+      'Start Menu',
+      'Programs'
+    );
 
     // Create desktop shortcut
     const desktopShortcut = path.join(desktopPath, 'ifin Platform.lnk');
@@ -312,7 +319,7 @@ NODE_ENV=production
 
   private async generateReport(): Promise<void> {
     console.log('\n📊 Setup Report');
-    console.log('=' .repeat(50));
+    console.log('='.repeat(50));
 
     console.log('\n📁 Installation Paths:');
     console.log(`  Application: ${this.config.installation.appPath}`);
@@ -322,12 +329,16 @@ NODE_ENV=production
     console.log('\n🌐 Detected Browsers:');
     for (const [browserType, config] of Object.entries(this.config.browsers)) {
       const status = config.enabled ? '✅' : '❌';
-      console.log(`  ${status} ${browserType.charAt(0).toUpperCase() + browserType.slice(1)}: ${config.version || 'Not found'}`);
+      console.log(
+        `  ${status} ${browserType.charAt(0).toUpperCase() + browserType.slice(1)}: ${config.version || 'Not found'}`
+      );
     }
 
     console.log('\n⚙️  Enabled Features:');
     console.log(`  ${this.config.features.headless ? '✅' : '❌'} Headless Mode`);
-    console.log(`  ${this.config.features.performanceMonitoring ? '✅' : '❌'} Performance Monitoring`);
+    console.log(
+      `  ${this.config.features.performanceMonitoring ? '✅' : '❌'} Performance Monitoring`
+    );
     console.log(`  ${this.config.features.networkSimulation ? '✅' : '❌'} Network Simulation`);
     console.log(`  ${this.config.features.deviceEmulation ? '✅' : '❌'} Device Emulation`);
 
@@ -341,7 +352,7 @@ NODE_ENV=production
 
 // Run setup wizard
 const wizard = new SetupWizard();
-wizard.run().catch(error => {
+wizard.run().catch((error) => {
   console.error('Setup wizard failed:', error);
   process.exit(1);
 });

@@ -46,7 +46,7 @@ export async function createMCPServer(): Promise<McpServer> {
     // Create MCP server
     const server = new McpServer(
       {
-        name: 'mcp-router',
+        name: 'ifin-platform',
         version: '1.0.0',
       },
       {

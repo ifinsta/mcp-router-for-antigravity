@@ -98,7 +98,7 @@ If a client only supports local command-based MCP setup, use:
 ```json
 {
   "mcpServers": {
-    "mcp-router": {
+    "ifin-platform": {
       "command": "node",
       "args": ["C:\\Users\\yourusername\\ifin-platform\\dist\\src\\index.js"],
       "env": {
@@ -116,7 +116,7 @@ On macOS/Linux, the equivalent path is:
 ```json
 {
   "mcpServers": {
-    "mcp-router": {
+    "ifin-platform": {
       "command": "node",
       "args": ["/home/yourusername/ifin-platform/dist/src/index.js"],
       "env": {

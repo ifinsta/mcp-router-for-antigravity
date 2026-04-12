@@ -1,4 +1,4 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import { ApiKeyManager, ProviderApiKeyConfig } from '../client/apiKeyManager';
 import { RouterClient, RouterModelInfo } from '../client/routerClient';
 import { ExtensionConfig, getExtensionConfig, getProviderConfig } from '../config/settings';
@@ -76,7 +76,11 @@ export class ApiKeySettingsPanel {
   private routerClient: RouterClient;
   private disposables: vscode.Disposable[] = [];
 
-  private constructor(panel: vscode.WebviewPanel, apiKeyManager: ApiKeyManager, extensionUri: vscode.Uri) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    apiKeyManager: ApiKeyManager,
+    extensionUri: vscode.Uri
+  ) {
     this.panel = panel;
     this.apiKeyManager = apiKeyManager;
     this.extensionUri = extensionUri;
@@ -86,7 +90,7 @@ export class ApiKeySettingsPanel {
     this.panel.webview.onDidReceiveMessage(
       (message) => this.handleMessage(message as PanelMessage),
       null,
-      this.disposables,
+      this.disposables
     );
   }
 
@@ -104,11 +108,15 @@ export class ApiKeySettingsPanel {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
-      },
+      }
     );
 
     const apiKeyManager = new ApiKeyManager(context);
-    ApiKeySettingsPanel.currentPanel = new ApiKeySettingsPanel(panel, apiKeyManager, context.extensionUri);
+    ApiKeySettingsPanel.currentPanel = new ApiKeySettingsPanel(
+      panel,
+      apiKeyManager,
+      context.extensionUri
+    );
     void ApiKeySettingsPanel.currentPanel.update();
   }
 
@@ -128,11 +136,16 @@ export class ApiKeySettingsPanel {
       models,
       modelCatalogSource: source,
       detectedIde: this.detectCurrentIde(),
-      currentMode: vscode.workspace.getConfiguration(CONFIGURATION_SECTION).get<'agent' | 'router'>('mode', 'agent'),
+      currentMode: vscode.workspace
+        .getConfiguration(CONFIGURATION_SECTION)
+        .get<'agent' | 'router'>('mode', 'agent'),
     };
   }
 
-  private async loadModelCatalog(): Promise<{ models: RouterModelInfo[]; source: ModelCatalogSource }> {
+  private async loadModelCatalog(): Promise<{
+    models: RouterModelInfo[];
+    source: ModelCatalogSource;
+  }> {
     try {
       const models = await this.routerClient.getModelCatalog(false);
       return { models, source: 'live' };
@@ -194,9 +207,17 @@ export class ApiKeySettingsPanel {
     await config.update('models.byMode.code', normalizeConfigValue(message.codeModel), true);
     await config.update('models.byMode.plan', normalizeConfigValue(message.planModel), true);
     await config.update('models.byMode.debug', normalizeConfigValue(message.debugModel), true);
-    await config.update('models.byMode.orchestrator', normalizeConfigValue(message.orchestratorModel), true);
+    await config.update(
+      'models.byMode.orchestrator',
+      normalizeConfigValue(message.orchestratorModel),
+      true
+    );
     await config.update('models.byMode.ask', normalizeConfigValue(message.askModel), true);
-    this.panel.webview.postMessage({ command: 'notice', kind: 'success', message: 'Model preferences saved.' });
+    this.panel.webview.postMessage({
+      command: 'notice',
+      kind: 'success',
+      message: 'Model preferences saved.',
+    });
   }
 
   private async handleSaveConnectionSettings(message: PanelMessage): Promise<void> {
@@ -225,21 +246,21 @@ export class ApiKeySettingsPanel {
         cursor: `${appData}/Cursor/User/mcp.json`,
         windsurf: `${home}/.codeium/windsurf/mcp_config.json`,
         'claude-desktop': `${appData}/Claude/claude_desktop_config.json`,
-        antigravity: `${appData}/antigravity/mcp_servers.json`,
+        'ifin-platform': `${appData}/ifin-platform/mcp_servers.json`,
       },
       darwin: {
         qoder: `${home}/.config/Qoder/User/mcp.json`,
         cursor: `${home}/.cursor/mcp.json`,
         windsurf: `${home}/.codeium/windsurf/mcp_config.json`,
         'claude-desktop': `${home}/Library/Application Support/Claude/claude_desktop_config.json`,
-        antigravity: `${home}/.config/antigravity/mcp_servers.json`,
+        'ifin-platform': `${home}/.config/ifin-platform/mcp_servers.json`,
       },
       linux: {
         qoder: `${home}/.config/Qoder/User/mcp.json`,
         cursor: `${home}/.cursor/mcp.json`,
         windsurf: `${home}/.codeium/windsurf/mcp_config.json`,
         'claude-desktop': `${home}/.config/Claude/claude_desktop_config.json`,
-        antigravity: `${home}/.config/antigravity/mcp_servers.json`,
+        'ifin-platform': `${home}/.config/ifin-platform/mcp_servers.json`,
       },
     };
 
@@ -261,7 +282,10 @@ export class ApiKeySettingsPanel {
     });
   }
 
-  private async handleSaveApiKey(provider: string | undefined, apiKey: string | undefined): Promise<void> {
+  private async handleSaveApiKey(
+    provider: string | undefined,
+    apiKey: string | undefined
+  ): Promise<void> {
     if (!provider) {
       throw new Error('Provider is required.');
     }
@@ -332,7 +356,9 @@ export class ApiKeySettingsPanel {
     try {
       routerHealthy = await this.routerClient.healthCheck();
       if (routerHealthy) {
-        const response = await fetch(`${this.routerClient.baseUrl.replace(/\/$/, '')}/health`, { method: 'GET' });
+        const response = await fetch(`${this.routerClient.baseUrl.replace(/\/$/, '')}/health`, {
+          method: 'GET',
+        });
         if (response.ok) {
           providerCount = extractProviderCount(await response.json().catch(() => null));
         }
@@ -343,16 +369,22 @@ export class ApiKeySettingsPanel {
       routerError = error instanceof Error ? error.message : 'Router health check failed.';
     }
 
-    const summaryParts = [`Configured providers: ${configuredProviders.length} of ${providers.length}.`];
+    const summaryParts = [
+      `Configured providers: ${configuredProviders.length} of ${providers.length}.`,
+    ];
     if (routerHealthy) {
-      summaryParts.push(providerCount > 0 ? `Router reachable. Health endpoint reports ${providerCount} providers.` : 'Router reachable.');
+      summaryParts.push(
+        providerCount > 0
+          ? `Router reachable. Health endpoint reports ${providerCount} providers.`
+          : 'Router reachable.'
+      );
     } else {
       summaryParts.push(`Router unavailable${routerError ? `: ${routerError}` : '.'}`);
     }
     summaryParts.push(
       configuredProviders.length === 0
         ? 'Save at least one provider key before validating credentials.'
-        : 'Use Test on a provider row to validate a specific credential.',
+        : 'Use Test on a provider row to validate a specific credential.'
     );
 
     this.panel.webview.postMessage({
@@ -362,7 +394,11 @@ export class ApiKeySettingsPanel {
     });
   }
 
-  private async testProviderEndpoint(provider: string, baseUrl: string, apiKey: string): Promise<{ success: boolean; message: string }> {
+  private async testProviderEndpoint(
+    provider: string,
+    baseUrl: string,
+    apiKey: string
+  ): Promise<{ success: boolean; message: string }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15_000);
 
@@ -391,21 +427,35 @@ export class ApiKeySettingsPanel {
       } else {
         return { success: false, message: `Unknown provider: ${provider}` };
       }
-      const response = await fetch(url, { method, headers, ...(body ? { body } : {}), signal: controller.signal });
+      const response = await fetch(url, {
+        method,
+        headers,
+        ...(body ? { body } : {}),
+        signal: controller.signal,
+      });
       if (response.ok) {
         return { success: true, message: `Connected to ${provider} successfully.` };
       }
       if (response.status === 401 || response.status === 403) {
-        return { success: false, message: `Authentication failed (${response.status}). Check the API key.` };
+        return {
+          success: false,
+          message: `Authentication failed (${response.status}). Check the API key.`,
+        };
       }
 
       const responseBody = await response.text().catch(() => '');
-      return { success: false, message: `${provider} returned ${response.status}: ${responseBody.slice(0, 160)}` };
+      return {
+        success: false,
+        message: `${provider} returned ${response.status}: ${responseBody.slice(0, 160)}`,
+      };
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, message: 'Connection timed out after 15 seconds.' };
       }
-      return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
+      return {
+        success: false,
+        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
     } finally {
       clearTimeout(timeoutId);
     }
@@ -421,21 +471,25 @@ export class ApiKeySettingsPanel {
     if (appName.includes('cursor')) return 'cursor';
     if (appName.includes('windsurf')) return 'windsurf';
     if (appName.includes('claude')) return 'claude-desktop';
-    if (appName.includes('antigravity')) return 'antigravity';
+    if (appName.includes('ifin-platform')) return 'ifin-platform';
     return 'vscode';
   }
 
   private getHtmlForWebview(state: PanelState): string {
     const webview = this.panel.webview;
-    const variablesCssUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'variables.css'));
-    const settingsCssUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'settings.css'));
-    const configuredProviderIds = state.providers.filter((provider) => provider.isConfigured).map((provider) => provider.provider);
-    const visibleOverrideIds = MODE_OVERRIDE_DEFINITIONS
-      .filter((definition) => {
-        const currentValue = state.config.models.byMode[definition.id];
-        return typeof currentValue === 'string' && currentValue.length > 0;
-      })
-      .map((definition) => definition.id);
+    const variablesCssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'media', 'variables.css')
+    );
+    const settingsCssUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'media', 'settings.css')
+    );
+    const configuredProviderIds = state.providers
+      .filter((provider) => provider.isConfigured)
+      .map((provider) => provider.provider);
+    const visibleOverrideIds = MODE_OVERRIDE_DEFINITIONS.filter((definition) => {
+      const currentValue = state.config.models.byMode[definition.id];
+      return typeof currentValue === 'string' && currentValue.length > 0;
+    }).map((definition) => definition.id);
     const providerTemplateMap = Object.fromEntries(
       state.providers.map((provider) => [provider.provider, this.renderProviderRow(provider)])
     );
@@ -937,7 +991,13 @@ export class ApiKeySettingsPanel {
     `;
   }
 
-  private renderActionRow(label: string, help: string, meta: string, buttonId: string, buttonLabel: string): string {
+  private renderActionRow(
+    label: string,
+    help: string,
+    meta: string,
+    buttonId: string,
+    buttonLabel: string
+  ): string {
     return `
       <div class="setting-row">
         <div class="setting-copy">
@@ -1005,13 +1065,21 @@ export class ApiKeySettingsPanel {
       bucket.push(model);
       grouped.set(model.provider, bucket);
     }
-    return Array.from(grouped.entries()).map(([provider, providerModels]) => `
+    return Array.from(grouped.entries())
+      .map(
+        ([provider, providerModels]) => `
       <optgroup label="${escapeHtml(provider.toUpperCase())}">
-        ${providerModels.map((model) => `
+        ${providerModels
+          .map(
+            (model) => `
           <option value="${escapeHtml(model.id)}" ${selectedModel === model.id ? 'selected' : ''}>${escapeHtml(model.name)}</option>
-        `).join('')}
+        `
+          )
+          .join('')}
       </optgroup>
-    `).join('');
+    `
+      )
+      .join('');
   }
   private renderProviderRow(provider: ProviderApiKeyConfig): string {
     return `
@@ -1062,7 +1130,13 @@ export class ApiKeySettingsPanel {
     `;
   }
 
-  private renderTextFieldRow(label: string, help: string, id: string, value: string, placeholder: string): string {
+  private renderTextFieldRow(
+    label: string,
+    help: string,
+    id: string,
+    value: string,
+    placeholder: string
+  ): string {
     return `
       <label class="setting-row" for="${id}">
         <span class="setting-copy">
@@ -1093,7 +1167,10 @@ function normalizeConfigValue(value: string | undefined): string {
 }
 
 function labelForIde(ide: string): string {
-  return ide.split('-').map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1)).join(' ');
+  return ide
+    .split('-')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
 }
 
 function extractProviderCount(payload: unknown): number {

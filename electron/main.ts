@@ -41,7 +41,7 @@ function createWindow(): BrowserWindowType {
     },
     titleBarStyle: 'default',
     backgroundColor: '#1a1a2e',
-    icon: assetPaths.appIcon
+    icon: assetPaths.appIcon,
   });
 
   // Load the app
@@ -69,7 +69,7 @@ ipcMain.handle('get-system-info', async () => {
     cpus: os.cpus().length,
     totalMemory: os.totalmem(),
     freeMemory: os.freemem(),
-    homedir: os.homedir()
+    homedir: os.homedir(),
   };
 });
 
@@ -78,7 +78,7 @@ ipcMain.handle('get-browser-paths', async () => {
     chrome: findChromePath(),
     edge: findEdgePath(),
     firefox: findFirefoxPath(),
-    safari: findSafariPath()
+    safari: findSafariPath(),
   };
   return browserPaths;
 });
@@ -91,7 +91,14 @@ ipcMain.handle('start-mcp-server', async (event, config: any) => {
 
     const nodePath = process.execPath;
     const serverScript = app.isPackaged
-      ? path.join(path.dirname(process.execPath), 'resources', 'app.asar', 'dist', 'src', 'index.js')
+      ? path.join(
+          path.dirname(process.execPath),
+          'resources',
+          'app.asar',
+          'dist',
+          'src',
+          'index.js'
+        )
       : assetPaths.serverEntryScript;
 
     mcpServerProcess = spawn(nodePath, [serverScript], {
@@ -99,8 +106,8 @@ ipcMain.handle('start-mcp-server', async (event, config: any) => {
       env: {
         ...process.env,
         ...(app.isPackaged ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
-        ...config.env
-      }
+        ...config.env,
+      },
     });
 
     mcpServerProcess.stdout?.on('data', (data) => {
@@ -135,13 +142,13 @@ ipcMain.handle('stop-mcp-server', async () => {
 ipcMain.handle('get-mcp-server-status', async () => {
   return {
     running: mcpServerProcess !== null,
-    pid: mcpServerProcess?.pid || null
+    pid: mcpServerProcess?.pid || null,
   };
 });
 
 ipcMain.handle('configure-browsers', async (event, config: any) => {
   try {
-    const configPath = path.join(os.homedir(), '.mcp-router-browser.json');
+    const configPath = path.join(os.homedir(), '.ifin-platform-browser.json');
     await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2));
     return { success: true, path: configPath };
   } catch (error) {
@@ -152,7 +159,7 @@ ipcMain.handle('configure-browsers', async (event, config: any) => {
 
 ipcMain.handle('get-browser-config', async () => {
   try {
-    const configPath = path.join(os.homedir(), '.mcp-router-browser.json');
+    const configPath = path.join(os.homedir(), '.ifin-platform-browser.json');
     const config = await fs.promises.readFile(configPath, 'utf-8');
     return JSON.parse(config);
   } catch (error) {
@@ -271,31 +278,40 @@ ipcMain.handle('assignment:resume', async (_event, assignmentId: string) => {
   }
 });
 
-ipcMain.handle('assignment:complete-objective', async (_event, assignmentId: string, objectiveId: string, evidence?: string) => {
-  try {
-    const current = assignmentManager.getCurrentAssignment();
-    if (!current || current.id !== assignmentId) {
-      return { success: false, error: 'Can only complete objectives on the current active assignment' };
+ipcMain.handle(
+  'assignment:complete-objective',
+  async (_event, assignmentId: string, objectiveId: string, evidence?: string) => {
+    try {
+      const current = assignmentManager.getCurrentAssignment();
+      if (!current || current.id !== assignmentId) {
+        return {
+          success: false,
+          error: 'Can only complete objectives on the current active assignment',
+        };
+      }
+      const assignment = await assignmentManager.completeObjective(objectiveId, evidence);
+      allAssignments.set(assignment.id, assignment);
+      return { success: true, assignment };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
     }
-    const assignment = await assignmentManager.completeObjective(objectiveId, evidence);
-    allAssignments.set(assignment.id, assignment);
-    return { success: true, assignment };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message };
   }
-});
+);
 
-ipcMain.handle('assignment:add-checkpoint', async (_event, objectiveId: string, description: string, evidence?: string) => {
-  try {
-    const assignment = await assignmentManager.addCheckpoint(objectiveId, description, evidence);
-    allAssignments.set(assignment.id, assignment);
-    return { success: true, assignment };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message };
+ipcMain.handle(
+  'assignment:add-checkpoint',
+  async (_event, objectiveId: string, description: string, evidence?: string) => {
+    try {
+      const assignment = await assignmentManager.addCheckpoint(objectiveId, description, evidence);
+      allAssignments.set(assignment.id, assignment);
+      return { success: true, assignment };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: message };
+    }
   }
-});
+);
 
 ipcMain.handle('assignment:get-report', async (_event, assignmentId: string) => {
   try {
@@ -323,7 +339,7 @@ function findChromePath(): string | null {
   const possiblePaths = [
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    path.join(os.homedir(), 'AppData\\Local\\Google\\Chrome\\Application\\chrome.exe')
+    path.join(os.homedir(), 'AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'),
   ];
 
   for (const p of possiblePaths) {
@@ -336,7 +352,7 @@ function findEdgePath(): string | null {
   const possiblePaths = [
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    path.join(os.homedir(), 'AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe')
+    path.join(os.homedir(), 'AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe'),
   ];
 
   for (const p of possiblePaths) {
@@ -349,7 +365,7 @@ function findFirefoxPath(): string | null {
   const possiblePaths = [
     'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
     'C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe',
-    path.join(os.homedir(), 'AppData\\Local\\Mozilla Firefox\\firefox.exe')
+    path.join(os.homedir(), 'AppData\\Local\\Mozilla Firefox\\firefox.exe'),
   ];
 
   for (const p of possiblePaths) {
@@ -385,37 +401,37 @@ function getDefaultBrowserConfig() {
         enabled: true,
         path: findChromePath(),
         headless: true,
-        userDataDir: null
+        userDataDir: null,
       },
       edge: {
         enabled: true,
         path: findEdgePath(),
         headless: true,
-        userDataDir: null
+        userDataDir: null,
       },
       firefox: {
         enabled: true,
         path: findFirefoxPath(),
         headless: true,
-        userDataDir: null
+        userDataDir: null,
       },
       safari: {
         enabled: false,
         path: null,
         headless: true,
-        userDataDir: null
-      }
+        userDataDir: null,
+      },
     },
     performance: {
       timeout: 30000,
       retryAttempts: 3,
-      concurrentSessions: 5
+      concurrentSessions: 5,
     },
     logging: {
       level: 'info',
       fileLogging: true,
-      logPath: path.join(os.homedir(), '.mcp-router-logs')
-    }
+      logPath: path.join(os.homedir(), '.ifin-platform-logs'),
+    },
   };
 }
 

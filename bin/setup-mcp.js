@@ -12,7 +12,7 @@ const rootDir = join(__dirname, '..');
 const compiledModulePath = join(rootDir, 'dist', 'src', 'integration', 'desktopIntegrations.js');
 const CODEX_TARGET_ID = 'codex';
 const ALL_TARGET_ID = 'all';
-const FALLBACK_ROUTER_SERVER_NAME = 'mcp-router';
+const FALLBACK_ROUTER_SERVER_NAME = 'ifin-platform';
 
 function showHelp() {
   console.log(`
@@ -27,7 +27,7 @@ Available targets:
   cursor
   windsurf
   claude-desktop
-  antigravity
+  ifin-platform
   codex
   all
 
@@ -42,12 +42,14 @@ Options:
 
 function getOptionValue(args, optionName) {
   const index = args.indexOf(optionName);
-  return index >= 0 ? args[index + 1] ?? null : null;
+  return index >= 0 ? (args[index + 1] ?? null) : null;
 }
 
 async function loadIntegrationModule() {
   if (!existsSync(compiledModulePath)) {
-    console.error('Build artifacts are missing. Run `npm run build` before using `npm run setup -- <target>`.');
+    console.error(
+      'Build artifacts are missing. Run `npm run build` before using `npm run setup -- <target>`.'
+    );
     process.exit(1);
   }
 
@@ -76,11 +78,15 @@ function runCommand(command, args, options = {}) {
 function ensureCodexCli() {
   const probe = runCommand('codex', ['mcp', '--help']);
   if (probe.error) {
-    throw new Error('Codex CLI is not available on PATH. Install Codex or skip the `codex` target.');
+    throw new Error(
+      'Codex CLI is not available on PATH. Install Codex or skip the `codex` target.'
+    );
   }
 
   if (probe.status !== 0) {
-    throw new Error(probe.stderr.trim() || 'Codex CLI is installed, but `codex mcp` failed to run.');
+    throw new Error(
+      probe.stderr.trim() || 'Codex CLI is installed, but `codex mcp` failed to run.'
+    );
   }
 }
 
@@ -106,7 +112,12 @@ function sanitizeJsonPreview(configJson) {
     const mcpServers = parsed?.mcpServers;
     if (mcpServers && typeof mcpServers === 'object') {
       for (const serverDefinition of Object.values(mcpServers)) {
-        if (serverDefinition && typeof serverDefinition === 'object' && serverDefinition.env && typeof serverDefinition.env === 'object') {
+        if (
+          serverDefinition &&
+          typeof serverDefinition === 'object' &&
+          serverDefinition.env &&
+          typeof serverDefinition.env === 'object'
+        ) {
           serverDefinition.env = redactEnvRecord(serverDefinition.env);
         }
       }
@@ -166,7 +177,9 @@ function getCodexRegistration(routerServerName) {
     return {
       available: true,
       registered: false,
-      reason: missingServer ? 'Codex does not have an ifin Platform MCP server configured yet.' : stderr,
+      reason: missingServer
+        ? 'Codex does not have an ifin Platform MCP server configured yet.'
+        : stderr,
       payload: null,
     };
   }
@@ -202,8 +215,10 @@ function codexConfigMatches(preview, registration) {
     ? transport.args.filter((value) => typeof value === 'string')
     : [];
 
-  return transport.command === preview.transport.command
-    && JSON.stringify(actualArgs) === JSON.stringify(preview.transport.args);
+  return (
+    transport.command === preview.transport.command &&
+    JSON.stringify(actualArgs) === JSON.stringify(preview.transport.args)
+  );
 }
 
 function applyCodexPreview(preview) {
@@ -217,11 +232,16 @@ function applyCodexPreview(preview) {
   if (registration.available && registration.registered) {
     const removeResult = runCommand('codex', ['mcp', 'remove', preview.routerServerName]);
     if (removeResult.status !== 0) {
-      throw new Error(removeResult.stderr.trim() || 'Failed to remove the existing Codex MCP registration.');
+      throw new Error(
+        removeResult.stderr.trim() || 'Failed to remove the existing Codex MCP registration.'
+      );
     }
   }
 
-  const envArgs = normalizeEnvEntries(preview.transport.env).flatMap(([key, value]) => ['--env', `${key}=${value}`]);
+  const envArgs = normalizeEnvEntries(preview.transport.env).flatMap(([key, value]) => [
+    '--env',
+    `${key}=${value}`,
+  ]);
   const addArgs = [
     'mcp',
     'add',
@@ -234,7 +254,9 @@ function applyCodexPreview(preview) {
 
   const addResult = runCommand('codex', addArgs);
   if (addResult.status !== 0) {
-    throw new Error(addResult.stderr.trim() || 'Failed to register the ifin Platform MCP server with Codex.');
+    throw new Error(
+      addResult.stderr.trim() || 'Failed to register the ifin Platform MCP server with Codex.'
+    );
   }
 
   return {
@@ -264,7 +286,7 @@ function formatCodexPreview(preview) {
       launcherMode: preview.resolvedMode,
     },
     null,
-    2,
+    2
   );
 }
 
@@ -312,15 +334,21 @@ async function configureAllTargets(integrationModule, context, launcherMode, rep
       results.push({
         status: 'preview',
         label: target.label,
-        detail: preview.command === null || preview.resolvedMode === null
-          ? (preview.reason ?? 'No valid launcher target is available.')
-          : `${preview.configPath} (${preview.resolvedMode})`,
+        detail:
+          preview.command === null || preview.resolvedMode === null
+            ? (preview.reason ?? 'No valid launcher target is available.')
+            : `${preview.configPath} (${preview.resolvedMode})`,
       });
       continue;
     }
 
     try {
-      const applied = integrationModule.applyMcpClientConfig(context, target.id, launcherMode, repair);
+      const applied = integrationModule.applyMcpClientConfig(
+        context,
+        target.id,
+        launcherMode,
+        repair
+      );
       results.push({
         status: 'configured',
         label: applied.targetLabel,
@@ -396,11 +424,19 @@ async function main() {
     env: process.env,
   });
 
-  const jsonTargetIds = integrationModule.getMcpClientDefinitions(context).map((target) => target.id);
+  const jsonTargetIds = integrationModule
+    .getMcpClientDefinitions(context)
+    .map((target) => target.id);
   const routerServerName = integrationModule.ROUTER_SERVER_NAME ?? FALLBACK_ROUTER_SERVER_NAME;
 
   if (targetId === ALL_TARGET_ID) {
-    const results = await configureAllTargets(integrationModule, context, launcherMode, repair, showOnly);
+    const results = await configureAllTargets(
+      integrationModule,
+      context,
+      launcherMode,
+      repair,
+      showOnly
+    );
     results.forEach((result) => printResultLine(result.status, result.label, result.detail));
     process.exit(results.some((result) => result.status === 'blocked') ? 1 : 0);
   }
@@ -426,13 +462,19 @@ async function main() {
     }
 
     const applied = applyCodexPreview(preview);
-    printResultLine('configured', applied.targetLabel, `${applied.configPath} (${applied.resolvedMode})`);
+    printResultLine(
+      'configured',
+      applied.targetLabel,
+      `${applied.configPath} (${applied.resolvedMode})`
+    );
     process.exit(0);
   }
 
   if (!jsonTargetIds.includes(targetId)) {
     console.error(`Unknown setup target: ${targetId}`);
-    console.error(`Supported targets: ${[...jsonTargetIds, CODEX_TARGET_ID, ALL_TARGET_ID].join(', ')}`);
+    console.error(
+      `Supported targets: ${[...jsonTargetIds, CODEX_TARGET_ID, ALL_TARGET_ID].join(', ')}`
+    );
     process.exit(1);
   }
 
@@ -462,12 +504,20 @@ async function main() {
   }
 
   const applied = integrationModule.applyMcpClientConfig(context, targetId, launcherMode, repair);
-  printResultLine('configured', applied.targetLabel, `${applied.configPath} (${applied.resolvedMode})`);
+  printResultLine(
+    'configured',
+    applied.targetLabel,
+    `${applied.configPath} (${applied.resolvedMode})`
+  );
 
   if (targetId !== CODEX_TARGET_ID) {
     const codexRegistration = getCodexRegistration(routerServerName);
     if (codexRegistration.available && !codexRegistration.registered) {
-      printResultLine('hint', 'Codex', 'Run `npm run setup -- codex --mode repo` if you want the same server available in Codex.');
+      printResultLine(
+        'hint',
+        'Codex',
+        'Run `npm run setup -- codex --mode repo` if you want the same server available in Codex.'
+      );
     }
   }
 }

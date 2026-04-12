@@ -112,13 +112,22 @@ const sections: SectionConfig[] = [
   },
 ];
 
-function StatusCard({ title, status, details, icon }: {
+function StatusCard({
+  title,
+  status,
+  details,
+  icon,
+}: {
   title: string;
   status: 'good' | 'warning' | 'error';
   details: string;
   icon: string;
 }) {
-  const colors = { good: 'var(--status-good)', warning: 'var(--status-warning)', error: 'var(--status-poor)' };
+  const colors = {
+    good: 'var(--status-good)',
+    warning: 'var(--status-warning)',
+    error: 'var(--status-poor)',
+  };
   return (
     <div className="status-card">
       <div className="status-card-header">
@@ -164,7 +173,7 @@ function getDefaultBrowserSettings(): BrowserSettings {
     logging: {
       level: 'info',
       fileLogging: true,
-      logPath: '~/.mcp-router-logs',
+      logPath: '~/.ifin-platform-logs',
     },
   };
 }
@@ -174,13 +183,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 function hasNoProviderConfigurationWarning(warnings: string[]): boolean {
   return warnings.some((warning) => {
     const normalized = warning.toLowerCase();
-    return normalized.includes('no providers configured') || normalized.includes('no providers available for discovery');
+    return (
+      normalized.includes('no providers configured') ||
+      normalized.includes('no providers available for discovery')
+    );
   });
 }
 
@@ -192,28 +206,31 @@ function normalizeBrowserSettings(value: unknown): BrowserSettings {
   }
 
   const rawBrowsers = isRecord(value.browsers) ? value.browsers : {};
-  const browsers = browserTypes.reduce<Record<BrowserType, StoredBrowserConfig>>((accumulator, browserType) => {
-    const candidate = isRecord(rawBrowsers[browserType]) ? rawBrowsers[browserType] : {};
-    accumulator[browserType] = {
-      enabled:
-        typeof candidate.enabled === 'boolean'
-          ? candidate.enabled
-          : defaults.browsers[browserType].enabled,
-      path:
-        typeof candidate.path === 'string' || candidate.path === null
-          ? candidate.path
-          : defaults.browsers[browserType].path,
-      headless:
-        typeof candidate.headless === 'boolean'
-          ? candidate.headless
-          : defaults.browsers[browserType].headless,
-      userDataDir:
-        typeof candidate.userDataDir === 'string' || candidate.userDataDir === null
-          ? candidate.userDataDir
-          : defaults.browsers[browserType].userDataDir,
-    };
-    return accumulator;
-  }, {} as Record<BrowserType, StoredBrowserConfig>);
+  const browsers = browserTypes.reduce<Record<BrowserType, StoredBrowserConfig>>(
+    (accumulator, browserType) => {
+      const candidate = isRecord(rawBrowsers[browserType]) ? rawBrowsers[browserType] : {};
+      accumulator[browserType] = {
+        enabled:
+          typeof candidate.enabled === 'boolean'
+            ? candidate.enabled
+            : defaults.browsers[browserType].enabled,
+        path:
+          typeof candidate.path === 'string' || candidate.path === null
+            ? candidate.path
+            : defaults.browsers[browserType].path,
+        headless:
+          typeof candidate.headless === 'boolean'
+            ? candidate.headless
+            : defaults.browsers[browserType].headless,
+        userDataDir:
+          typeof candidate.userDataDir === 'string' || candidate.userDataDir === null
+            ? candidate.userDataDir
+            : defaults.browsers[browserType].userDataDir,
+      };
+      return accumulator;
+    },
+    {} as Record<BrowserType, StoredBrowserConfig>
+  );
 
   const rawPerformance = isRecord(value.performance) ? value.performance : {};
   const rawLogging = isRecord(value.logging) ? value.logging : {};
@@ -240,27 +257,31 @@ function normalizeBrowserSettings(value: unknown): BrowserSettings {
         typeof rawLogging.fileLogging === 'boolean'
           ? rawLogging.fileLogging
           : defaults.logging.fileLogging,
-      logPath: typeof rawLogging.logPath === 'string' ? rawLogging.logPath : defaults.logging.logPath,
+      logPath:
+        typeof rawLogging.logPath === 'string' ? rawLogging.logPath : defaults.logging.logPath,
     },
   };
 }
 
 function buildBrowserViewModel(settings: BrowserSettings): BrowserConfig {
-  return browserTypes.reduce<BrowserConfig>((accumulator, browserType) => {
-    const browser = settings.browsers[browserType];
-    accumulator[browserType] = {
-      enabled: browser.enabled,
-      path: browser.path,
-      version: '',
-      status: 'idle',
-    };
-    return accumulator;
-  }, {
-    chrome: { enabled: false, path: null, version: '', status: 'idle' },
-    edge: { enabled: false, path: null, version: '', status: 'idle' },
-    firefox: { enabled: false, path: null, version: '', status: 'idle' },
-    safari: { enabled: false, path: null, version: '', status: 'idle' },
-  });
+  return browserTypes.reduce<BrowserConfig>(
+    (accumulator, browserType) => {
+      const browser = settings.browsers[browserType];
+      accumulator[browserType] = {
+        enabled: browser.enabled,
+        path: browser.path,
+        version: '',
+        status: 'idle',
+      };
+      return accumulator;
+    },
+    {
+      chrome: { enabled: false, path: null, version: '', status: 'idle' },
+      edge: { enabled: false, path: null, version: '', status: 'idle' },
+      firefox: { enabled: false, path: null, version: '', status: 'idle' },
+      safari: { enabled: false, path: null, version: '', status: 'idle' },
+    }
+  );
 }
 
 export default function App() {
@@ -268,12 +289,15 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [browserConfig, setBrowserConfig] = useState<BrowserConfig | null>(null);
-  const [browserSettings, setBrowserSettings] = useState<BrowserSettings>(getDefaultBrowserSettings);
+  const [browserSettings, setBrowserSettings] =
+    useState<BrowserSettings>(getDefaultBrowserSettings);
   const [launcherMode, setLauncherMode] = useState<LauncherMode>('auto');
   const [integrationRecords, setIntegrationRecords] = useState<IntegrationRecord[]>([]);
   const [systemReadiness, setSystemReadiness] = useState<SystemReadiness | null>(null);
   const [integrationPreview, setIntegrationPreview] = useState<IntegrationPreview | null>(null);
-  const [integrationTestResult, setIntegrationTestResult] = useState<IntegrationTestResult | null>(null);
+  const [integrationTestResult, setIntegrationTestResult] = useState<IntegrationTestResult | null>(
+    null
+  );
   const [mcpServerStatus, setMcpServerStatus] = useState<{ running: boolean; pid: number | null }>({
     running: false,
     pid: null,
@@ -282,13 +306,21 @@ export default function App() {
   const [appVersion, setAppVersion] = useState('');
   const [modeSelected, setModeSelected] = useState<boolean>(true); // assume selected until checked
   const [currentMode, setCurrentMode] = useState<string>('agent');
-  const [browserBridgeStatus, setBrowserBridgeStatus] = useState<'connected' | 'degraded' | 'not_connected'>('not_connected');
+  const [browserBridgeStatus, setBrowserBridgeStatus] = useState<
+    'connected' | 'degraded' | 'not_connected'
+  >('not_connected');
   const [browserTabCount, setBrowserTabCount] = useState<number>(0);
   const [routerVersion, setRouterVersion] = useState<string>('');
-  const [routerHealthStatus, setRouterHealthStatus] = useState<'healthy' | 'degraded' | 'disconnected'>('disconnected');
-  const [routerHealthDetail, setRouterHealthDetail] = useState<string>('The local API is not reachable.');
+  const [routerHealthStatus, setRouterHealthStatus] = useState<
+    'healthy' | 'degraded' | 'disconnected'
+  >('disconnected');
+  const [routerHealthDetail, setRouterHealthDetail] = useState<string>(
+    'The local API is not reachable.'
+  );
   const [providersConfigured, setProvidersConfigured] = useState<boolean>(true);
-  const [browserTabs, setBrowserTabs] = useState<Array<{ tabId: string; url: string; title: string; isActive: boolean }>>([]);
+  const [browserTabs, setBrowserTabs] = useState<
+    Array<{ tabId: string; url: string; title: string; isActive: boolean }>
+  >([]);
   const [showBrowserPairing, setShowBrowserPairing] = useState<boolean>(false);
 
   useEffect(() => {
@@ -305,7 +337,7 @@ export default function App() {
       try {
         const res = await fetch('http://localhost:3000/health');
         if (res.ok) {
-          const data = await res.json() as unknown;
+          const data = (await res.json()) as unknown;
           if (!isRecord(data)) {
             throw new Error('Health response returned an unexpected shape.');
           }
@@ -456,8 +488,17 @@ export default function App() {
       return 'Waiting for the local API to finish starting.';
     }
 
-    return systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.detail || 'No local API status yet';
-  }, [mcpServerStatus.running, providersConfigured, routerHealthStatus, routerVersion, systemReadiness]);
+    return (
+      systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.detail ||
+      'No local API status yet'
+    );
+  }, [
+    mcpServerStatus.running,
+    providersConfigured,
+    routerHealthStatus,
+    routerVersion,
+    systemReadiness,
+  ]);
 
   const loadIntegrations = async () => {
     try {
@@ -470,7 +511,10 @@ export default function App() {
         }
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to load integrations: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to load integrations: ${String(error)}`,
+      ]);
     }
   };
 
@@ -522,7 +566,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),
       });
-    } catch { /* router may not be running */ }
+    } catch {
+      /* router may not be running */
+    }
   };
 
   const setupEventListeners = () => {
@@ -579,7 +625,10 @@ export default function App() {
       }));
 
       if (!result.success) {
-        setLogs((prev) => [...prev.slice(-119), `[ERROR] ${browserType} test failed: ${result.error}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[ERROR] ${browserType} test failed: ${result.error}`,
+        ]);
       }
     } catch (error) {
       setBrowserConfig((prev) => ({
@@ -590,7 +639,10 @@ export default function App() {
         },
       }));
 
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] ${browserType} test failed: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] ${browserType} test failed: ${String(error)}`,
+      ]);
     }
   };
 
@@ -599,12 +651,21 @@ export default function App() {
       const result = await window.electronAPI.startMCPServer({});
       if (result.success) {
         setMcpServerStatus({ running: true, pid: result.pid });
-        setLogs((prev) => [...prev.slice(-119), `[INFO] MCP Server started with PID: ${result.pid}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[INFO] MCP Server started with PID: ${result.pid}`,
+        ]);
       } else {
-        setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to start MCP Server: ${result.error}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[ERROR] Failed to start MCP Server: ${result.error}`,
+        ]);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to start MCP Server: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to start MCP Server: ${String(error)}`,
+      ]);
     }
   };
 
@@ -616,7 +677,10 @@ export default function App() {
         setLogs((prev) => [...prev.slice(-119), '[INFO] MCP Server stopped']);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to stop MCP Server: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to stop MCP Server: ${String(error)}`,
+      ]);
     }
   };
 
@@ -628,16 +692,19 @@ export default function App() {
     try {
       const nextSettings: BrowserSettings = {
         ...browserSettings,
-        browsers: browserTypes.reduce<Record<BrowserType, StoredBrowserConfig>>((accumulator, browserType) => {
-          const existing = browserSettings.browsers[browserType];
-          const current = browserConfig[browserType];
-          accumulator[browserType] = {
-            ...existing,
-            enabled: current.enabled,
-            path: current.path,
-          };
-          return accumulator;
-        }, {} as Record<BrowserType, StoredBrowserConfig>),
+        browsers: browserTypes.reduce<Record<BrowserType, StoredBrowserConfig>>(
+          (accumulator, browserType) => {
+            const existing = browserSettings.browsers[browserType];
+            const current = browserConfig[browserType];
+            accumulator[browserType] = {
+              ...existing,
+              enabled: current.enabled,
+              path: current.path,
+            };
+            return accumulator;
+          },
+          {} as Record<BrowserType, StoredBrowserConfig>
+        ),
       };
 
       await window.electronAPI.configureBrowsers(nextSettings);
@@ -645,7 +712,10 @@ export default function App() {
       setLogs((prev) => [...prev.slice(-119), '[INFO] Browser configuration saved']);
       await loadIntegrations();
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to save configuration: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to save configuration: ${String(error)}`,
+      ]);
     }
   };
 
@@ -656,10 +726,16 @@ export default function App() {
         setLauncherMode(result.launcherMode);
         setIntegrationPreview(null);
         await loadIntegrations();
-        setLogs((prev) => [...prev.slice(-119), `[INFO] Launcher mode set to ${result.launcherMode}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[INFO] Launcher mode set to ${result.launcherMode}`,
+        ]);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to set launcher mode: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to set launcher mode: ${String(error)}`,
+      ]);
     }
   };
 
@@ -669,28 +745,44 @@ export default function App() {
       if (result.success && result.preview) {
         const preview = result.preview;
         setIntegrationPreview(preview);
-        setLogs((prev) => [...prev.slice(-119), `[INFO] Preview generated for ${preview.targetLabel}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[INFO] Preview generated for ${preview.targetLabel}`,
+        ]);
       } else if (result.error) {
         setLogs((prev) => [...prev.slice(-119), `[ERROR] ${result.error}`]);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to preview integration: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to preview integration: ${String(error)}`,
+      ]);
     }
   };
 
   const applyIntegration = async (targetId: string, replaceInvalid: boolean = false) => {
     try {
-      const result = await window.electronAPI.integrationAPI.apply(targetId, launcherMode, replaceInvalid);
+      const result = await window.electronAPI.integrationAPI.apply(
+        targetId,
+        launcherMode,
+        replaceInvalid
+      );
       if (result.success && result.preview) {
         const preview = result.preview;
         setIntegrationPreview(preview);
         await loadIntegrations();
-        setLogs((prev) => [...prev.slice(-119), `[INFO] Applied integration for ${preview.targetLabel}`]);
+        setLogs((prev) => [
+          ...prev.slice(-119),
+          `[INFO] Applied integration for ${preview.targetLabel}`,
+        ]);
       } else if (result.error) {
         setLogs((prev) => [...prev.slice(-119), `[ERROR] ${result.error}`]);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to apply integration: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to apply integration: ${String(error)}`,
+      ]);
     }
   };
 
@@ -705,7 +797,10 @@ export default function App() {
         setLogs((prev) => [...prev.slice(-119), `[ERROR] ${result.error}`]);
       }
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to test integration: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to test integration: ${String(error)}`,
+      ]);
     }
   };
 
@@ -733,16 +828,23 @@ export default function App() {
       await window.electronAPI.copyText(instructions);
       setLogs((prev) => [...prev.slice(-119), '[INFO] Browser extension load instructions copied']);
     } catch (error) {
-      setLogs((prev) => [...prev.slice(-119), `[ERROR] Failed to copy instructions: ${String(error)}`]);
+      setLogs((prev) => [
+        ...prev.slice(-119),
+        `[ERROR] Failed to copy instructions: ${String(error)}`,
+      ]);
     }
   };
 
   const openExtensionGuide = () => {
-    void window.electronAPI.openURL('https://github.com/ifinsta/ifin-platform/blob/main/docs/INTEGRATIONS.md');
+    void window.electronAPI.openURL(
+      'https://github.com/ifinsta/ifin-platform/blob/main/docs/INTEGRATIONS.md'
+    );
   };
 
   const openBrowserGuide = () => {
-    void window.electronAPI.openURL('https://github.com/ifinsta/ifin-platform/blob/main/docs/BROWSER.md');
+    void window.electronAPI.openURL(
+      'https://github.com/ifinsta/ifin-platform/blob/main/docs/BROWSER.md'
+    );
   };
 
   const getStatusLabel = (status: string) => {
@@ -897,7 +999,11 @@ export default function App() {
           <button type="button" className="btn-secondary" onClick={() => setActiveTab('dashboard')}>
             Overview
           </button>
-          <button type="button" className="btn-secondary" onClick={() => setActiveTab('integrations')}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setActiveTab('integrations')}
+          >
             Integrations
           </button>
           <button type="button" className="btn-secondary" onClick={() => setActiveTab('browser')}>
@@ -923,14 +1029,24 @@ export default function App() {
         <StatusCard
           icon="🔌"
           title="MCP Server"
-            status={routerCardState.status}
-            details={routerCardState.details}
+          status={routerCardState.status}
+          details={routerCardState.details}
         />
         <StatusCard
           icon="🌐"
           title="Browser Bridge"
-          status={browserBridgeStatus === 'connected' ? 'good' : browserBridgeStatus === 'degraded' ? 'warning' : 'error'}
-          details={browserBridgeStatus === 'connected' ? `Connected (${browserTabCount} tab${browserTabCount !== 1 ? 's' : ''})` : 'Not Connected'}
+          status={
+            browserBridgeStatus === 'connected'
+              ? 'good'
+              : browserBridgeStatus === 'degraded'
+                ? 'warning'
+                : 'error'
+          }
+          details={
+            browserBridgeStatus === 'connected'
+              ? `Connected (${browserTabCount} tab${browserTabCount !== 1 ? 's' : ''})`
+              : 'Not Connected'
+          }
         />
         <StatusCard
           icon="🤖"
@@ -943,8 +1059,12 @@ export default function App() {
       <div className="stats-grid">
         <div className="metric-panel">
           <span className="metric-label">System Readiness</span>
-          <strong className="metric-value">{getStatusLabel(systemReadiness?.status || 'not_configured')}</strong>
-          <span className="metric-detail">{systemReadiness?.summary || 'Readiness data is still loading.'}</span>
+          <strong className="metric-value">
+            {getStatusLabel(systemReadiness?.status || 'not_configured')}
+          </strong>
+          <span className="metric-detail">
+            {systemReadiness?.summary || 'Readiness data is still loading.'}
+          </span>
         </div>
         <div className="metric-panel">
           <span className="metric-label">Launcher Mode</span>
@@ -958,17 +1078,25 @@ export default function App() {
         <div className="metric-panel">
           <span className="metric-label">Local API</span>
           <strong className="metric-value">
-            {getStatusLabel(systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.status || 'degraded')}
+            {getStatusLabel(
+              systemReadiness?.planes.find((plane) => plane.id === 'localApi')?.status || 'degraded'
+            )}
           </strong>
           <span className="metric-detail">{localApiDetail}</span>
         </div>
         <div className="metric-panel">
           <span className="metric-label">Browser Bridge</span>
-          <strong className={`metric-value ${mcpServerStatus.running ? 'state-success' : 'state-danger'}`}>
-            {getStatusLabel(systemReadiness?.planes.find((plane) => plane.id === 'browserBridge')?.status || 'degraded')}
+          <strong
+            className={`metric-value ${mcpServerStatus.running ? 'state-success' : 'state-danger'}`}
+          >
+            {getStatusLabel(
+              systemReadiness?.planes.find((plane) => plane.id === 'browserBridge')?.status ||
+                'degraded'
+            )}
           </strong>
           <span className="metric-detail">
-            {systemReadiness?.planes.find((plane) => plane.id === 'browserBridge')?.detail || 'No bridge status yet'}
+            {systemReadiness?.planes.find((plane) => plane.id === 'browserBridge')?.detail ||
+              'No bridge status yet'}
           </span>
         </div>
       </div>
@@ -987,11 +1115,17 @@ export default function App() {
                     <h4>{item.label}</h4>
                     <p>{item.summary}</p>
                   </div>
-                  <span className={`status-pill status-${item.status}`}>{getStatusLabel(item.status)}</span>
+                  <span className={`status-pill status-${item.status}`}>
+                    {getStatusLabel(item.status)}
+                  </span>
                 </div>
                 <p className="integration-detail">{item.remediation}</p>
                 <div className="integration-card-actions">
-                  <button type="button" className="btn-secondary" onClick={() => openChecklistDestination(item.id)}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => openChecklistDestination(item.id)}
+                  >
                     {item.id === 'local-api'
                       ? mcpServerStatus.running
                         ? 'Restart'
@@ -1014,19 +1148,30 @@ export default function App() {
           <dl className="detail-stack">
             <div>
               <dt>Platform</dt>
-              <dd>{systemInfo?.platform || 'Unknown'} {systemInfo?.version || ''}</dd>
+              <dd>
+                {systemInfo?.platform || 'Unknown'} {systemInfo?.version || ''}
+              </dd>
             </div>
             <div>
               <dt>Architecture</dt>
-              <dd>{systemInfo?.arch || 'Unknown'} / {systemInfo?.cpus || 0} cores</dd>
+              <dd>
+                {systemInfo?.arch || 'Unknown'} / {systemInfo?.cpus || 0} cores
+              </dd>
             </div>
             <div>
               <dt>Memory</dt>
-              <dd>{formatMemory(systemInfo?.freeMemory)} free of {formatMemory(systemInfo?.totalMemory)}</dd>
+              <dd>
+                {formatMemory(systemInfo?.freeMemory)} free of{' '}
+                {formatMemory(systemInfo?.totalMemory)}
+              </dd>
             </div>
             <div>
               <dt>Server</dt>
-              <dd>{mcpServerStatus.running ? `Running${mcpServerStatus.pid ? ` (PID ${mcpServerStatus.pid})` : ''}` : 'Stopped'}</dd>
+              <dd>
+                {mcpServerStatus.running
+                  ? `Running${mcpServerStatus.pid ? ` (PID ${mcpServerStatus.pid})` : ''}`
+                  : 'Stopped'}
+              </dd>
             </div>
             <div>
               <dt>Browsers Enabled</dt>
@@ -1075,7 +1220,8 @@ export default function App() {
   );
 
   const renderBrowser = () => {
-    const bridgePlane = systemReadiness?.planes.find((plane) => plane.id === 'browserBridge') ?? null;
+    const bridgePlane =
+      systemReadiness?.planes.find((plane) => plane.id === 'browserBridge') ?? null;
     const localApiPlane = systemReadiness?.planes.find((plane) => plane.id === 'localApi') ?? null;
 
     return (
@@ -1105,14 +1251,22 @@ export default function App() {
               <p className="integration-detail">{browserExtensionRecord.remediation}</p>
               <div className="integration-card-actions">
                 {browserExtensionRecord.path ? (
-                  <button type="button" className="btn-secondary" onClick={() => openIntegrationPath(browserExtensionRecord.path!)}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => openIntegrationPath(browserExtensionRecord.path!)}
+                  >
                     Open Folder
                   </button>
                 ) : null}
                 <button type="button" className="btn-secondary" onClick={copyBrowserInstructions}>
                   Copy Load Instructions
                 </button>
-                <button type="button" className="btn-primary" onClick={() => testIntegration('browser-extension')}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => testIntegration('browser-extension')}
+                >
                   Test Bridge
                 </button>
                 <button type="button" className="btn-secondary" onClick={openBrowserGuide}>
@@ -1152,11 +1306,24 @@ export default function App() {
         <section className="panel-block">
           <div className="panel-header">
             <h3>Managed Tabs</h3>
-            <span className="panel-note">{browserTabs.length} tab{browserTabs.length !== 1 ? 's' : ''}</span>
+            <span className="panel-note">
+              {browserTabs.length} tab{browserTabs.length !== 1 ? 's' : ''}
+            </span>
           </div>
-          <div className="tabs-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+          <div
+            className="tabs-list"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+            }}
+          >
             {browserTabs.length === 0 ? (
-              <div className="empty-state">No tabs available. Connect a browser to see managed tabs.</div>
+              <div className="empty-state">
+                No tabs available. Connect a browser to see managed tabs.
+              </div>
             ) : (
               browserTabs.map((tab) => (
                 <div
@@ -1174,10 +1341,26 @@ export default function App() {
                 >
                   <span style={{ fontSize: '12px' }}>🌐</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
                       {tab.title || 'Untitled'}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
                       {tab.url}
                     </div>
                   </div>
@@ -1219,7 +1402,9 @@ export default function App() {
                     <div className="browser-header">
                       <div className="browser-info">
                         <h4>{record.label}</h4>
-                        <span className="browser-version">{browser?.version || 'Not detected'}</span>
+                        <span className="browser-version">
+                          {browser?.version || 'Not detected'}
+                        </span>
                       </div>
                       <span className={`status-pill status-${record.status}`}>
                         {getStatusLabel(record.status)}
@@ -1240,7 +1425,11 @@ export default function App() {
                     <p className="integration-detail">{record.remediation}</p>
 
                     <div className="integration-card-actions">
-                      <button type="button" className="btn-secondary" onClick={() => toggleBrowser(browserType)}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => toggleBrowser(browserType)}
+                      >
                         {browser?.enabled ? 'Disable' : 'Enable'}
                       </button>
                       <button
@@ -1279,7 +1468,10 @@ export default function App() {
             <div className="empty-state">No logs available.</div>
           ) : (
             logs.map((log, index) => (
-              <div key={index} className={`log-entry ${log.startsWith('[ERROR]') ? 'error' : 'info'}`}>
+              <div
+                key={index}
+                className={`log-entry ${log.startsWith('[ERROR]') ? 'error' : 'info'}`}
+              >
                 {log}
               </div>
             ))
@@ -1298,7 +1490,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const renderSettings = () => (
@@ -1373,7 +1567,7 @@ export default function App() {
             </div>
             <div>
               <dt>Configuration Path</dt>
-              <dd>~/.mcp-router-browser.json</dd>
+              <dd>~/.ifin-platform-browser.json</dd>
             </div>
           </dl>
         </section>
@@ -1384,7 +1578,8 @@ export default function App() {
             <span className="panel-note">Repository reference</span>
           </div>
           <p className="panel-copy">
-            Open the project documentation for IDE setup, browser extension workflows, and operational guidance.
+            Open the project documentation for IDE setup, browser extension workflows, and
+            operational guidance.
           </p>
           <div className="inline-actions">
             <button

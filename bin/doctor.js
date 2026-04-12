@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
-const ROUTER_SERVER_NAME = 'mcp-router';
+const ROUTER_SERVER_NAME = 'ifin-platform';
 const PROVIDER_ENV_KEYS = [
   'OPENAI_API_KEY',
   'GLM_API_KEY',
@@ -78,8 +78,14 @@ function runNpmVersion(commandRunner) {
 }
 
 function compareVersions(left, right) {
-  const leftParts = left.replace(/^v/u, '').split('.').map((value) => Number.parseInt(value, 10) || 0);
-  const rightParts = right.replace(/^v/u, '').split('.').map((value) => Number.parseInt(value, 10) || 0);
+  const leftParts = left
+    .replace(/^v/u, '')
+    .split('.')
+    .map((value) => Number.parseInt(value, 10) || 0);
+  const rightParts = right
+    .replace(/^v/u, '')
+    .split('.')
+    .map((value) => Number.parseInt(value, 10) || 0);
   const maxLength = Math.max(leftParts.length, rightParts.length);
 
   for (let index = 0; index < maxLength; index += 1) {
@@ -116,10 +122,10 @@ function getClientDefinitions(platform, homedir, appDataDir, localAppDataDir) {
   if (platform === 'win32') {
     return [
       {
-        id: 'antigravity',
-        label: 'Antigravity',
-        configPath: path.join(appDataDir, 'antigravity', 'mcp_servers.json'),
-        appPath: path.join(localAppDataDir, 'Programs', 'Antigravity', 'Antigravity.exe'),
+        id: 'ifin-platform',
+        label: 'ifin-platform',
+        configPath: path.join(appDataDir, 'ifin-platform', 'mcp_servers.json'),
+        appPath: path.join(localAppDataDir, 'Programs', 'ifin-platform', 'ifin-platform.exe'),
       },
       {
         id: 'cursor',
@@ -150,9 +156,9 @@ function getClientDefinitions(platform, homedir, appDataDir, localAppDataDir) {
 
   return [
     {
-      id: 'antigravity',
-      label: 'Antigravity',
-      configPath: path.join(homedir, '.config', 'antigravity', 'mcp_servers.json'),
+      id: 'ifin-platform',
+      label: 'ifin-platform',
+      configPath: path.join(homedir, '.config', 'ifin-platform', 'mcp_servers.json'),
       appPath: null,
     },
     {
@@ -178,7 +184,13 @@ function getClientDefinitions(platform, homedir, appDataDir, localAppDataDir) {
       label: 'Claude Desktop',
       configPath:
         platform === 'darwin'
-          ? path.join(homedir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
+          ? path.join(
+              homedir,
+              'Library',
+              'Application Support',
+              'Claude',
+              'claude_desktop_config.json'
+            )
           : path.join(homedir, '.config', 'Claude', 'claude_desktop_config.json'),
       appPath: null,
     },
@@ -220,7 +232,8 @@ function getCodexRegistration(commandRunner = runCommand) {
       status: 'FAIL',
       label: 'Codex MCP registration',
       detail: 'Codex returned unreadable JSON for the configured server.',
-      remediation: 'Remove and recreate the registration with `npm run setup -- codex --mode repo`.',
+      remediation:
+        'Remove and recreate the registration with `npm run setup -- codex --mode repo`.',
     };
   }
 }
@@ -233,28 +246,39 @@ export function collectDoctorReport(overrides = {}) {
   const currentProjectRoot = overrides.projectRoot ?? projectRoot;
   const platform = overrides.platform ?? process.platform;
   const homedir = overrides.homedir ?? os.homedir();
-  const env = { ...parseDotEnvFile(path.join(currentProjectRoot, '.env')), ...process.env, ...(overrides.env ?? {}) };
+  const env = {
+    ...parseDotEnvFile(path.join(currentProjectRoot, '.env')),
+    ...process.env,
+    ...(overrides.env ?? {}),
+  };
   const appDataDir =
-    overrides.appDataDir ??
-    process.env.APPDATA ??
-    path.join(homedir, 'AppData', 'Roaming');
+    overrides.appDataDir ?? process.env.APPDATA ?? path.join(homedir, 'AppData', 'Roaming');
   const localAppDataDir =
-    overrides.localAppDataDir ??
-    process.env.LOCALAPPDATA ??
-    path.join(homedir, 'AppData', 'Local');
+    overrides.localAppDataDir ?? process.env.LOCALAPPDATA ?? path.join(homedir, 'AppData', 'Local');
 
   const sections = [];
 
-  const commandRunner = overrides.commandRunner ?? ((command, args) => runCommand(command, args, currentProjectRoot));
+  const commandRunner =
+    overrides.commandRunner ?? ((command, args) => runCommand(command, args, currentProjectRoot));
   const npmVersion = runNpmVersion(commandRunner);
   sections.push({
     title: 'Toolchain',
     items: [
       compareVersions(process.version, '20.10.0') >= 0
         ? makeItem('PASS', 'Node.js', process.version)
-        : makeItem('FAIL', 'Node.js', `${process.version} detected`, 'Install Node.js 20.10.0 or newer.'),
+        : makeItem(
+            'FAIL',
+            'Node.js',
+            `${process.version} detected`,
+            'Install Node.js 20.10.0 or newer.'
+          ),
       npmVersion.error
-        ? makeItem('FAIL', 'npm', 'npm is not available on PATH.', 'Install npm and rerun `npm install`.')
+        ? makeItem(
+            'FAIL',
+            'npm',
+            'npm is not available on PATH.',
+            'Install npm and rerun `npm install`.'
+          )
         : makeItem('PASS', 'npm', npmVersion.stdout.trim()),
       fs.existsSync(path.join(currentProjectRoot, 'node_modules'))
         ? makeItem('PASS', 'Dependencies', 'node_modules is present.')
@@ -265,7 +289,13 @@ export function collectDoctorReport(overrides = {}) {
   const routerEntrypoint = path.join(currentProjectRoot, 'dist', 'src', 'index.js');
   const legacyEntrypoint = path.join(currentProjectRoot, 'dist', 'index.js');
   const extensionEntrypoint = path.join(currentProjectRoot, 'extension', 'dist', 'extension.js');
-  const rendererEntrypoint = path.join(currentProjectRoot, 'electron', 'renderer', 'dist', 'index.html');
+  const rendererEntrypoint = path.join(
+    currentProjectRoot,
+    'electron',
+    'renderer',
+    'dist',
+    'index.html'
+  );
   const electronEntrypoint = path.join(currentProjectRoot, 'electron', 'dist', 'main.js');
 
   sections.push({
@@ -275,24 +305,46 @@ export function collectDoctorReport(overrides = {}) {
         ? makeItem('PASS', 'Router build', routerEntrypoint)
         : makeItem('FAIL', 'Router build', 'Missing dist/src/index.js.', 'Run `npm run build`.'),
       fs.existsSync(legacyEntrypoint)
-        ? makeItem('WARN', 'Legacy router entrypoint', legacyEntrypoint, 'Use `dist/src/index.js` in client configs, not `dist/index.js`.')
+        ? makeItem(
+            'WARN',
+            'Legacy router entrypoint',
+            legacyEntrypoint,
+            'Use `dist/src/index.js` in client configs, not `dist/index.js`.'
+          )
         : makeItem('PASS', 'Router entrypoint path', 'Canonical entrypoint is dist/src/index.js.'),
       fs.existsSync(extensionEntrypoint)
         ? makeItem('PASS', 'Extension build', extensionEntrypoint)
-        : makeItem('FAIL', 'Extension build', 'Missing extension/dist/extension.js.', 'Run `npm run build:ide-extension`.'),
+        : makeItem(
+            'FAIL',
+            'Extension build',
+            'Missing extension/dist/extension.js.',
+            'Run `npm run build:ide-extension`.'
+          ),
       fs.existsSync(rendererEntrypoint) && fs.existsSync(electronEntrypoint)
         ? makeItem('PASS', 'Desktop build', `${electronEntrypoint} + renderer bundle present`)
-        : makeItem('FAIL', 'Desktop build', 'Electron main build or renderer bundle is missing.', 'Run `npm run build:all`.'),
+        : makeItem(
+            'FAIL',
+            'Desktop build',
+            'Electron main build or renderer bundle is missing.',
+            'Run `npm run build:all`.'
+          ),
     ],
   });
 
-  const configuredProviders = PROVIDER_ENV_KEYS.filter((key) => typeof env[key] === 'string' && env[key].trim().length > 0);
+  const configuredProviders = PROVIDER_ENV_KEYS.filter(
+    (key) => typeof env[key] === 'string' && env[key].trim().length > 0
+  );
   sections.push({
     title: 'Environment',
     items: [
       fs.existsSync(path.join(currentProjectRoot, '.env'))
         ? makeItem('PASS', '.env file', '.env is present.')
-        : makeItem('WARN', '.env file', '.env is missing.', 'Copy `.env.example` to `.env` if you want router-mode provider config.'),
+        : makeItem(
+            'WARN',
+            '.env file',
+            '.env is missing.',
+            'Copy `.env.example` to `.env` if you want router-mode provider config.'
+          ),
       configuredProviders.length > 0
         ? makeItem('PASS', 'Provider configuration', configuredProviders.join(', '))
         : makeItem(
@@ -301,8 +353,13 @@ export function collectDoctorReport(overrides = {}) {
             'No provider API keys or Ollama base URL were detected.',
             'Set provider values in `.env` or use Agent mode until router-mode providers are configured.'
           ),
-      typeof env.ROUTER_DEFAULT_PROVIDER === 'string' && typeof env.ROUTER_DEFAULT_MODEL === 'string'
-        ? makeItem('PASS', 'Default router target', `${env.ROUTER_DEFAULT_PROVIDER} / ${env.ROUTER_DEFAULT_MODEL}`)
+      typeof env.ROUTER_DEFAULT_PROVIDER === 'string' &&
+      typeof env.ROUTER_DEFAULT_MODEL === 'string'
+        ? makeItem(
+            'PASS',
+            'Default router target',
+            `${env.ROUTER_DEFAULT_PROVIDER} / ${env.ROUTER_DEFAULT_MODEL}`
+          )
         : makeItem(
             'WARN',
             'Default router target',
@@ -315,14 +372,18 @@ export function collectDoctorReport(overrides = {}) {
   const clientItems = [];
   for (const client of getClientDefinitions(platform, homedir, appDataDir, localAppDataDir)) {
     const configExists = fs.existsSync(client.configPath);
-    const appDetected = client.appPath ? fs.existsSync(client.appPath) : fs.existsSync(path.dirname(client.configPath));
+    const appDetected = client.appPath
+      ? fs.existsSync(client.appPath)
+      : fs.existsSync(path.dirname(client.configPath));
 
     if (!configExists) {
       clientItems.push(
         makeItem(
           appDetected ? 'WARN' : 'PASS',
           client.label,
-          appDetected ? `No MCP config found at ${client.configPath}.` : 'Target not detected on this machine.',
+          appDetected
+            ? `No MCP config found at ${client.configPath}.`
+            : 'Target not detected on this machine.',
           appDetected ? `Run \`npm run setup -- ${client.id} --mode repo\`.` : ''
         )
       );
@@ -332,17 +393,28 @@ export function collectDoctorReport(overrides = {}) {
     const parsed = readJson(client.configPath);
     if (!parsed.ok || typeof parsed.value !== 'object' || parsed.value === null) {
       clientItems.push(
-        makeItem('FAIL', client.label, `Malformed JSON at ${client.configPath}.`, `Run \`npm run setup -- ${client.id} --mode repo --repair\`.`)
+        makeItem(
+          'FAIL',
+          client.label,
+          `Malformed JSON at ${client.configPath}.`,
+          `Run \`npm run setup -- ${client.id} --mode repo --repair\`.`
+        )
       );
       continue;
     }
 
     const mcpServers = parsed.value.mcpServers;
-    const hasRouterEntry = typeof mcpServers === 'object' && mcpServers !== null && ROUTER_SERVER_NAME in mcpServers;
+    const hasRouterEntry =
+      typeof mcpServers === 'object' && mcpServers !== null && ROUTER_SERVER_NAME in mcpServers;
     clientItems.push(
       hasRouterEntry
         ? makeItem('PASS', client.label, `${client.configPath} contains \`${ROUTER_SERVER_NAME}\`.`)
-        : makeItem('WARN', client.label, `${client.configPath} does not contain \`${ROUTER_SERVER_NAME}\`.`, `Run \`npm run setup -- ${client.id} --mode repo\`.`)
+        : makeItem(
+            'WARN',
+            client.label,
+            `${client.configPath} does not contain \`${ROUTER_SERVER_NAME}\`.`,
+            `Run \`npm run setup -- ${client.id} --mode repo\`.`
+          )
     );
   }
   clientItems.push(getCodexRegistration(commandRunner));
@@ -357,18 +429,39 @@ export function collectDoctorReport(overrides = {}) {
       items: [
         fs.existsSync(path.join(currentProjectRoot, 'electron', 'icon.ico'))
           ? makeItem('PASS', 'Installer icon', 'electron/icon.ico is present.')
-          : makeItem('FAIL', 'Installer icon', 'electron/icon.ico is missing.', 'Generate the installer assets before packaging.'),
+          : makeItem(
+              'FAIL',
+              'Installer icon',
+              'electron/icon.ico is missing.',
+              'Generate the installer assets before packaging.'
+            ),
         fs.existsSync(path.join(currentProjectRoot, 'electron', 'installer', 'build-installer.cjs'))
-          ? makeItem('PASS', 'Installer builder', 'electron/installer/build-installer.cjs is present.')
-          : makeItem('FAIL', 'Installer builder', 'Installer builder script is missing.', 'Restore the installer builder script before packaging.'),
+          ? makeItem(
+              'PASS',
+              'Installer builder',
+              'electron/installer/build-installer.cjs is present.'
+            )
+          : makeItem(
+              'FAIL',
+              'Installer builder',
+              'Installer builder script is missing.',
+              'Restore the installer builder script before packaging.'
+            ),
         fs.existsSync(path.join(currentProjectRoot, 'node_modules', 'electron-builder'))
           ? makeItem('PASS', 'electron-builder', 'electron-builder dependency is installed.')
-          : makeItem('FAIL', 'electron-builder', 'electron-builder dependency is missing.', 'Run `npm install` before packaging the Windows app.'),
+          : makeItem(
+              'FAIL',
+              'electron-builder',
+              'electron-builder dependency is missing.',
+              'Run `npm install` before packaging the Windows app.'
+            ),
       ],
     });
   }
 
-  const hasFailures = sections.some((section) => section.items.some((item) => item.status === 'FAIL'));
+  const hasFailures = sections.some((section) =>
+    section.items.some((item) => item.status === 'FAIL')
+  );
   return { sections, hasFailures };
 }
 

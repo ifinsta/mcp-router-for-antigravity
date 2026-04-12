@@ -16,7 +16,7 @@ playwright-report/
 test-results/
 .qoder/
 .agent/
-.antigravity/
+.ifin-platform/
 .claude/
 screenshots/*
 # Logs

@@ -13,9 +13,7 @@
     "mcpServer": {
       "name": "ifin Platform Server",
       "executable": "%ProgramFiles%\\ifin Platform\\ifin Platform.exe",
-      "args": [
-        "%ProgramFiles%\\ifin Platform\\resources\\app.asar\\dist\\src\\index.js"
-      ],
+      "args": ["%ProgramFiles%\\ifin Platform\\resources\\app.asar\\dist\\src\\index.js"],
       "env": {
         "ELECTRON_RUN_AS_NODE": "1"
       },
@@ -23,13 +21,9 @@
       "timeout": 30000
     },
     "browsers": {
-      "supported": [
-        "chrome",
-        "edge",
-        "firefox"
-      ],
+      "supported": ["chrome", "edge", "firefox"],
       "autoDetect": true,
-      "configPath": "%USERPROFILE%\\.mcp-router-browser.json"
+      "configPath": "%USERPROFILE%\\.ifin-platform-browser.json"
     }
   },
   "features": {
@@ -41,10 +35,7 @@
     "multiTab": true
   },
   "compatibility": {
-    "windows": [
-      "10",
-      "11"
-    ],
+    "windows": ["10", "11"],
     "node": ">=20.10.0",
     "chrome": ">=90",
     "edge": ">=90",

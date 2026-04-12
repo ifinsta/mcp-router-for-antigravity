@@ -45,7 +45,7 @@ Installer artifacts are written to `installers/`.
 Use the setup helper instead of hand-editing client config files:
 
 ```bash
-npm run setup -- antigravity --mode repo
+npm run setup -- ifin-platform --mode repo
 npm run setup -- cursor --mode repo
 npm run setup -- qoder --mode repo
 npm run setup -- codex --mode repo
@@ -56,17 +56,17 @@ Run `npm run doctor` after setup to verify:
 
 - router build artifacts exist
 - extension and desktop builds are present
-- client MCP configs contain `mcp-router`
-- Codex has an `mcp-router` registration
+- client MCP configs contain `ifin-platform`
+- Codex has an `ifin-platform` registration
 - Windows packaging prerequisites are intact
 
 ## Main Paths
 
 - Router entrypoint: `dist/src/index.js`
-- Browser configuration: `%USERPROFILE%\\.mcp-router-browser.json`
-- Logs directory: `%USERPROFILE%\\.mcp-router-logs`
-- Cache directory: `%USERPROFILE%\\.mcp-router-cache`
-- Installer output: `installers\\`
+- Browser configuration: `%USERPROFILE%\.ifin-platform-browser.json`
+- Logs directory: `%USERPROFILE%\.ifin-platform-logs`
+- Cache directory: `%USERPROFILE%\.ifin-platform-cache`
+- Installer output: `installers\`
 
 For installed Windows app launchers, use the bundled `app.asar` router entrypoint
 with `ELECTRON_RUN_AS_NODE=1`. Do not launch the packaged Electron binary with
@@ -83,7 +83,7 @@ with `ELECTRON_RUN_AS_NODE=1`. Do not launch the packaged Electron binary with
 ### Desktop app starts but browser automation is unavailable
 
 - Verify Chrome, Edge, or Firefox is installed locally
-- Check `%USERPROFILE%\\.mcp-router-browser.json`
+- Check `%USERPROFILE%\.ifin-platform-browser.json`
 - Review logs for startup or connection errors
 
 ### The router starts from terminal mode but not in Electron
