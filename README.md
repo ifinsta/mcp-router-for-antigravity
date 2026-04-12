@@ -1,16 +1,14 @@
-# README.md
-
-## ifin Platform
+# ifin Platform
 
 A production-grade MCP platform that connects supported clients, local extensions, browser tooling, and external LLM providers through one stable, resilient MCP server.
 
 The software is built for developers and teams that want:
 
-* one stable MCP layer across multiple supported clients
-* a strict compatibility layer between local clients and provider APIs
-* resilience under degraded provider conditions
-* strong typing, strong validation, and strong operational visibility
-* one clean integration point instead of many fragile direct integrations
+- one stable MCP layer across multiple supported clients
+- a strict compatibility layer between local clients and provider APIs
+- resilience under degraded provider conditions
+- strong typing, strong validation, and strong operational visibility
+- one clean integration point instead of many fragile direct integrations
 
 ---
 
@@ -21,14 +19,14 @@ ifin Platform is an MCP server that sits between supported clients and external 
 Clients talk to the router through MCP.
 The router handles:
 
-* request validation
-* transport-to-domain normalization
-* provider selection
-* provider-specific request/response translation
-* retry and fallback decisions
-* circuit-breaker and concurrency protection
-* health and observability
-* response normalization back to the calling client
+- request validation
+- transport-to-domain normalization
+- provider selection
+- provider-specific request/response translation
+- retry and fallback decisions
+- circuit-breaker and concurrency protection
+- health and observability
+- response normalization back to the calling client
 
 The result is a small, stable MCP-facing tool surface, even when the underlying providers differ significantly.
 
@@ -38,13 +36,13 @@ The result is a small, stable MCP-facing tool surface, even when the underlying 
 
 MCP-capable clients can connect to MCP servers, but external model providers often differ in:
 
-* authentication style
-* payload format
-* response format
-* model discovery behavior
-* token usage reporting
-* timeout and error behavior
-* compatibility with so-called OpenAI-compatible APIs
+- authentication style
+- payload format
+- response format
+- model discovery behavior
+- token usage reporting
+- timeout and error behavior
+- compatibility with so-called OpenAI-compatible APIs
 
 This project isolates those differences behind provider adapters and exposes one predictable execution model to supported clients.
 
@@ -56,111 +54,145 @@ This project isolates those differences behind provider adapters and exposes one
 
 ifin Platform supports two operational modes:
 
-* **Agent Mode** — Use your IDE's AI with ifin tools. No provider keys required for basic use. The host IDE's AI owns chat.
-* **Router Mode** — Use ifin tools plus ifin-managed models. Provider keys enable routed chat features.
+- **Agent Mode** — Use your IDE's AI with ifin tools. No provider keys required for basic use. The host IDE's AI owns chat.
+- **Router Mode** — Use ifin tools plus ifin-managed models. Provider keys enable routed chat features.
 
 The key principle: **Modes change only chat ownership, not the core tool or browser experience.**
 
-| Feature | Agent Mode | Router Mode |
-|---------|------------|-------------|
-| MCP tools | ✓ | ✓ |
-| Browser automation | ✓ | ✓ |
-| Browser bridge | ✓ | ✓ |
-| Native LM provider (VS Code) | ✗ | ✓ |
-| Provider key configuration | Optional | Required |
+| Feature                      | Agent Mode | Router Mode |
+| ---------------------------- | ---------- | ----------- |
+| MCP tools                    | ✓          | ✓           |
+| Browser automation           | ✓          | ✓           |
+| Browser bridge               | ✓          | ✓           |
+| Native LM provider (VS Code) | ✗          | ✓           |
+| Provider key configuration   | Optional   | Required    |
 
 Mode is selectable on first run and can be switched at any time via:
-* VS Code: QuickPick command or `ifin-platform.mode` setting
-* Electron: Settings panel toggle
-* Chrome: Badge click in popup
+
+- VS Code: QuickPick command or `ifin-platform.mode` setting
+- Electron: Settings panel toggle
+- Chrome: Badge click in popup
 
 ### Stable MCP tool surface
 
 The software exposes a small, stable set of tools:
 
-* `llm.chat`
-* `llm.list_models`
-* `router.health`
-* `browser.*`
+- `llm_chat`
+- `llm_list_models`
+- `router_health`
+- `router_cache`
+- `llm_consensus`
+- `llm_from_template`
+- `llm_list_templates`
+- `browser.*`
+- Assignment tools (`create_assignment`, `start_assignment`, `complete_objective`, etc.)
 
 Optional extensions can be enabled without weakening the core contract.
+
+### Advanced LLM features
+
+The router includes additional LLM tooling beyond basic chat:
+
+- **Consensus** — Query multiple models in parallel and get quality-ranked responses
+- **Prompt templates** — Pre-defined templates for common tasks (code review, React components, unit tests, etc.)
+- **Structured output** — JSON schema validation for deterministic response parsing
+- **Quality guards** — Output quality checks with auto-retry (syntax, length, repetition, non-answer detection)
+- **Response caching** — TTL-based caching with key invalidation support
 
 ### Local integrations
 
 The repository also includes optional local integrations around the core router:
 
-* a Windows desktop application for local setup, packaging, and runtime management
-* an IDE extension for VS Code-compatible editors
-* a browser extension that gives the router a live in-browser bridge
+- a Windows desktop application for local setup, packaging, and runtime management
+- an IDE extension for VS Code-compatible editors
+- a browser extension that gives the router a live in-browser bridge
 
 The browser extension exists to support:
 
-* browser automation and tab-aware control
-* page-context script execution
-* browser diagnostics and runtime inspection
-* real-time metrics collection and WebSocket-based event streaming
-* Chrome DevTools Protocol-backed profiling and extension-assisted browser control
+- browser automation and tab-aware control
+- page-context script execution
+- browser diagnostics and runtime inspection
+- real-time metrics collection and WebSocket-based event streaming
+- Chrome DevTools Protocol-backed profiling and extension-assisted browser control
 
 ### Unified browser MCP
 
 The default browser-facing contract is now one `browser.*` family that combines
 general automation and performance-oriented workflows:
 
-* `browser.capabilities`
-* `browser.session.open`, `browser.session.close`, `browser.session.list`
-* `browser.navigate`, `browser.screenshot`, `browser.evaluate`
-* `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.scroll`, `browser.wait_for`
-* `browser.console`
-* `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
-* `browser.network.set_conditions`, `browser.network.reset`
-* `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
-* `browser.profile.start`, `browser.profile.stop`
+- `browser.capabilities`
+- `browser.session.open`, `browser.session.close`, `browser.session.list`
+- `browser.navigate`, `browser.screenshot`, `browser.evaluate`
+- `browser.click`, `browser.type`, `browser.fill_form`, `browser.hover`, `browser.scroll`, `browser.wait_for`
+- `browser.console`
+- `browser.tabs.list`, `browser.tabs.create`, `browser.tabs.activate`, `browser.tabs.close`
+- `browser.network.set_conditions`, `browser.network.reset`
+- `browser.metrics`, `browser.web_vitals`, `browser.audit.design`
+- `browser.profile.start`, `browser.profile.stop`
 
 ### Browser Intelligence Tools
 
 Tools for evidence capture, failure analysis, and workflow verification:
 
-* `browser.evidence.capture`, `browser.evidence.explain`, `browser.evidence.analyze_flake`, `browser.evidence.root_cause`
-* `browser.tabs.list_all`, `browser.tabs.switch`
-* `browser.recorder.start`, `browser.recorder.stop`, `browser.recorder.export`
-* `browser.assertions.evaluate`
-* `browser.verification.run`
-* `browser.pr_summary.generate`
+- `browser.evidence.capture`, `browser.evidence.explain`, `browser.evidence.analyze_flake`, `browser.evidence.root_cause`
+- `browser.tabs.list_all`, `browser.tabs.switch`
+- `browser.recorder.start`, `browser.recorder.stop`, `browser.recorder.export`
+- `browser.assertions.evaluate`
+- `browser.verification.run`
+- `browser.pr_summary.generate`
 
 These tools support:
-* **Evidence capsules** — capture screenshots, DOM, console, network, performance
-* **Failure classification** — classify into app_code, timing, selector_drift, backend_failure, environment
-* **Flake detection** — multi-run analysis with recommendations
-* **Root cause mapping** — map evidence to probable code ownership
-* **Assertion evaluation** — 6-category (functional, visual, a11y, performance, ux, network)
-* **Fix verification** — compare before/after with verdicts
-* **PR summaries** — GitHub-ready markdown reports
-* **Workflow recording** — record-to-test code generation
+
+- **Evidence capsules** — capture screenshots, DOM, console, network, performance
+- **Failure classification** — classify into app_code, timing, selector_drift, backend_failure, environment
+- **Flake detection** — multi-run analysis with recommendations
+- **Root cause mapping** — map evidence to probable code ownership
+- **Assertion evaluation** — 6-category (functional, visual, a11y, performance, ux, network)
+- **Fix verification** — compare before/after with verdicts
+- **PR summaries** — GitHub-ready markdown reports
+- **Workflow recording** — record-to-test code generation
 
 Browser execution stays transport-neutral at the MCP boundary:
 
-* Chrome browser sessions require extension-backed augmentation by default, with explicit opt-in for degraded CDP-only execution
-* Edge uses Chromium CDP without extension augmentation
-* Firefox uses Marionette/WebDriver-style control for core actions
-* Safari is surfaced through the same contract, but with limited capabilities called out explicitly
-* Console capture is available on CDP-capable Chromium sessions, so visual debugging does not depend entirely on the extension path
+- Chrome browser sessions require extension-backed augmentation by default, with explicit opt-in for degraded CDP-only execution
+- Edge uses Chromium CDP without extension augmentation
+- Firefox uses Marionette/WebDriver-style control for core actions
+- Safari is surfaced through the same contract, but with limited capabilities called out explicitly
+- Console capture is available on CDP-capable Chromium sessions, so visual debugging does not depend entirely on the extension path
 
 ### Multi-provider support
 
 Supported provider paths include:
 
-* OpenAI
-* GLM
-* Ollama
-* self-hosted OpenAI-compatible endpoints
+- OpenAI
+- GLM (Z.AI)
+- Chutes.ai
+- Anthropic
+- Azure OpenAI
+- self-hosted OpenAI-compatible endpoints
+
+### Assignment modes
+
+The router supports structured assignment execution with multiple modes:
+
+- **Explorer** — Codebase discovery and URL mapping
+- **Tester** — Comprehensive testing assignments
+- **Auditor** — Code and security audits
+- **Benchmarker** — Performance benchmarking
+- **Migrator** — Code migration tasks
+- **Optimizer** — Performance optimization
+- **Documenter** — Documentation generation
+- **Custom** — User-defined assignment workflows
+
+Tools include `create_assignment`, `start_assignment`, `resume_assignment`, `pause_assignment`, `complete_objective`, `add_checkpoint`, `get_assignment_status`, and `get_assignment_report`.
 
 ### Strong normalization
 
 The router separates:
 
-* MCP transport DTOs
-* internal normalized domain contracts
-* provider-native request/response types
+- MCP transport DTOs
+- internal normalized domain contracts
+- provider-native request/response types
 
 This prevents provider-specific quirks from leaking into the rest of the system.
 
@@ -168,44 +200,44 @@ This prevents provider-specific quirks from leaking into the rest of the system.
 
 The router includes:
 
-* bounded retries
-* exponential backoff
-* jitter
-* request-budget accounting
-* provider fallback
-* circuit breakers
-* bulkheads and concurrency limits
-* degraded-success warnings
+- bounded retries
+- exponential backoff
+- jitter
+- request-budget accounting
+- provider fallback
+- circuit breakers
+- bulkheads and concurrency limits
+- degraded-success warnings
 
 ### Operational safety
 
 The router includes:
 
-* provider and model allowlists
-* strict runtime validation
-* typed error classification
-* secret redaction
-* sanitized provider errors
-* metrics and health signals good enough for operations
+- provider and model allowlists
+- strict runtime validation
+- typed error classification
+- secret redaction
+- sanitized provider errors
+- metrics and health signals good enough for operations
 
 ### Security policy engine
 
 The router includes browser security controls:
 
-* domain allowlists for browser navigation
-* action audit logs for compliance and debugging
-* secret redaction from logs and responses
-* high-risk action warnings
-* session isolation and permission control
+- domain allowlists for browser navigation
+- action audit logs for compliance and debugging
+- secret redaction from logs and responses
+- high-risk action warnings
+- session isolation and permission control
 
 ### Browser context auto-injection
 
 The router can automatically attach browser context to AI conversations:
 
-* URL, page title, active tab id
-* selected text when available
-* last screenshot/artifact reference
-* configurable for privacy and noise control
+- URL, page title, active tab id
+- selected text when available
+- last screenshot/artifact reference
+- configurable for privacy and noise control
 
 ---
 
@@ -230,9 +262,11 @@ MCP Router
    ├── provider registry
    ├── provider adapters
    │    ├── OpenAI
-   │    ├── GLM
-   │    ├── Ollama
-   │    └── self-hosted compatible endpoints
+   │    ├── GLM (Z.AI)
+   │    ├── Chutes.ai
+   │    ├── Anthropic
+   │    ├── Azure OpenAI
+   │    └── OpenAI-compatible endpoints
    └── health, logs, and metrics
 ```
 
@@ -246,22 +280,22 @@ The software succeeds because it keeps the boundary to supported clients simple 
 
 Supported clients see:
 
-* one MCP server
-* few tools
-* stable request/response contracts
-* explicit errors
-* clear warnings when execution is degraded
+- one MCP server
+- few tools
+- stable request/response contracts
+- explicit errors
+- clear warnings when execution is degraded
 
 ### The inside stays strict
 
 The router enforces:
 
-* strong typing at critical boundaries
-* runtime validation for all external input and output
-* typed error taxonomy
-* adapter isolation
-* resilience logic in one dedicated layer
-* config access through one typed config module
+- strong typing at critical boundaries
+- runtime validation for all external input and output
+- typed error taxonomy
+- adapter isolation
+- resilience logic in one dedicated layer
+- config access through one typed config module
 
 This keeps the system understandable, testable, and hard to break accidentally.
 
@@ -273,7 +307,7 @@ This keeps the system understandable, testable, and hard to break accidentally.
 
 ```text
 Supported MCP client
-  → calls `llm.chat`
+  → calls `llm_chat`
   → tool input is validated
   → request is normalized into domain format
   → policy checks run
@@ -293,50 +327,66 @@ A request fails only when no safe useful path remains.
 
 That means the router will stop only when:
 
-* the error is non-retryable
-* remaining paths are blocked by policy
-* fallback is unavailable or invalid
-* circuit breakers block remaining providers
-* maximum attempts are exhausted
-* request budget is no longer sufficient for useful work
+- the error is non-retryable
+- remaining paths are blocked by policy
+- fallback is unavailable or invalid
+- circuit breakers block remaining providers
+- maximum attempts are exhausted
+- request budget is no longer sufficient for useful work
 
 ---
 
 ## Core tool contracts
 
-### `llm.chat`
+### `llm_chat`
 
 Primary execution tool for chat completion across supported providers.
 
 Typical input:
 
-* `provider` optional if a default exists
-* `model` optional if a default exists
-* `messages`
-* `temperature` optional
-* `maxTokens` optional
-* `timeoutMs` optional
-* `fallbackProvider` optional
+- `provider` optional if a default exists
+- `model` optional if a default exists
+- `messages`
+- `temperature` optional
+- `maxTokens` optional
+- `timeoutMs` optional
+- `fallbackProvider` optional
 
 Typical output:
 
-* `provider`
-* `model`
-* `outputText`
-* `finishReason`
-* `usage`
-* `latencyMs`
-* `costEstimate`
-* `warnings`
-* `fallbackUsed`
+- `provider`
+- `model`
+- `outputText`
+- `finishReason`
+- `usage`
+- `latencyMs`
+- `costEstimate`
+- `warnings`
+- `fallbackUsed`
 
-### `llm.list_models`
+### `llm_list_models`
 
 Lists models for configured providers and returns partial results safely if one provider cannot respond.
 
-### `router.health`
+### `router_health`
 
 Returns router health, provider health, breaker state, and operational warnings.
+
+### `router_cache`
+
+Manages the response cache: get statistics, clear all entries, or invalidate specific keys.
+
+### `llm_consensus`
+
+Sends the same prompt to multiple models in parallel and returns quality-ranked responses.
+
+### `llm_from_template` / `llm_list_templates`
+
+Execute chat requests using pre-defined prompt templates for common tasks.
+
+### `browser.*`
+
+Unified browser automation and diagnostics surface.
 
 ### `browser.*`
 
@@ -344,10 +394,10 @@ Unified browser automation and diagnostics surface.
 
 Typical results include:
 
-* a typed `sessionId` or `tabId` when applicable
-* structured `warnings` for degraded execution
-* explicit `error.code` values for unsupported or failed operations
-* `artifacts` for screenshots and captured profiles
+- a typed `sessionId` or `tabId` when applicable
+- structured `warnings` for degraded execution
+- explicit `error.code` values for unsupported or failed operations
+- `artifacts` for screenshots and captured profiles
 
 ### Browser capability matrix
 
@@ -355,10 +405,10 @@ The router reports browser support honestly through `browser.capabilities`.
 
 Current contract intent:
 
-* Chrome: strongest coverage for control, tabs, network, web vitals, design audit, and profiling
-* Edge: strong Chromium coverage for control, tabs, network, web vitals, design audit, and profiling
-* Firefox: core control coverage, with advanced diagnostics intentionally marked unsupported
-* Safari: limited support with unsupported features surfaced explicitly instead of hidden behind placeholders
+- Chrome: strongest coverage for control, tabs, network, web vitals, design audit, and profiling
+- Edge: strong Chromium coverage for control, tabs, network, web vitals, design audit, and profiling
+- Firefox: core control coverage, with advanced diagnostics intentionally marked unsupported
+- Safari: limited support with unsupported features surfaced explicitly instead of hidden behind placeholders
 
 ---
 
@@ -368,9 +418,9 @@ Current contract intent:
 
 The router supports:
 
-* explicit provider selection
-* explicit model selection
-* configured defaults
+- explicit provider selection
+- explicit model selection
+- configured defaults
 
 ### Fallback behavior
 
@@ -378,35 +428,35 @@ Fallback is supported when configured and allowed.
 
 Fallback will not run if:
 
-* the path violates policy
-* the fallback provider is the same useless path
-* the capability does not match the request
-* there is not enough remaining request budget
+- the path violates policy
+- the fallback provider is the same useless path
+- the capability does not match the request
+- there is not enough remaining request budget
 
 ### Retry behavior
 
 Retries are:
 
-* bounded
-* classified by provider and error class
-* subject to exponential backoff and jitter
-* blocked for unsafe or non-idempotent operations unless explicitly allowed
+- bounded
+- classified by provider and error class
+- subject to exponential backoff and jitter
+- blocked for unsafe or non-idempotent operations unless explicitly allowed
 
 ### Breaker behavior
 
 The router avoids hammering dead providers by using circuit breakers with:
 
-* closed state
-* open state
-* cautious reopen or half-open probing
+- closed state
+- open state
+- cautious reopen or half-open probing
 
 ### Concurrency behavior
 
 The router isolates failing providers using:
 
-* global concurrency limits
-* per-provider concurrency limits
-* graceful overload rejection
+- global concurrency limits
+- per-provider concurrency limits
+- graceful overload rejection
 
 ---
 
@@ -426,11 +476,11 @@ The router refuses endless retries, invalid fallbacks, and low-value recovery pa
 
 A response may still be successful while carrying warnings for:
 
-* fallback used
-* truncation
-* estimated usage
-* reduced provider capability
-* normalization issues
+- fallback used
+- truncation
+- estimated usage
+- reduced provider capability
+- normalization issues
 
 ### It preserves enough operational truth to act
 
@@ -444,17 +494,17 @@ This software treats type discipline as a core feature, not a code-style prefere
 
 ### Type rules
 
-* strong typing is enforced at transport, domain, provider, resilience, and config boundaries
-* provider-native payloads are never reused as domain contracts
-* typed error codes drive retry, fallback, and breaker decisions
-* weak typing is not allowed in critical execution paths
+- strong typing is enforced at transport, domain, provider, resilience, and config boundaries
+- provider-native payloads are never reused as domain contracts
+- typed error codes drive retry, fallback, and breaker decisions
+- weak typing is not allowed in critical execution paths
 
 ### Validation rules
 
-* all MCP tool input is validated at runtime
-* all provider responses are validated before normalization
-* malformed successful-looking responses are rejected
-* transport DTOs are converted into normalized domain models through explicit typed mappers
+- all MCP tool input is validated at runtime
+- all provider responses are validated before normalization
+- malformed successful-looking responses are rejected
+- transport DTOs are converted into normalized domain models through explicit typed mappers
 
 ---
 
@@ -464,12 +514,12 @@ The router is designed to reduce risk while still allowing powerful external int
 
 ### Security properties
 
-* secrets are loaded from environment or secret-management sources
-* secrets are never returned in tool output
-* logs redact secrets and auth headers
-* provider errors are sanitized before exposure
-* provider and model allowlists can be enforced
-* passthrough behavior is restricted and disabled by default where appropriate
+- secrets are loaded from environment or secret-management sources
+- secrets are never returned in tool output
+- logs redact secrets and auth headers
+- provider errors are sanitized before exposure
+- provider and model allowlists can be enforced
+- passthrough behavior is restricted and disabled by default where appropriate
 
 ---
 
@@ -481,35 +531,35 @@ The router is built to be operable in production.
 
 Structured logs include:
 
-* request id
-* provider
-* model
-* latency
-* retry count
-* fallback usage
-* breaker state when relevant
-* error classification
+- request id
+- provider
+- model
+- latency
+- retry count
+- fallback usage
+- breaker state when relevant
+- error classification
 
 ### Metrics
 
 The software emits or supports:
 
-* request counts
-* latency metrics
-* retry counts
-* fallback-rate metrics
-* failure-rate metrics by provider and error class
-* overload metrics
-* breaker transition metrics
-* active concurrency metrics
+- request counts
+- latency metrics
+- retry counts
+- fallback-rate metrics
+- failure-rate metrics by provider and error class
+- overload metrics
+- breaker transition metrics
+- active concurrency metrics
 
 ### Health
 
 Health is visible in three layers:
 
-* configuration health
-* discovery health
-* execution-path health
+- configuration health
+- discovery health
+- execution-path health
 
 ---
 
@@ -518,9 +568,11 @@ Health is visible in three layers:
 ```text
 ifin-platform/
   README.md
+  AGENTS.md
   package.json
   tsconfig.json
   .env.example
+  bin/
   chrome-extension/
   electron/
   extension/
@@ -529,6 +581,11 @@ ifin-platform/
     server/
       mcpServer.ts
       toolHandlers.ts
+      assignmentToolHandlers.ts
+      browserPublicToolHandlers.ts
+      browserToolHandlers.ts
+      performanceToolHandlers.ts
+      testingToolHandlers.ts
       extensionApiServer.ts
     core/
       router.ts
@@ -538,6 +595,8 @@ ifin-platform/
       normalizer.ts
       errors.ts
       types.ts
+      validation.ts
+      health.ts
       evidenceCapsule.ts
       failureClassifier.ts
       flakeAnalyzer.ts
@@ -548,7 +607,16 @@ ifin-platform/
       workflowRecorder.ts
       browserContext.ts
       browserContract.ts
-      modeManager.ts
+      assignmentModes.ts
+      consensus.ts
+      cache.ts
+      templates.ts
+      structuredOutput.ts
+      qualityGuards.ts
+      capabilities.ts
+      performanceDiagnostics.ts
+      performanceKnowledgeBase.ts
+      performanceTemplates.ts
     resilience/
       retryPolicy.ts
       requestBudget.ts
@@ -558,34 +626,43 @@ ifin-platform/
       attemptHistory.ts
       securityPolicy.ts
     providers/
+      baseAdapter.ts
       openaiAdapter.ts
       glmAdapter.ts
-      ollamaAdapter.ts
-      compatibleAdapter.ts
+      chutesAdapter.ts
+      anthropicAdapter.ts
+      azureOpenaiAdapter.ts
+      openaiCompatibleAdapter.ts
+      providerFactory.ts
     browser/
       browserBridge.ts
       browserManager.ts
       cdpClient.ts
       extensionBridge.ts
       multiTabManager.ts
+      networkControl.ts
+      performanceAPI.ts
+      deviceProfiles.ts
+      advancedInteractions.ts
+      edgeDriver.ts
+      firefoxDriver.ts
+      safariDriver.ts
+      waitConditions.ts
     infra/
       config.ts
       logger.ts
       metrics.ts
-      secrets.ts
-      http.ts
-      clocks.ts
+      electronPaths.ts
+    integration/
+    testing/
   test/
     unit/
     contract/
     chaos/
     load/
     integration/
-  specs/
-    README.md
-    requirements.md
-    architecture.md
-    implementation-plan.md
+    browser/
+    windows/
 ```
 
 ---
@@ -594,9 +671,9 @@ ifin-platform/
 
 ### Prerequisites
 
-* Node.js runtime compatible with the project version
-* access to supported client MCP configuration
-* credentials for the providers you want to enable
+- Node.js runtime compatible with the project version
+- access to supported client MCP configuration
+- credentials for the providers you want to enable
 
 ### Installation
 
@@ -719,11 +796,11 @@ npm run test:load
 
 ### Expected engineering rules
 
-* keep provider logic inside adapters
-* keep resilience logic inside resilience layer
-* keep config access inside config module
-* keep external validation at every boundary
-* do not mark work done without tests and observability hooks
+- keep provider logic inside adapters
+- keep resilience logic inside resilience layer
+- keep config access inside config module
+- keep external validation at every boundary
+- do not mark work done without tests and observability hooks
 
 ---
 
@@ -735,60 +812,63 @@ The project uses several testing layers.
 
 Covers:
 
-* validation
-* policy logic
-* retry logic
-* budget logic
-* breaker transitions
-* concurrency control
-* typed mappers
+- validation
+- policy logic
+- retry logic
+- budget logic
+- breaker transitions
+- concurrency control
+- typed mappers
 
 ### Contract tests
 
 Covers:
 
-* OpenAI adapter
-* GLM adapter
-* normalized output guarantees
-* compatibility drift detection
+- OpenAI adapter
+- GLM adapter
+- normalized output guarantees
+- compatibility drift detection
 
 ### Chaos tests
 
 Covers injected failure modes such as:
 
-* timeouts
-* malformed JSON
-* partial responses
-* DNS failures
-* rate limits
-* credential revocation
+- timeouts
+- malformed JSON
+- partial responses
+- DNS failures
+- rate limits
+- credential revocation
 
 ### Load tests
 
 Covers:
 
-* overload handling
-* provider isolation
-* concurrency saturation
-* behavior under pressure
+- overload handling
+- provider isolation
+- concurrency saturation
+- behavior under pressure
 
 ### Integration tests
 
 Covers:
 
-* MCP tool registration
-* client communication over MCP
-* end-to-end tool invocation
-* degraded-success warnings
-* structured failures
+- MCP tool registration
+- client communication over MCP
+- end-to-end tool invocation
+- degraded-success warnings
+- structured failures
 
 ### Test coverage summary
 
-The project includes comprehensive test coverage:
+The project includes comprehensive test coverage across multiple test types:
 
-* **232 unit tests** for core modules (evidence, failure classification, flake detection, assertions, verification)
-* **74 security/resilience tests** for policy engine, retry, breakers, concurrency
-* **163 contract tests** for provider adapters and browser contracts
+- **Unit tests** for core modules (evidence, failure classification, flake detection, assertions, verification, consensus, templates, cache, validation, structured output, quality guards)
+- **Security/resilience tests** for policy engine, retry, breakers, concurrency
+- **Contract tests** for provider adapters and browser contracts
+- **Chaos tests** for injected failure modes (timeouts, malformed JSON, partial responses, DNS failures, rate limits)
+- **Load tests** for overload handling and behavior under pressure
+- **Integration tests** for MCP tool registration and end-to-end tool invocation
 
 ---
 
@@ -796,14 +876,14 @@ The project includes comprehensive test coverage:
 
 The complete project enforces:
 
-* strict type-checking with zero type errors
-* lint with zero critical-rule violations
-* no provider calls outside adapters
-* no raw env access outside config module
-* no malformed external input entering the domain layer
-* no malformed provider success payload accepted as success
-* no secrets in logs
-* no degraded execution without warnings
+- strict type-checking with zero type errors
+- lint with zero critical-rule violations
+- no provider calls outside adapters
+- no raw env access outside config module
+- no malformed external input entering the domain layer
+- no malformed provider success payload accepted as success
+- no secrets in logs
+- no degraded execution without warnings
 
 Coverage and test thresholds are enforced in CI for critical-path modules.
 
@@ -813,11 +893,11 @@ Coverage and test thresholds are enforced in CI for critical-path modules.
 
 ### Use OpenAI through the router
 
-Ask a supported MCP client to use `llm.chat` with `provider=openai` and a supported model. The router validates the request, executes it, and returns normalized output.
+Ask a supported MCP client to use `llm_chat` with `provider=openai` and a supported model. The router validates the request, executes it, and returns normalized output.
 
 ### Use GLM even if your client does not support it natively
 
-Ask the client to call the same `llm.chat` tool but with `provider=glm`. The router adapts request and response behavior without changing the MCP-facing contract.
+Ask the client to call the same `llm_chat` tool but with `provider=glm`. The router adapts request and response behavior without changing the MCP-facing contract.
 
 ### Recover from a temporary provider failure
 
@@ -847,14 +927,10 @@ When concurrency limits are reached, the router rejects excess work clearly inst
 
 ## Documentation map
 
-This repository includes project documentation under `specs/`:
+This repository includes project documentation:
 
-* `specs/README.md` — project-level design introduction
-* `specs/requirements.md` — system requirements
-* `specs/architecture.md` — technical architecture
-* `specs/implementation-plan.md` — execution plan and delivery matrix
-
-This top-level README is the operational entry point for the complete software.
+- `AGENTS.md` — engineering rules and architectural guidelines
+- This README — operational entry point for the complete software
 
 ---
 
@@ -864,12 +940,12 @@ The project is production-complete in this README view.
 
 That means the software described here assumes:
 
-* the MCP server is implemented
-* OpenAI and GLM adapters are implemented
-* resilience controls are active
-* health and metrics are operational
-* the test pyramid is in place
-* supported client integration works end to end
+- the MCP server is implemented
+- OpenAI, GLM, Chutes.ai, Anthropic, and Azure OpenAI adapters are implemented
+- resilience controls are active
+- health and metrics are operational
+- the test pyramid is in place
+- supported client integration works end to end
 
 ---
 
@@ -879,11 +955,11 @@ Contributions must preserve the architecture and its discipline.
 
 Do not submit changes that:
 
-* weaken typing in critical paths
-* move provider logic outside adapters
-* move resilience logic outside resilience layer
-* bypass runtime validation
-* add new tools without clear normalization, observability, and test strategy
+- weaken typing in critical paths
+- move provider logic outside adapters
+- move resilience logic outside resilience layer
+- bypass runtime validation
+- add new tools without clear normalization, observability, and test strategy
 
 ---
 
