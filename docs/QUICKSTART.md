@@ -184,4 +184,4 @@ initialization failures.
 
 - Read [README.md](../README.md)
 - Review [DEVELOPMENT.md](./DEVELOPMENT.md)
-- Check [specs/architecture.md](../specs/architecture.md)
+- Review additional documentation in [docs/](./)

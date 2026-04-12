@@ -15,5 +15,4 @@ Use these files first:
 Everything else that is historical, highly specialized, or superseded now lives in
 [`archive/`](./archive/README.md).
 
-The product overview remains in [`../README.md`](../README.md), and the design
-authority remains in [`../specs/`](../specs/README.md).
+The product overview remains in [`../README.md`](../README.md).

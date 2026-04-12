@@ -69,8 +69,7 @@ ifin-platform/
 ├── electron/             # Desktop shell and renderer
 ├── chrome-extension/     # Browser bridge extension
 ├── test/                 # Unit, contract, chaos, load, windows
-├── docs/                 # User and developer documentation
-└── specs/                # Design authority
+└── docs/                 # User and developer documentation
 ```
 
 ## Requirements
